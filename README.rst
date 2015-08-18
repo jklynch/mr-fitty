@@ -41,7 +41,7 @@ MrFitty
     :alt: PyPI Package monthly downloads
     :target: https://pypi.python.org/pypi/mrfitty
 
-An example package. Replace this with a proper project description. Generated with https://github.com/ionelmc/cookiecutter-pylibrary
+A package for linear least squares fitting XANES data.  Generated with https://github.com/ionelmc/cookiecutter-pylibrary
 
 * Free software: BSD license
 
