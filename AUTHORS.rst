@@ -2,4 +2,5 @@
 Authors
 =======
 
-* Joshua Lynch - none
+* Joshua Lynch - (website here)
+* Sarah Nicholas - (website here)
