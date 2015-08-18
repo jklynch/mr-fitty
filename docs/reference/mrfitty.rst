@@ -1,0 +1,5 @@
+mrfitty
+=======
+
+.. automodule:: mrfitty
+    :members:
