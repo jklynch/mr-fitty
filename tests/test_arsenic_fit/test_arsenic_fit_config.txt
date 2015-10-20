@@ -1,0 +1,11 @@
+[references]
+prm: reference/As_database_for_llsq_25_refs.prm
+
+[data]
+*.e
+
+[parameters]
+#fit_energy_start: 11834.5
+#fit_energy_stop: 12096.0
+fit_method: lsq
+
