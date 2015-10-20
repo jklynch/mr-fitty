@@ -43,7 +43,7 @@ MrFitty
 
 A package for linear least squares fitting XANES data.  Generated with https://github.com/ionelmc/cookiecutter-pylibrary
 
-* Free software: BSD license
+* Free software: MIT license
 
 Installation
 ============
@@ -60,6 +60,6 @@ https://mr-fitty.readthedocs.org/
 Development
 ===========
 
-To run the all tests run::
+To run all tests::
 
     tox
