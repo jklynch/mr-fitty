@@ -1,0 +1,5 @@
+coverage
+pytest-capturelog
+pytest-cov
+sphinx
+tox
