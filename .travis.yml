@@ -4,9 +4,6 @@ sudo: false
 env:
   global:
     LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
-  matrix:
-    - TOXENV=check
-    - TOXENV=3.4
 before_install:
   - python --version
   - virtualenv --version
