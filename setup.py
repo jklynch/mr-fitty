@@ -56,6 +56,10 @@ setup(
     ],
     install_requires=[
         'click',
+        'matplotlib',
+        'numpy',
+        'pandas',
+        'scipy'
     ],
     extras_require={
         # eg:
