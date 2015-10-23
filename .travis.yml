@@ -21,7 +21,8 @@ before_install:
   - source activate condaenv
 install:
   - conda install --yes python=3 atlas numpy scipy matplotlib dateutil pandas pytest
-  - pip install -e ~/mr-fitty
+  - pwd
+  - pip install -e `pwd`
 script:
   - py.test tests/
 notifications:
