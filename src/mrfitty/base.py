@@ -1,5 +1,25 @@
 """
+The MIT License (MIT)
 
+Copyright (c) 2015 Joshua Lynch, Sarah Nicholas
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 """
 import logging
 import os.path
@@ -13,6 +33,31 @@ log = logging.getLogger(name=__name__)
 
 
 class Spectrum:
+    """Spectrum
+
+    Encapsulates spectrum data contained in TODO: files.
+
+    Parameters
+    ----------
+    file_path : str, required
+        Path to the file containing this spectrum.
+
+    data_df : pandas.Dataframe, required
+        Array of incident energies and fluorescence TODO: values??
+        (index)    incident_energy    fluorescence
+           0         1000.1             0.001
+           1         1000.2             0.002
+          ...        ...                ...
+          100        1100.3             0.100
+
+    Attributes
+    ----------
+    file_path : str
+
+    file_name : str
+
+    data_df : pandas.Dataframe
+    """
     def __init__(self, file_path, data_df):
         self.file_path = file_path
         self.file_name = os.path.split(file_path)[1]
@@ -23,6 +68,23 @@ class Spectrum:
 
     @classmethod
     def read_file(cls, file_path_or_buffer, **kwargs):
+        """Read a file called what?
+        TODO: what are these files called?
+        Parameters
+        ----------
+        cls : Spectrum or Spectrum subclass, required
+            The class to be instantiated with contents of the specified file.
+
+        file_path_or_buffer : path to file or file-like object, required
+            The file to be read.
+
+        **kwargs : keyword arguments, optional
+            Arguments for the cls constructor.
+
+        Returns
+        -------
+        Instance of class Spectrum or subclass.
+        """
         spectrum_data_df = pd.read_csv(
             file_path_or_buffer,
             engine='python',
@@ -46,6 +108,22 @@ class Spectrum:
 
 
 class ReferenceSpectrum(Spectrum):
+    """ReferenceSpectrum
+
+    Parameters
+    ----------
+    file_path : str
+
+    reference_spectrum_data : pandas.Dataframe
+
+    mineral_category : str
+
+    Attributes
+    ----------
+    mineral_category : str
+
+    interpolant : scipy.interpolate.InterpolatedUnivariateSpline
+    """
     def __init__(self, file_path, reference_spectrum_data, mineral_category=None):
         super(type(self), self).__init__(file_path, reference_spectrum_data)
         self.mineral_category = mineral_category
@@ -59,6 +137,35 @@ class ReferenceSpectrum(Spectrum):
 
 
 class SpectrumFit:
+    """SpectrumFit
+
+    Encapsulates a single fit of one or more reference spectra to a single unknown spectrum.
+
+    Parameters
+    ----------
+    interpolant_incident_energy :
+
+    reference_spectra_A_df :
+
+    unknown_spectrum_b :
+
+    reference_spectra_seq :
+
+    reference_spectra_coef_x :
+
+    Attributes
+    ----------
+    interpolant_incident_energy :
+
+    reference_spectra_A_df :
+
+    unknown_spectrum_b :
+
+    reference_spectra_seq :
+
+    reference_spectra_coef_x :
+
+    """
     def __init__(
         self,
         interpolant_incident_energy,
@@ -74,11 +181,14 @@ class SpectrumFit:
         self.reference_spectra_coef_x = reference_spectra_coef_x
         self.fit_spectrum_b = reference_spectra_A_df.dot(reference_spectra_coef_x)
         self.residuals = self.fit_spectrum_b - self.unknown_spectrum_b
+        log.debug('self.unknown_spectrum_b :\n{}'.format(self.unknown_spectrum_b))
+        log.debug('self.fit_spectrum_b     :\n{}'.format(self.fit_spectrum_b))
+        log.debug('residuals               :\n{}'.format(self.residuals))
         self.sum_of_abs_residuals = np.sum(np.abs(self.residuals))
-        self.sum_of_abs_unknown_spectum_b = np.sum(np.abs(unknown_spectrum_b))
+        self.sum_of_abs_unknown_spectrum_b = np.sum(np.abs(unknown_spectrum_b))
         self.sum_of_squared_residuals = np.sum(np.power(self.residuals, 2.0))
         self.sum_of_squared_unknown_spectrum_b = np.sum(np.power(unknown_spectrum_b, 2.0))
-        self.nsa = self.sum_of_abs_residuals / self.sum_of_abs_unknown_spectum_b
+        self.nsa = self.sum_of_abs_residuals / self.sum_of_abs_unknown_spectrum_b
         self.nss = self.sum_of_squared_residuals / self.sum_of_squared_unknown_spectrum_b
 
         # calculate the approximate area under each curve
