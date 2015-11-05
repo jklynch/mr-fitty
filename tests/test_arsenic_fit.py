@@ -5,11 +5,11 @@ import os
 from mrfitty.base import ReferenceSpectrum, Spectrum
 from mrfitty.combination_fit import AdaptiveEnergyRangeBuilder, AllCombinationFitTask
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, filename='test_arsenic_fit.log')
 log = logging.getLogger(name=__name__)
 
 
-def test_arsenic_1(request):
+def test_arsenic_1(caplog, request):
     """
     Test fits for known arsenic data and references.
     Expect to find PRM, data, and reference files in a directory called 'test_arsenic_fit'.
@@ -18,6 +18,8 @@ def test_arsenic_1(request):
     :param request: pytest fixture with information about the path to this test file
     :return:
     """
+
+    caplog.setLevel(logging.INFO)
 
     test_arsenic_fit_fp = request.module.__file__
     log.info('test_arsenic_fit_fp: {}'.format(test_arsenic_fit_fp))
@@ -48,10 +50,14 @@ def test_arsenic_1(request):
 
     unknown_spectrum_fit = task.fit_table[unknown_spectrum]
 
-    ##assert 3 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
+    assert unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape == unknown_spectrum_fit.best_fit.fit_spectrum_b.shape
+    assert unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape == unknown_spectrum_fit.best_fit.unknown_spectrum_b.shape
+    assert unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape == unknown_spectrum_fit.best_fit.residuals.shape
+
+    assert 3 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
 
 
-def test_arsenic_2(request):
+def test_arsenic_2(caplog, request):
     """
     Test fits for a single reference against all references..
     Expect to find PRM, data, and reference files in a directory called 'test_arsenic_fit'.
@@ -60,6 +66,8 @@ def test_arsenic_2(request):
     :param request: pytest fixture with information about the path to this test file
     :return:
     """
+
+    caplog.setLevel(logging.INFO)
 
     test_arsenic_fit_fp = request.module.__file__
     log.info('test_arsenic_fit_fp: {}'.format(test_arsenic_fit_fp))
@@ -90,4 +98,4 @@ def test_arsenic_2(request):
 
     unknown_spectrum_fit = task.fit_table[unknown_spectrum]
 
-    ##assert 3 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
+    assert 3 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
