@@ -21,15 +21,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-# Why does this file exist, and why __main__?
-# For more info, read:
-# - https://www.python.org/dev/peps/pep-0338/
-# - https://docs.python.org/2/using/cmdline.html#cmdoption-m
-# - https://docs.python.org/3/using/cmdline.html#cmdoption-m
 import configparser
 import logging
 import io
-import sys
 
 import click
 
@@ -37,14 +31,17 @@ from mrfitty.combination_fit import AllCombinationFitTask
 
 
 def get_config_parser():
-    return configparser.ConfigParser(
+    cp = configparser.ConfigParser(
         allow_no_value=True,
         delimiters=('=',)
     )
+    cp.optionxform = lambda option: option
+    return cp
 
 @click.command()
 @click.argument('config_fp', type=click.Path(exists=True))
 def main(config_fp):
+    logging.basicConfig(level=logging.INFO)
     log = logging.getLogger(name=__name__)
 
     config = get_config_parser()
@@ -79,8 +76,3 @@ def main(config_fp):
         fitter.write_best_fit_arrays(best_fit_files_dir_path)
     else:
         log.warning('No directory specified for best fit files')
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    sys.exit(main())
