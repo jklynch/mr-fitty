@@ -1,8 +1,12 @@
 [references]
-prm: reference/As_database_for_llsq_25_refs.prm
+prm = reference/As_database_for_llsq_25_refs.prm
 
 [data]
-*.e
+data/OTT3_55_spot0.e
+
+[output]
+plots_pdf_fp = test_arsenic_fit_plots.pdf
+table_fp = test_arsenic_fit_table.txt
 
 [parameters]
 #fit_energy_start: 11834.5
