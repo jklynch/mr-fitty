@@ -42,20 +42,51 @@ log = logging.getLogger(name=__name__)
 
 
 class AdaptiveEnergyRangeBuilder:
+    """AdaptiveEnergyRangeBuilder
+
+    Builds an array of incident energies present in the specified unknown spectrum and the sequence of reference
+    spectra.  For example, given an unknown spectrum like this:
+
+    index             0        1        2        3
+    incident energy   11760.0  11765.0  11771.0  11776.0
+    fluorescence      0.08123  0.08234  0.08345  0.08456
+
+    and two reference spectra like these:
+
+    index             0        1        2        3
+    incident energy   11761.0  11764.0  11770.0  11775.0
+    fluorescence      0.08123  0.08234  0.08345  0.08456
+
+    index             0        1        2        3
+    incident energy   11759.0  11766.0  11772.0  11778.0
+    fluorescence      0.08123  0.08234  0.08345  0.08456
+
+    the incident energies present in the unknown spectrum that will be used to interpolate values from the reference
+    spectra are:
+
+    index
+    incident energy   11765.0  11771.0
+    """
     def __init__(self):
         pass
 
     def build_range(self, unknown_spectrum, reference_spectrum_seq):
+        """
+
+        :param unknown_spectrum:
+        :param reference_spectrum_seq:
+        :return:
+        """
         ref_min_last_energy = np.inf
         ref_max_first_energy = -1.0 * np.inf
-        for s in reference_spectrum_seq:
-            log.debug('s: {}'.format(s))
-            if s.data_df.energy.iloc[-1] < ref_min_last_energy:
-                ref_min_last_energy = s.data_df.energy.iloc[-1]
+        for reference_spectrum in reference_spectrum_seq:
+            log.debug('s: {}'.format(reference_spectrum))
+            if reference_spectrum.data_df.energy.iloc[-1] < ref_min_last_energy:
+                ref_min_last_energy = reference_spectrum.data_df.energy.iloc[-1]
             else:
                 pass
-            if s.data_df.energy.iloc[0] > ref_max_first_energy:
-                ref_max_first_energy = s.data_df.energy.iloc[0]
+            if reference_spectrum.data_df.energy.iloc[0] > ref_max_first_energy:
+                ref_max_first_energy = reference_spectrum.data_df.energy.iloc[0]
             else:
                 pass
 
@@ -87,6 +118,9 @@ class FixedEnergyRangeBuilder:
 
 
 class CombinationFitResults:
+    """CombinationFitResults
+
+    """
     def __init__(self, spectrum, best_fit, sorted_component_count_fit_lists):
         self.spectrum = spectrum
         self.best_fit = best_fit
@@ -126,13 +160,17 @@ class AllCombinationFitTask:
                 reference_spectra_A_series = {}
                 unknown_spectrum_b = unknown_spectrum.data_df.norm[fit_energies_ndx]
                 log.debug('unknown_spectrum_b.shape: {}'.format(unknown_spectrum_b.shape))
-                log.debug('unknown_spectrum_b      : {}'.format(unknown_spectrum_b.values))
-                log.debug('reference combination  : {}'.format(reference_spectra_combination))
+                #log.debug('unknown_spectrum_b      : {}'.format(unknown_spectrum_b.values))
+                #log.debug('reference combination  : {}'.format(reference_spectra_combination))
                 reference_spectra_A_column_list = []
                 for i, rs in enumerate(reference_spectra_combination):
                     reference_spectra_A_column_list.append(rs.file_name)
                     reference_spectra_A_series[rs.file_name] = pd.Series(rs.interpolant(fit_energies))
+                # use the (time) index from the unknown spectrum
+                # this is important because pandas Series and Dataframes will align on their indexes for most operations
+                # so for example calculating residuals can result in the wrong shape
                 reference_spectra_A_df = pd.DataFrame(reference_spectra_A_series)
+                reference_spectra_A_df.index = unknown_spectrum_b.index
 
                 # it is important to put the columns in the expected order
                 reference_spectra_A_df = reference_spectra_A_df.reindex(columns=reference_spectra_A_column_list)
@@ -145,10 +183,10 @@ class AllCombinationFitTask:
                     reference_spectra_A_df.values,
                     unknown_spectrum_b
                 )
-                log.debug('A        :\n{}'.format(reference_spectra_A_df))
-                log.debug('coef     : {}'.format(reference_spectra_coef_x))
-                log.debug('residual : {}'.format(residual))
-                log.debug('solution :\n{}'.format(reference_spectra_A_df.dot(reference_spectra_coef_x)))
+                #log.debug('A        :\n{}'.format(reference_spectra_A_df))
+                #log.debug('coef     : {}'.format(reference_spectra_coef_x))
+                #log.debug('residual : {}'.format(residual))
+                #log.debug('solution :\n{}'.format(reference_spectra_A_df.dot(reference_spectra_coef_x)))
                 if np.any(reference_spectra_coef_x < 0.0):
                     # this happens a lot with lstsq and is generally not a problem
                     #print('{}: least-squares fit has negative coefficients'.format(
@@ -222,7 +260,21 @@ class AllCombinationFitTask:
             for spectrum, fit_results in self.fit_table.items():
                 log.info('plotting fit for {}'.format(spectrum.file_name))
                 f, ax = plt.subplots()
+                log.info(fit_results.best_fit.fit_spectrum_b.shape)
                 ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.fit_spectrum_b)
+                log.info(fit_results.best_fit.residuals.shape)
+                ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.unknown_spectrum_b, '.')
+                ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.residuals)
+                #log.info('fit_results.best_fit.interpolant_incident_energy:\n{}'.format(
+                #    fit_results.best_fit.interpolant_incident_energy)
+                #)
+                #ax.vlines(x=[
+                #        fit_results.best_fit.interpolant_incident_energy.iloc[0],
+                #        fit_results.best_fit.interpolant_incident_energy.iloc[-1]
+                #    ],
+                #    ymin=fit_results.best_fit.unknown_spectrum_b.min(),
+                #    ymax=fit_results.best_fit.unknown_spectrum_b.max()
+                #)
                 plot_file.savefig(f)
 
     def write_best_fit_arrays(self, best_fit_dir_path):
