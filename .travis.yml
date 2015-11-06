@@ -20,7 +20,7 @@ before_install:
   - conda install --yes -n condaenv pip
   - source activate condaenv
 install:
-  - conda install --yes python=3 atlas numpy scipy matplotlib dateutil pandas pytest
+  - conda install --yes python=3 atlas numpy scipy matplotlib dateutil pandas pytest pytest-capturelog
   - pwd
   - pip install -e `pwd`
 script:
