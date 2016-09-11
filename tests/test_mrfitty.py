@@ -106,7 +106,7 @@ ref=ref_3.e
         )
         test_main_config = get_config_parser()
         test_main_config.read_string('''
-[references]
+[reference_spectra]
 prm = test_main.prm
 
 [data]

@@ -1,3 +1,6 @@
+"""
+pytest-capturelog is required by this test
+"""
 from glob import glob
 import logging
 import os
@@ -11,7 +14,7 @@ log = logging.getLogger(name=__name__)
 
 def test_arsenic_1(caplog, request):
     """
-    Test fits for known arsenic data and references.
+    Test fits for known arsenic data and reference_spectra.
     Expect to find PRM, data, and reference files in a directory called 'test_arsenic_fit'.
     See also: http://stackoverflow.com/questions/29627341/pytest-where-to-store-expected-data.
 
@@ -59,7 +62,7 @@ def test_arsenic_1(caplog, request):
 
 def test_arsenic_2(caplog, request):
     """
-    Test fits for a single reference against all references..
+    Test fits for a single reference against all reference_spectra..
     Expect to find PRM, data, and reference files in a directory called 'test_arsenic_fit'.
     See also: http://stackoverflow.com/questions/29627341/pytest-where-to-store-expected-data.
 

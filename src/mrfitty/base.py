@@ -21,6 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+import glob
 import logging
 import os.path
 import re
@@ -105,6 +106,36 @@ class Spectrum:
         log.debug('  first incident energy is {}'.format(spectrum_data_df.energy.iloc[0]))
         log.debug('  last incident energy is  {}'.format(spectrum_data_df.energy.iloc[-1]))
         return cls(file_path_or_buffer, spectrum_data_df, **kwargs)
+
+    @classmethod
+    def read_all(cls, file_glob_list):
+        """
+        Return a ReferenceSpectrum instance for each file in the file glob list.
+        :param file_glob_list: list of paths or file globs
+        :return: set of ReferenceSpectrum instances
+        """
+        # keep a list of config file entries for error reporting
+        reference_spectrum_file_path_set = set()
+
+        # return this set of duplicate file paths
+        duplicate_file_path_set = set()
+        # return this set of ReferenceSpectrum instances
+        reference_spectrum_set = set()
+        for reference_spectrum_file_glob in file_glob_list:
+            logging.info('reference file pattern: {}'.format(reference_spectrum_file_glob))
+            reference_spectrum_file_glob_expanded = os.path.expanduser(reference_spectrum_file_glob)
+            #reference_spectrum_file_glob_list.append(reference_spectrum_file_glob_expanded)
+            logging.info('expanded file pattern: {}'.format(reference_spectrum_file_glob_expanded))
+            for i, reference_spectrum_file_path in enumerate(glob.glob(reference_spectrum_file_glob_expanded)):
+                if reference_spectrum_file_path in reference_spectrum_file_path_set:
+                    logging.info('  reference file {} has already been read'.format(reference_spectrum_file_path))
+                    duplicate_file_path_set.add(reference_spectrum_file_path)
+                else:
+                    log.info('  reading reference file {}: {}'.format(i, reference_spectrum_file_path))
+                    reference_spectrum = cls.read_file(reference_spectrum_file_path)
+                    reference_spectrum_set.add(reference_spectrum)
+
+        return reference_spectrum_set, duplicate_file_path_set
 
 
 class ReferenceSpectrum(Spectrum):

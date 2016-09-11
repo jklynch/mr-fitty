@@ -33,38 +33,48 @@ MrFitty
     :alt: PyPI Package monthly downloads
     :target: https://pypi.python.org/pypi/mrfitty
 
-A package for linear least squares fitting XANES data.  Generated with https://github.com/ionelmc/cookiecutter-pylibrary
+Generated with https://github.com/ionelmc/cookiecutter-pylibrary.
+
+MrFitty is an open-source Python package for fitting XANES data to a set of reference spectra using linear least
+squares and best subset selection as described in (). It runs on any operating system with a Python 3.4+ interpreter
+including Linux, OS X, and Windows.
+
+MrFitty functions similarly to the spectra-fitting tools in the LabView software suite written by
+Dr. Matthew Marcus at the Berkeley Synchrotron available here. MrFitty includes a method for choosing the best number
+of reference spectra based on prediction error as described here.
 
 * Free software: MIT license
 
 Requirements
 ============
 
-MrFitty requires Python 3.4 or higher and the following packages:
+MrFitty requires Python 3.4+ and the following packages:
 
     1. click >= 5.1
     2. matplotlib >= 1.4.3
     3. numpy >= 1.10
     4. pandas >= 0.16
     5. scipy >= 0.16
+    6. scikit-learn >= 0.17.1
 
 Installation
 ============
 
 Users should consider installing MrFitty in a `Python virtual environment <https://docs.python.org/3.4/library/venv.html>`_.
-This is not necessary but it simplifies package management.  On systems without Python 3.4 (or higher) the `Anaconda <https://anaconda.org>`_
-Python distribution is a good choice that can be installed without administrative priviledges and also supports virtual environments.
+This is not necessary but it simplifies package management on systems with many Python requirements. On systems without
+Python 3.4+ the `Anaconda <https://anaconda.org>`_ Python distribution is a good choice. It can be installed without
+administrative priviledges and supports virtual environments.
 
-Once Python is available MrFitty can be installed with pip: ::
+Once Python 3.4+ is available MrFitty can be installed with pip directly from GitHub: ::
 
-    $ pip install mrfitty
+    $ pip install git+https://github.com/jklynch/mr-fitty.git
 
-Required packages will be automatically installed by pip.
+The required packages will be automatically installed by pip.
 
 Usage
 =====
 
-MrFitty runs from the command line.  Use the --help option to display usage: ::
+MrFitty runs from the command line.  The --help option will display usage instructions: ::
 
     $ mrfitty --help
     Usage: mrfitty [OPTIONS] CONFIG_FP
@@ -72,14 +82,14 @@ MrFitty runs from the command line.  Use the --help option to display usage: ::
     Options:
       --help   Show this message and exit.
 
-The required CONFIG_FP argument specifies the path to a user-generated configuration file, e.g. ::
+The required CONFIG_FP argument specifies the path to a configuration file written by the user, e.g. ::
 
-    $ mrfitty ~/mrfitty_arsenic_spectra.cfg
+    $ mrfitty ~/fit_arsenic_spectra.cfg
 
 Here is an example configuration file: ::
 
     [references]
-    prm =  reference/As_database_for_llsq_25_refs.prm
+    prm = reference/As_database_for_llsq_25_refs.prm
 
     [data]
     data/*.e
@@ -93,7 +103,6 @@ Here is an example configuration file: ::
 Documentation
 =============
 
-https://mr-fitty.readthedocs.org/
 
 Development
 ===========

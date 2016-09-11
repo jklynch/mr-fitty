@@ -24,10 +24,12 @@ SOFTWARE.
 import configparser
 import logging
 import io
+import os
 
 import click
 
 from mrfitty.combination_fit import AllCombinationFitTask
+from mrfitty.best_subset_selection import BestSubsetSelectionFitTask
 
 
 def get_config_parser():
@@ -54,7 +56,7 @@ def main(config_fp):
         config.write(string_buffer)
         log.info('configuration file contents:\n{}'.format(string_buffer.getvalue()))
 
-    fitter = AllCombinationFitTask.build(config)
+    fitter = BestSubsetSelectionFitTask.build(config)
     fitter.fit_all()
 
     table_file_path = config.get('output', 'table_fp', fallback=None)
@@ -67,7 +69,10 @@ def main(config_fp):
     plots_pdf_file_path = config.get('output', 'plots_pdf_fp', fallback=None)
     if plots_pdf_file_path:
         log.info('writing plots to PDF {}'.format(plots_pdf_file_path))
-        fitter.draw_plots(plots_pdf_file_path)
+        fitter.draw_plots_matplotlib(plots_pdf_file_path)
+        plots_html_file_path = os.path.splitext(plots_pdf_file_path)[0] + '.html'
+        log.info('writing plots to HTML {}'.format(plots_html_file_path))
+        fitter.draw_plots_bokeh(plots_html_file_path)
     else:
         log.warning('No file path specified for plot output')
 

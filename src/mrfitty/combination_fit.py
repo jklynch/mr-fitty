@@ -28,6 +28,9 @@ import logging
 from operator import attrgetter
 import os.path
 
+import bokeh.io
+import bokeh.plotting
+
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
@@ -128,10 +131,10 @@ class CombinationFitResults:
 
 
 class AllCombinationFitTask:
-    def __init__(self, energy_range_builder, reference_spectrum_list, unknown_spectrum_list, component_count_range):
-        self.energy_range_builder = energy_range_builder
+    def __init__(self, reference_spectrum_list, unknown_spectrum_list, energy_range_builder, component_count_range=range(4)):
         self.reference_spectrum_list = reference_spectrum_list
         self.unknown_spectrum_list = unknown_spectrum_list
+        self.energy_range_builder = energy_range_builder
         self.component_count_range = component_count_range
         self.fit_table = collections.OrderedDict()
 
@@ -145,15 +148,20 @@ class AllCombinationFitTask:
                 best_fit=best_fit,
                 sorted_component_count_fit_lists=sorted_component_count_fit_lists
             )
+        return self.fit_table
 
     def fit(self, unknown_spectrum):
+        logging.info('fitting unknown spectrum {}'.format(unknown_spectrum.file_name))
         log = logging.getLogger(name=unknown_spectrum.file_name)
-        # fit all combinations of references
+        # fit all combinations of reference_spectra
         spectrum_fit_list = []
         for component_count in self.component_count_range:
             for reference_spectra_combination in itertools.combinations(self.reference_spectrum_list, component_count):
-                log.debug('fitting to references {}'.format(reference_spectra_combination))
-                fit_energies, fit_energies_ndx = self.energy_range_builder.build_range(unknown_spectrum, reference_spectra_combination)
+                log.debug('fitting to reference_spectra {}'.format(reference_spectra_combination))
+                fit_energies, fit_energies_ndx = self.energy_range_builder.build_range(
+                    unknown_spectrum,
+                    reference_spectra_combination
+                )
                 # interpolate the reference spectra at the fit_energies
                 log.debug('fit energies.shape: {}'.format(fit_energies.shape))
                 # reference_spectra_A_df is energies x components
@@ -167,8 +175,9 @@ class AllCombinationFitTask:
                     reference_spectra_A_column_list.append(rs.file_name)
                     reference_spectra_A_series[rs.file_name] = pd.Series(rs.interpolant(fit_energies))
                 # use the (time) index from the unknown spectrum
-                # this is important because pandas Series and Dataframes will align on their indexes for most operations
-                # so for example calculating residuals can result in the wrong shape
+                # this is important because pandas Series and Dataframes will align on their
+                #  indexes for most operations so for example calculating residuals can result
+                #  in the wrong shape
                 reference_spectra_A_df = pd.DataFrame(reference_spectra_A_series)
                 reference_spectra_A_df.index = unknown_spectrum_b.index
 
@@ -206,13 +215,13 @@ class AllCombinationFitTask:
         return best_fit, sorted_component_count_fits
 
     def sort_fits(self, spectrum, spectrum_fit_list):
-        # sort all fits with the same component count together
+        # sort all fits with the same component count
         log = logging.getLogger(name=spectrum.file_name)
         # compare the top fits for each component count
         # component_count_fit_lists looks like this:
         #   [ [list of 0-component fits], [list of 1-component fits], ..., [list of n-component fits] ]
         component_count_fit_lists = [[] for component_count in self.component_count_range]
-        # append and extra empty list for 0-component fits even though there are none
+        # append an extra empty list for 0-component fits even though there are none
         # this allows component count to work as the list index
         component_count_fit_lists.append([])
         log.debug('creating one fit list for each component count in self.component_count_range: {}'.format(
@@ -230,12 +239,24 @@ class AllCombinationFitTask:
                 log.debug('best fit for {} component(s): {}'.format(component_count, component_count_fit_list[0]))
             else:
                 log.debug('no fits for component count {}'.format(component_count))
+
+        best_fit_for_component_count_list = [c[0] for c in component_count_fit_lists[1:]]
+        best_fit = self.choose_best_component_count(best_fit_for_component_count_list)
+        return best_fit, component_count_fit_lists[1:]
         # choose the best fit from the top fits for all component counts
         # skip the 0-component list since it is empty
+
+    def choose_best_component_count(self, best_fit_for_component_count_list):
+        """
+        Choose the best fit from the best fits for each component count.
+        :param best_fit_for_component_count_list:
+          a list of fits for component counts 0 to N; there is no 0-component fit
+        :return:
+        """
         best_fit = None
         previous_nss = 1.0
-        for component_count, component_count_fit_list in enumerate(component_count_fit_lists[1:]):
-            best_fit_for_component_count = component_count_fit_list[0]
+        for component_count, component_count_fit_list in enumerate(best_fit_for_component_count_list):
+            best_fit_for_component_count = component_count_fit_list
             improvement = (previous_nss - best_fit_for_component_count.nss) / previous_nss
             log.debug('improvement: {:5.3f} for {}'.format(improvement, best_fit_for_component_count))
             if improvement < 0.10:
@@ -244,17 +265,18 @@ class AllCombinationFitTask:
                 best_fit = best_fit_for_component_count
                 previous_nss = best_fit.nss
         log.debug('best fit: {}'.format(best_fit))
-        return best_fit, component_count_fit_lists
+        return best_fit
 
     def write_table(self, table_file_path):
         with open(table_file_path, 'w') as table_file:
-            table_file.write('spectrum\tNSS')
+            table_file.write('spectrum\tNSS\n')
             for spectrum, fit_results in self.fit_table.items():
                 table_file.write(spectrum.file_name)
                 table_file.write('\t')
                 table_file.write('{:5.3f}'.format(fit_results.best_fit.nss))
+                table_file.write('\n')
 
-    def draw_plots(self, plots_pdf_file_path):
+    def draw_plots_matplotlib(self, plots_pdf_file_path):
         with PdfPages(plots_pdf_file_path) as plot_file:
             log.info('writing plots file {}'.format(plots_pdf_file_path))
             for spectrum, fit_results in self.fit_table.items():
@@ -277,6 +299,51 @@ class AllCombinationFitTask:
                 #)
                 plot_file.savefig(f)
 
+    def draw_plots_bokeh(self, plots_html_file_path):
+        bokeh.io.output_file(plots_html_file_path)
+        #with PdfPages(plots_pdf_file_path) as plot_file:
+        log.info('writing plots file {}'.format(plots_html_file_path))
+        plot_list = []
+        for spectrum, fit_results in self.fit_table.items():
+            log.info('plotting fit for {}'.format(spectrum.file_name))
+            #f, ax = plt.subplots()
+            f = bokeh.plotting.figure(
+                title='{}\n???'.format(spectrum.file_name)
+            )
+            plot_list.append(f)
+
+            log.info(fit_results.best_fit.fit_spectrum_b.shape)
+            #ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.fit_spectrum_b)
+            f.line(
+                fit_results.best_fit.interpolant_incident_energy,
+                fit_results.best_fit.fit_spectrum_b,
+                line_width=2
+            )
+            log.info(fit_results.best_fit.residuals.shape)
+            #ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.unknown_spectrum_b, '.')
+            f.circle(
+                fit_results.best_fit.interpolant_incident_energy,
+                fit_results.best_fit.unknown_spectrum_b
+            )
+            #ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.residuals)
+            f.line(
+                fit_results.best_fit.interpolant_incident_energy,
+                fit_results.best_fit.residuals
+            )
+            #log.info('fit_results.best_fit.interpolant_incident_energy:\n{}'.format(
+            #    fit_results.best_fit.interpolant_incident_energy)
+            #)
+            #ax.vlines(x=[
+            #        fit_results.best_fit.interpolant_incident_energy.iloc[0],
+            #        fit_results.best_fit.interpolant_incident_energy.iloc[-1]
+            #    ],
+            #    ymin=fit_results.best_fit.unknown_spectrum_b.min(),
+            #    ymax=fit_results.best_fit.unknown_spectrum_b.max()
+            #)
+            #plot_file.savefig(f)
+        p = bokeh.plotting.vplot(*plot_list)
+        bokeh.io.save(p)
+
     def write_best_fit_arrays(self, best_fit_dir_path):
         for spectrum, fit_results in self.fit_table.items():
             file_base_name, file_name_ext = os.path.splitext(spectrum.file_name)
@@ -292,23 +359,110 @@ class AllCombinationFitTask:
             )
             fit_df.to_csv(fit_file_path, sep='\t', float_format='%8.4f', index=False)
 
+    @classmethod
+    def build_reference_spectrum_list_from_prm_file(cls, config):
+        """
+        Read a PRM file to create a list of ReferenceSpectrum
+        instances, maximum component count, and minimum component
+        count from a PRM file.
+
+        :param config: configparser instance
+        :return:
+            list of ReferenceSpectrum instances
+            maximum component count
+            minimum component count
+        """
+        reference_spectrum_list = []
+        prm_file_path = os.path.expanduser(config.get('references', 'prm'))
+        log.info('reading PRM file {}'.format(prm_file_path))
+        prm = PRM.read_prm(prm_file_path)
+        # read reference files
+        for i, fp in enumerate(prm.reference_file_path_list):
+            log.info('reading reference file {}: {}'.format(i, fp))
+            reference_spectrum = ReferenceSpectrum.read_file(fp)
+            reference_spectrum_list.append(reference_spectrum)
+
+        return reference_spectrum_list, prm.nb_component_max, prm.nb_component_min
+
+    @classmethod
+    def build_reference_spectrum_list_from_config_file(cls, config):
+        """
+        Read reference spectrum file glob(s) from configuration file to create
+        a list of ReferenceSpectrum instances, maximum component count, and
+        minimum component count.
+
+        :param config: configparser instance
+        :return: list of ReferenceSpectrum instances
+        """
+
+        reference_spectrum_list, reference_spectrum_file_glob_list = ReferenceSpectrum.read_all(
+            [reference_file_glob for reference_file_glob, _ in config.items('references')]
+        )
+
+        if len(reference_spectrum_file_glob_list) == 0:
+            logging.exception(
+                'no reference spectrum file paths or patterns were found in section [references] of configuration file {}'.format(
+                    config
+                )
+            )
+        elif len(reference_spectrum_list) == 0:
+            logging.exception('no reference spectrum files were found')
+        else:
+            # everything is ok
+            pass
+
+        if not config.has_option('fit', 'maximum_component_count'):
+            logging.exception(
+                'required parameter maximum_component_count is missing from section [fit] in configuration file {}'.format(
+                    config
+                )
+            )
+        elif not config.has_option('fit', 'minimum_component_count'):
+            logging.exception(
+                'required parameter minimum_component_count is missing from section [fit] in configuration file {}'.format(
+                    config
+                )
+            )
+        else:
+            maximum_component_count = config.getint('fit', 'maximum_component_count')
+            minimum_component_count = config.getint('fit', 'minimum_component_count')
+
+        return reference_spectrum_list, maximum_component_count, minimum_component_count
 
     @classmethod
     def build(cls, config):
         log = logging.getLogger(name=str(cls))
 
-        energy_range = cls.get_energy_range_from_config(config)
+        # read section [references]
+        # support a PRM file such as
+        #   prm = path/to/one.prm
+        # or
+        # a list of one or more file globs such as
+        #   arsenic_2_reference_spectra/*.e
+        #   arsenic_3_reference_spectra/*.e
 
-        # read prm
-        prm_file_path = os.path.expanduser(config.get('references', 'prm'))
-        log.info('reading PRM file {}'.format(prm_file_path))
-        prm = PRM.read_prm(prm_file_path)
-        # read reference files
-        reference_spectrum_list = []
-        for i, fp in enumerate(prm.reference_file_path_list):
-            log.info('reading reference file {}: {}'.format(i, fp))
-            reference_spectrum = ReferenceSpectrum.read_file(fp)
-            reference_spectrum_list.append(reference_spectrum)
+        if config.has_section('references'):
+            if config.has_option('references', 'prm'):
+                prm_file_path = os.path.expanduser(config.get('references', 'prm'))
+                reference_spectrum_list, max_cmp, min_cmp = cls.build_reference_spectrum_list_from_prm_file(prm_file_path)
+            else:
+                reference_spectrum_list, max_cmp, min_cmp = cls.build_reference_spectrum_list_from_config_file(config)
+        elif config.has_section('reference_spectra'):
+            if config.has_option('reference_spectra', 'prm'):
+                prm_file_path = os.path.expanduser(config.get('reference_spectra', 'pem'))
+                reference_spectrum_list, max_cmp, min_cmp = cls.build_reference_spectrum_list_from_prm_file(prm_file_path)
+            else:
+                raise Exception('section [reference_spectra] is missing required parameter prm')
+        else:
+            raise Exception('configuration file is missing section [references]')
+
+        if 0 < min_cmp <= max_cmp:
+            component_count_range = range(min_cmp, max_cmp+1)
+            logging.info('component count range: {}'.format(component_count_range))
+        else:
+            logging.exception('minimum and maximum component counts are not valid')
+
+        energy_range = cls.get_energy_range_from_config(config)
 
         # read data files
         unknown_spectrum_file_path_list = []
@@ -324,11 +478,11 @@ class AllCombinationFitTask:
             unknown_spectrum = Spectrum.read_file(unknown_spectrum_file_path)
             unknown_spectrum_list.append(unknown_spectrum)
 
-        fit_task = AllCombinationFitTask(
-            energy_range_builder=energy_range,
+        fit_task = cls(
             reference_spectrum_list=reference_spectrum_list,
             unknown_spectrum_list=unknown_spectrum_list,
-            component_count_range=prm.component_count_range
+            energy_range_builder=energy_range,
+            component_count_range=component_count_range
         )
 
         return fit_task
