@@ -83,7 +83,7 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
             # todo: calculate confidence interval
             component_count_to_median_cp[component_count] = np.median(normalized_cp_list)
         log.debug('component count to median cp: {}'.format(component_count_to_median_cp))
-        best_fit_component_count = np.argmin(component_count_to_median_cp)
+        best_fit_component_count = np.argmin(np.asarray(component_count_to_median_cp))
         log.info('best fit component count is {}'.format(best_fit_component_count))
         _, best_fit = best_fit_for_component_count_list[best_fit_component_count]
 

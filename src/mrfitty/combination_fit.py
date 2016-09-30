@@ -33,6 +33,7 @@ import bokeh.plotting
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 import numpy as np
 import pandas as pd
 from scipy.linalg import lstsq
@@ -282,11 +283,14 @@ class AllCombinationFitTask:
             for spectrum, fit_results in self.fit_table.items():
                 log.info('plotting fit for {}'.format(spectrum.file_name))
                 f, ax = plt.subplots()
+                f.suptitle(spectrum.file_name)
                 log.info(fit_results.best_fit.fit_spectrum_b.shape)
                 ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.fit_spectrum_b)
                 log.info(fit_results.best_fit.residuals.shape)
                 ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.unknown_spectrum_b, '.')
                 ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.residuals)
+
+                at = AnchoredText(fit_results.best_fit.reference_contribution_percent_sr)
                 #log.info('fit_results.best_fit.interpolant_incident_energy:\n{}'.format(
                 #    fit_results.best_fit.interpolant_incident_energy)
                 #)
