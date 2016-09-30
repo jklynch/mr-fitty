@@ -360,20 +360,19 @@ class AllCombinationFitTask:
             fit_df.to_csv(fit_file_path, sep='\t', float_format='%8.4f', index=False)
 
     @classmethod
-    def build_reference_spectrum_list_from_prm_file(cls, config):
+    def build_reference_spectrum_list_from_prm_file(cls, prm_file_path):
         """
         Read a PRM file to create a list of ReferenceSpectrum
         instances, maximum component count, and minimum component
         count from a PRM file.
 
-        :param config: configparser instance
+        :param prm_file_path:
         :return:
             list of ReferenceSpectrum instances
             maximum component count
             minimum component count
         """
         reference_spectrum_list = []
-        prm_file_path = os.path.expanduser(config.get('references', 'prm'))
         log.info('reading PRM file {}'.format(prm_file_path))
         prm = PRM.read_prm(prm_file_path)
         # read reference files
