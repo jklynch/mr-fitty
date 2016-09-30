@@ -53,16 +53,15 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
         log.setLevel(logging.DEBUG)
 
         log.debug('choosing best component count from {}'.format(best_fit_for_component_count_list))
-        component_count_to_cp_list = [None] * (len(best_fit_for_component_count_list) + 1)
-        component_count_to_median_cp = [None] * (len(best_fit_for_component_count_list) + 1)
+        component_count_to_cp_list = [np.Inf] * len(best_fit_for_component_count_list)
+        component_count_to_median_cp = [np.Inf] * len(best_fit_for_component_count_list)
         # todo: this component_count is off by 1
-        for component_count, component_count_fit_list in enumerate(best_fit_for_component_count_list):
-            best_fit_for_component_count = component_count_fit_list
+        for component_count_i, best_fit_for_component_count in enumerate(best_fit_for_component_count_list):
             log.debug(best_fit_for_component_count.reference_spectra_A_df)
             log.debug(best_fit_for_component_count.unknown_spectrum_b)
             # calculate Cp and 95% confidence interval of the median
             normalized_cp_list = []
-            component_count_to_cp_list[component_count] = normalized_cp_list
+            component_count_to_cp_list[component_count_i] = normalized_cp_list
             cv = sklearn.cross_validation.ShuffleSplit(
                 best_fit_for_component_count.reference_spectra_A_df.values.shape[0],
                 test_size=0.2,
@@ -81,11 +80,12 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
                 normalized_cp_list.append(normalized_cp)
 
             # todo: calculate confidence interval
-            component_count_to_median_cp[component_count] = np.median(normalized_cp_list)
+            component_count_to_median_cp[component_count_i] = np.median(normalized_cp_list)
         log.debug('component count to median cp: {}'.format(component_count_to_median_cp))
-        best_fit_component_count = np.argmin(np.asarray(component_count_to_median_cp))
+        best_fit_component_count_i = np.argmin(np.asarray(component_count_to_median_cp))
+        best_fit_component_count = 1 + best_fit_component_count_i
         log.info('best fit component count is {}'.format(best_fit_component_count))
-        _, best_fit = best_fit_for_component_count_list[best_fit_component_count]
+        best_fit = best_fit_for_component_count_list[best_fit_component_count_i]
 
         log.info('best fit: {}'.format(best_fit))
         return best_fit
