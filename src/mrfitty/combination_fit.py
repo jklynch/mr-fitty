@@ -282,6 +282,16 @@ class AllCombinationFitTask:
             log.info('writing plots file {}'.format(plots_pdf_file_path))
             for spectrum, fit_results in self.fit_table.items():
                 log.info('plotting fit for {}'.format(spectrum.file_name))
+
+                longest_name_len = max([len(name) for name in fit_results.best_fit.reference_contribution_percent_sr.index])
+                format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f}'
+                contribution_desc_lines = []
+                fit_results.best_fit.reference_contribution_percent_sr.sort_values(ascending=False, inplace=True)
+                for name, value in fit_results.best_fit.reference_contribution_percent_sr.iteritems():
+                    contribution_desc_lines.append(format_str.format(name, value))
+                contribution_desc_lines.append(format_str.format('residual', fit_results.best_fit.residuals_contribution))
+                contribution_desc = '\n'.join(contribution_desc_lines)
+
                 f, ax = plt.subplots()
                 f.suptitle(spectrum.file_name)
                 log.info(fit_results.best_fit.fit_spectrum_b.shape)
@@ -290,7 +300,9 @@ class AllCombinationFitTask:
                 ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.unknown_spectrum_b, '.')
                 ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.residuals)
 
-                at = AnchoredText(fit_results.best_fit.reference_contribution_percent_sr)
+                at = AnchoredText(contribution_desc, loc=1, prop=dict(fontname='Monospace', size=10))
+                ax.add_artist(at)
+
                 #log.info('fit_results.best_fit.interpolant_incident_energy:\n{}'.format(
                 #    fit_results.best_fit.interpolant_incident_energy)
                 #)
