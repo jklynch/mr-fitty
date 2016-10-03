@@ -57,15 +57,15 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
         component_count_to_median_cp = [np.Inf] * len(best_fit_for_component_count_list)
         # todo: this component_count is off by 1
         for component_count_i, best_fit_for_component_count in enumerate(best_fit_for_component_count_list):
-            log.debug(best_fit_for_component_count.reference_spectra_A_df)
-            log.debug(best_fit_for_component_count.unknown_spectrum_b)
+            #log.debug(best_fit_for_component_count.reference_spectra_A_df)
+            #log.debug(best_fit_for_component_count.unknown_spectrum_b)
             # calculate Cp and 95% confidence interval of the median
             normalized_cp_list = []
             component_count_to_cp_list[component_count_i] = normalized_cp_list
             cv = sklearn.cross_validation.ShuffleSplit(
                 best_fit_for_component_count.reference_spectra_A_df.values.shape[0],
                 test_size=0.2,
-                n_iter=100
+                n_iter=1000
             )
             for train_index, test_index in cv:
                 lm = sklearn.linear_model.LinearRegression()
