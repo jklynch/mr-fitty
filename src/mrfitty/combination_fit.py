@@ -155,8 +155,9 @@ class AllCombinationFitTask:
         logging.info('fitting unknown spectrum {}'.format(unknown_spectrum.file_name))
         log = logging.getLogger(name=unknown_spectrum.file_name)
         # fit all combinations of reference_spectra
-        spectrum_fit_list = []
+        all_counts_spectrum_fit_list = []
         for component_count in self.component_count_range:
+            spectrum_fit_list = []
             for reference_spectra_combination in itertools.combinations(self.reference_spectrum_list, component_count):
                 log.debug('fitting to reference_spectra {}'.format(reference_spectra_combination))
                 fit_energies, fit_energies_ndx = self.energy_range_builder.build_range(
@@ -212,7 +213,14 @@ class AllCombinationFitTask:
                     reference_spectra_coef_x=reference_spectra_coef_x
                 )
                 spectrum_fit_list.append(spectrum_fit)
-        best_fit, sorted_component_count_fits = self.sort_fits(unknown_spectrum, spectrum_fit_list)
+                spectrum_fit_list.sort(key=attrgetter('nss'))
+                # when there are many reference spectra the list of fits can get extremely long
+                # and eat up all the memory
+                if len(spectrum_fit_list) > 100:
+                    spectrum_fit_list.pop()
+
+            all_counts_spectrum_fit_list.extend(spectrum_fit_list)
+        best_fit, sorted_component_count_fits = self.sort_fits(unknown_spectrum, all_counts_spectrum_fit_list)
         return best_fit, sorted_component_count_fits
 
     def sort_fits(self, spectrum, spectrum_fit_list):
@@ -284,12 +292,14 @@ class AllCombinationFitTask:
                 log.info('plotting fit for {}'.format(spectrum.file_name))
 
                 longest_name_len = max([len(name) for name in fit_results.best_fit.reference_contribution_percent_sr.index])
-                format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f}'
+                # the format string should look like '{:N}{:5.2f}' where N is the length of the longest reference name
+                contribution_format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f}'
                 contribution_desc_lines = []
                 fit_results.best_fit.reference_contribution_percent_sr.sort_values(ascending=False, inplace=True)
                 for name, value in fit_results.best_fit.reference_contribution_percent_sr.iteritems():
-                    contribution_desc_lines.append(format_str.format(name, value))
-                contribution_desc_lines.append(format_str.format('residual', fit_results.best_fit.residuals_contribution))
+                    contribution_desc_lines.append(contribution_format_str.format(name, value))
+                contribution_desc_lines.append(
+                    contribution_format_str.format('residual', fit_results.best_fit.residuals_contribution))
                 contribution_desc = '\n'.join(contribution_desc_lines)
 
                 f, ax = plt.subplots()
