@@ -277,7 +277,7 @@ class AllCombinationFitTask:
         return best_fit
 
     def write_table(self, table_file_path):
-        with open(table_file_path, 'w') as table_file:
+        with open(table_file_path, 'wt') as table_file:
             table_file.write('spectrum\tNSS\n')
             for spectrum, fit_results in self.fit_table.items():
                 table_file.write(spectrum.file_name)
