@@ -20,7 +20,7 @@ before_install:
   - conda install --yes -n mrf pip
   - source activate mrf
 install:
-  - conda install --yes python=3 numpy scipy matplotlib dateutil pandas pytest sklearn
+  - conda install --yes python=3 numpy scipy matplotlib dateutil pandas pytest scikit-learn
   - pwd
   - pip install pytest-capturelog
   - pip install -e `pwd`

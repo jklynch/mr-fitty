@@ -60,7 +60,7 @@ setup(
         'numpy',
         'pandas',
         'scipy',
-        'sklearn'
+        'scikit-learn'
     ],
     extras_require={
         # eg:
