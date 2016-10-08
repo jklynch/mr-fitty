@@ -8,7 +8,7 @@ Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani. It runs on an
 including Linux, OS X, and Windows.
 
 MrFitty functions similarly to the spectra-fitting tools in the LabView software suite written by
-Dr. Matthew Marcus at the Berkeley Synchrotron available `here <https://sites.google.com/a/lbl.gov/als-beamline1032/software-download>`_. MrFitty includes a method for choosing a reasonable number of reference spectra based on prediction error.
+Dr. Matthew Marcus at the Berkeley Synchrotron available `here <https://sites.google.com/a/lbl.gov/als-beamline1032/software-download>`_.
 
 * Free software: MIT license
 
