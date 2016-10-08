@@ -2,8 +2,6 @@
 MrFitty
 =======
 
-Generated with https://github.com/ionelmc/cookiecutter-pylibrary.
-
 MrFitty is an open-source Python package for fitting XANES data to a set of reference spectra using linear least
 squares and best subset selection as described in *An Introduction to Statistical Learning with Applications in R* by
 Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani. It runs on any system with a Python 3.4+ interpreter
@@ -13,6 +11,8 @@ MrFitty functions similarly to the spectra-fitting tools in the LabView software
 Dr. Matthew Marcus at the Berkeley Synchrotron available `here <https://sites.google.com/a/lbl.gov/als-beamline1032/software-download>`_. MrFitty includes a method for choosing a reasonable number of reference spectra based on prediction error.
 
 * Free software: MIT license
+
+Project skeleton generated with https://github.com/ionelmc/cookiecutter-pylibrary.
 
 Requirements
 ============
