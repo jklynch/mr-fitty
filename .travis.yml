@@ -1,7 +1,7 @@
 language: python
-python: 2.7
+python: 3.5
 sudo: required
-dist: trusty
+dist: xenial
 env:
   global:
     LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
@@ -11,16 +11,16 @@ before_install:
   - pip --version
   - uname -a
   - lsb_release -a
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b
-  - export PATH=/home/travis/miniconda2/bin:$PATH
+  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda3.sh
+  - chmod +x miniconda3.sh
+  - ./miniconda3.sh -b
+  - export PATH=/home/travis/miniconda3/bin:$PATH
   - conda update --yes conda
-  - conda create --yes -n condaenv python=3
-  - conda install --yes -n condaenv pip
-  - source activate condaenv
+  - conda create --yes -n mrf python=3
+  - conda install --yes -n mrf pip
+  - source activate mrf
 install:
-  - conda install --yes python=3 atlas numpy scipy matplotlib dateutil pandas pytest
+  - conda install --yes python=3 numpy scipy matplotlib dateutil pandas pytest sklearn
   - pwd
   - pip install pytest-capturelog
   - pip install -e `pwd`
