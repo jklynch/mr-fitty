@@ -59,7 +59,8 @@ setup(
         'matplotlib',
         'numpy',
         'pandas',
-        'scipy'
+        'scipy',
+        'sklearn'
     ],
     extras_require={
         # eg:
