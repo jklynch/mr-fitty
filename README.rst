@@ -2,46 +2,15 @@
 MrFitty
 =======
 
-.. list-table::
-    :stub-columns: 1
-
-    * - docs
-      - |docs|
-    * - tests
-      - | |travis|
-        | |codecov|
-    * - package
-      - |version| |downloads|
-
-.. |docs| image:: https://readthedocs.org/projects/mr-fitty/badge/?style=flat
-    :target: https://readthedocs.org/projects/mr-fitty
-    :alt: Documentation Status
-
-.. |travis| image:: https://img.shields.io/travis/jklynch/mr-fitty/master.svg?style=flat&label=Travis
-    :alt: Travis-CI Build Status
-    :target: https://travis-ci.org/jklynch/mr-fitty
-
-.. |codecov| image:: https://img.shields.io/codecov/c/github/jklynch/mr-fitty/master.svg?style=flat&label=Codecov
-    :alt: Coverage Status
-    :target: https://codecov.io/github/jklynch/mr-fitty
-
-.. |version| image:: https://img.shields.io/pypi/v/mrfitty.svg?style=flat
-    :alt: PyPI Package latest release
-    :target: https://pypi.python.org/pypi/mrfitty
-
-.. |downloads| image:: https://img.shields.io/pypi/dm/mrfitty.svg?style=flat
-    :alt: PyPI Package monthly downloads
-    :target: https://pypi.python.org/pypi/mrfitty
-
 Generated with https://github.com/ionelmc/cookiecutter-pylibrary.
 
 MrFitty is an open-source Python package for fitting XANES data to a set of reference spectra using linear least
-squares and best subset selection as described in (). It runs on any operating system with a Python 3.4+ interpreter
+squares and best subset selection as described in *An Introduction to Statistical Learning with Applications in R* by
+Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani. It runs on any system with a Python 3.4+ interpreter
 including Linux, OS X, and Windows.
 
 MrFitty functions similarly to the spectra-fitting tools in the LabView software suite written by
-Dr. Matthew Marcus at the Berkeley Synchrotron available here. MrFitty includes a method for choosing the best number
-of reference spectra based on prediction error as described here.
+Dr. Matthew Marcus at the Berkeley Synchrotron available `here <https://sites.google.com/a/lbl.gov/als-beamline1032/software-download>`_. MrFitty includes a method for choosing a reasonable number of reference spectra based on prediction error.
 
 * Free software: MIT license
 
@@ -63,7 +32,8 @@ Installation
 Users should consider installing MrFitty in a `Python virtual environment <https://docs.python.org/3.4/library/venv.html>`_.
 This is not necessary but it simplifies package management on systems with many Python requirements. On systems without
 Python 3.4+ the `Anaconda <https://anaconda.org>`_ Python distribution is a good choice. It can be installed without
-administrative priviledges and supports virtual environments.
+administrative priviledges and supports virtual environments. In addition the Anaconda distribution includes pre-built
+packages which are less trouble to install in some cases, especially on Windows systems.
 
 Once Python 3.4+ is available MrFitty can be installed with pip directly from GitHub: ::
 
@@ -97,16 +67,3 @@ Here is an example configuration file: ::
     [output]
     plots_pdf_fp = test_arsenic_fit_plots.pdf
     table_fp = test_arsenic_fit_table.txt
-
-
-
-Documentation
-=============
-
-
-Development
-===========
-
-To run all tests::
-
-    tox
