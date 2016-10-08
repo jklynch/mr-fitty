@@ -16,11 +16,11 @@ before_install:
   - ./miniconda3.sh -b
   - export PATH=/home/travis/miniconda3/bin:$PATH
   - conda update --yes conda
-  - conda create --yes -n mrf python=3
+  - conda create --yes -n mrf anaconda
   - conda install --yes -n mrf pip
   - source activate mrf
 install:
-  - conda install --yes python=3 numpy scipy matplotlib dateutil pandas pytest scikit-learn
+  - conda install --yes pytest
   - pwd
   - pip install pytest-capturelog
   - pip install -e `pwd`
