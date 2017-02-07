@@ -327,13 +327,26 @@ class AllCombinationFitTask:
         return best_fit
 
     def write_table(self, table_file_path):
+        """
+        sample name, residual, reference 1, fraction 1, reference 2, fraction 2, ...
+        :param table_file_path:
+        :return:
+        """
         with open(table_file_path, 'wt') as table_file:
             table_file.write('spectrum\tNSS\n')
             for spectrum, fit_results in self.fit_table.items():
                 table_file.write(spectrum.file_name)
                 table_file.write('\t')
                 table_file.write('{:5.3f}'.format(fit_results.best_fit.nss))
+
+                for row in fit_results.best_fit.reference_contribution_percent_sr.sort_values(ascending=False).iteritems():
+                    table_file.write('\t')
+                    table_file.write(row[0])
+                    table_file.write('\t{:5.3f}'.format(row[1]))
                 table_file.write('\n')
+                #for row in fit_results.best_fit.reference_contribution_percent_sr:
+                #    table_file.write(row)
+                #    table_file.write('\n')
 
     def draw_plots_matplotlib(self, plots_pdf_file_path):
         with PdfPages(plots_pdf_file_path) as plot_file:
