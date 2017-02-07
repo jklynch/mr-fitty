@@ -36,10 +36,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 import numpy as np
 import pandas as pd
-from scipy.linalg import lstsq
-from scipy.optimize import nnls
 
-from mrfitty.base import PRM, ReferenceSpectrum, Spectrum, SpectrumFit
+from mrfitty.base import PRM, ReferenceSpectrum, Spectrum, InterpolatedReferenceSpectraSet, SpectrumFit
+from mrfitty.linear_model import NonNegativeLinearRegression
 
 
 log = logging.getLogger(name=__name__)
@@ -74,6 +73,7 @@ class AdaptiveEnergyRangeBuilder:
     def __init__(self):
         pass
 
+    #@profile
     def build_range(self, unknown_spectrum, reference_spectrum_seq):
         """
 
@@ -84,7 +84,7 @@ class AdaptiveEnergyRangeBuilder:
         ref_min_last_energy = np.inf
         ref_max_first_energy = -1.0 * np.inf
         for reference_spectrum in reference_spectrum_seq:
-            log.debug('s: {}'.format(reference_spectrum))
+            log.debug('s: %s', reference_spectrum)
             if reference_spectrum.data_df.energy.iloc[-1] < ref_min_last_energy:
                 ref_min_last_energy = reference_spectrum.data_df.energy.iloc[-1]
             else:
@@ -98,9 +98,9 @@ class AdaptiveEnergyRangeBuilder:
             ref_max_first_energy < unknown_spectrum.data_df.energy.values,
             unknown_spectrum.data_df.energy.values < ref_min_last_energy
         )
-        log.debug('fit_energy_indices: {}'.format(fit_energy_indices))
+        log.debug('fit_energy_indices: %s', fit_energy_indices)
         fit_energies = unknown_spectrum.data_df.energy.iloc[fit_energy_indices]
-        log.debug('fit_energies: {}'.format(fit_energies.values))
+        log.debug('fit_energies: %s', fit_energies.values)
         return fit_energies, fit_energy_indices
 
 
@@ -115,9 +115,9 @@ class FixedEnergyRangeBuilder:
             self.energy_start < unknown_spectrum.data_df.energy.values,
             unknown_spectrum.data_df.energy.values < self.energy_stop
         )
-        log.debug('fit_energy_indices: {}'.format(fit_energy_indices.values))
+        log.debug('fit_energy_indices: %s', fit_energy_indices.values)
         fit_energies = unknown_spectrum.data_df.energy.iloc[fit_energy_indices]
-        log.debug('fit_energies: {}'.format(fit_energies.values))
+        log.debug('fit_energies: %s', fit_energies.values)
         return fit_energies, fit_energy_indices
 
 
@@ -133,6 +133,7 @@ class CombinationFitResults:
 
 class AllCombinationFitTask:
     def __init__(self, reference_spectrum_list, unknown_spectrum_list, energy_range_builder, component_count_range=range(4)):
+        self.log = logging.getLogger(self.__class__.__name__)
         self.reference_spectrum_list = reference_spectrum_list
         self.unknown_spectrum_list = unknown_spectrum_list
         self.energy_range_builder = energy_range_builder
@@ -142,7 +143,7 @@ class AllCombinationFitTask:
     def fit_all(self):
         log = logging.getLogger(name='fit_all')
         for unknown_spectrum in self.unknown_spectrum_list:
-            log.debug('fitting {}'.format(unknown_spectrum.file_name))
+            log.debug('fitting %s', unknown_spectrum.file_name)
             best_fit, sorted_component_count_fit_lists = self.fit(unknown_spectrum)
             self.fit_table[unknown_spectrum] = CombinationFitResults(
                 spectrum=unknown_spectrum,
@@ -152,76 +153,125 @@ class AllCombinationFitTask:
         return self.fit_table
 
     def fit(self, unknown_spectrum):
-        logging.info('fitting unknown spectrum {}'.format(unknown_spectrum.file_name))
         log = logging.getLogger(name=unknown_spectrum.file_name)
+        log.info('fitting unknown spectrum %s', unknown_spectrum.file_name)
+        interpolated_reference_spectra = InterpolatedReferenceSpectraSet(
+            unknown_spectrum=unknown_spectrum,
+            reference_set=self.reference_spectrum_list)
         # fit all combinations of reference_spectra
+        all_counts_spectrum_fit_table = collections.defaultdict(list)
+        for reference_spectra_combination in self.reference_combination_iter(self.component_count_range):
+            log.debug('fitting to reference_spectra {}'.format(reference_spectra_combination))
+
+            #spectrum_fit = self.fit_unknown_spectrum_to_references(
+            #    unknown_spectrum=unknown_spectrum,
+            #    reference_spectra_combination=reference_spectra_combination
+            #)
+            spectrum_fit = self.fit_references_to_unknown(
+                interpolated_reference_spectra=interpolated_reference_spectra,
+                reference_spectra_subset=reference_spectra_combination)
+            reference_count = len(reference_spectra_combination)
+            spectrum_fit_list = all_counts_spectrum_fit_table[reference_count]
+            spectrum_fit_list.append(spectrum_fit)
+            spectrum_fit_list.sort(key=attrgetter('nss'))
+            # when there are many reference spectra the list of fits can get extremely long
+            # and eat up all the memory
+            if len(spectrum_fit_list) > 100:
+                spectrum_fit_list.pop()
+
         all_counts_spectrum_fit_list = []
-        for component_count in self.component_count_range:
-            spectrum_fit_list = []
-            for reference_spectra_combination in itertools.combinations(self.reference_spectrum_list, component_count):
-                log.debug('fitting to reference_spectra {}'.format(reference_spectra_combination))
-                fit_energies, fit_energies_ndx = self.energy_range_builder.build_range(
-                    unknown_spectrum,
-                    reference_spectra_combination
-                )
-                # interpolate the reference spectra at the fit_energies
-                log.debug('fit energies.shape: {}'.format(fit_energies.shape))
-                # reference_spectra_A_df is energies x components
-                reference_spectra_A_series = {}
-                unknown_spectrum_b = unknown_spectrum.data_df.norm[fit_energies_ndx]
-                log.debug('unknown_spectrum_b.shape: {}'.format(unknown_spectrum_b.shape))
-                #log.debug('unknown_spectrum_b      : {}'.format(unknown_spectrum_b.values))
-                #log.debug('reference combination  : {}'.format(reference_spectra_combination))
-                reference_spectra_A_column_list = []
-                for i, rs in enumerate(reference_spectra_combination):
-                    reference_spectra_A_column_list.append(rs.file_name)
-                    reference_spectra_A_series[rs.file_name] = pd.Series(rs.interpolant(fit_energies))
-                # use the (time) index from the unknown spectrum
-                # this is important because pandas Series and Dataframes will align on their
-                #  indexes for most operations so for example calculating residuals can result
-                #  in the wrong shape
-                reference_spectra_A_df = pd.DataFrame(reference_spectra_A_series)
-                reference_spectra_A_df.index = unknown_spectrum_b.index
-
-                # it is important to put the columns in the expected order
-                reference_spectra_A_df = reference_spectra_A_df.reindex(columns=reference_spectra_A_column_list)
-
-                ##reference_spectra_coef_x, residual, *extra = nnls(
-                ##    reference_spectra_A_df.values,
-                ##    unknown_spectrum_b
-                ##)
-                reference_spectra_coef_x, residual, rank, sigma = lstsq(
-                    reference_spectra_A_df.values,
-                    unknown_spectrum_b
-                )
-                #log.debug('A        :\n{}'.format(reference_spectra_A_df))
-                #log.debug('coef     : {}'.format(reference_spectra_coef_x))
-                #log.debug('residual : {}'.format(residual))
-                #log.debug('solution :\n{}'.format(reference_spectra_A_df.dot(reference_spectra_coef_x)))
-                if np.any(reference_spectra_coef_x < 0.0):
-                    # this happens a lot with lstsq and is generally not a problem
-                    #print('{}: least-squares fit has negative coefficients'.format(
-                    #    unknown_spectrum_file_name
-                    #))
-                    continue
-                ##else:
-                spectrum_fit = SpectrumFit(
-                    interpolant_incident_energy=fit_energies,
-                    reference_spectra_A_df=reference_spectra_A_df,
-                    unknown_spectrum_b=unknown_spectrum_b,
-                    reference_spectra_seq=reference_spectra_combination,
-                    reference_spectra_coef_x=reference_spectra_coef_x
-                )
-                spectrum_fit_list.append(spectrum_fit)
-                spectrum_fit_list.sort(key=attrgetter('nss'))
-                # when there are many reference spectra the list of fits can get extremely long
-                # and eat up all the memory
-                if len(spectrum_fit_list) > 100:
-                    spectrum_fit_list.pop()
-
+        for reference_count, spectrum_fit_list in all_counts_spectrum_fit_table.items():
             all_counts_spectrum_fit_list.extend(spectrum_fit_list)
         best_fit, sorted_component_count_fits = self.sort_fits(unknown_spectrum, all_counts_spectrum_fit_list)
         return best_fit, sorted_component_count_fits
+
+    def reference_combination_iter(self, component_count_range):
+        for component_count in component_count_range:
+            for referenece_spectra_combination in itertools.combinations(self.reference_spectrum_list, component_count):
+                yield referenece_spectra_combination
+
+    #@profile
+    def fit_references_to_unknown(self, interpolated_reference_spectra, reference_spectra_subset):
+        interpolated_reference_spectra_subset_df, unknown_spectrum_df = \
+            interpolated_reference_spectra.get_reference_subset_and_unknown_df(
+                reference_list=reference_spectra_subset)
+
+        #self.log.debug('unknown_spectrum_df:\n%s', unknown_spectrum_df.head())
+        #self.log.debug('interpolated_reference_spectra_subset_df:\n%s', interpolated_reference_spectra_subset_df.head())
+
+        ls = NonNegativeLinearRegression()
+        ls.fit(interpolated_reference_spectra_subset_df.values, unknown_spectrum_df.norm.values)
+        reference_spectra_coef_x = ls.reference_spectra_coef_x
+
+        spectrum_fit = SpectrumFit(
+            interpolant_incident_energy=interpolated_reference_spectra_subset_df.index,
+            reference_spectra_A_df=interpolated_reference_spectra_subset_df,
+            unknown_spectrum_b=unknown_spectrum_df,
+            reference_spectra_seq=reference_spectra_subset,
+            reference_spectra_coef_x=reference_spectra_coef_x
+        )
+        return spectrum_fit
+
+    #@profile
+    def fit_unknown_spectrum_to_references(self, unknown_spectrum, reference_spectra_combination):
+        fit_energies, fit_energies_ndx = self.energy_range_builder.build_range(
+            unknown_spectrum,
+            reference_spectra_combination
+        )
+        # interpolate the reference spectra at the fit_energies
+        log.debug('fit energies.shape: %s', fit_energies.shape)
+        # reference_spectra_A_df is energies x components
+        unknown_spectrum_b = unknown_spectrum.data_df.loc[fit_energies_ndx, 'norm']
+        # log.debug('unknown_spectrum_b.shape: {}'.format(unknown_spectrum_b.shape))
+        log.debug('unknown_spectrum_b      : %s', unknown_spectrum_b)
+        # log.debug('reference combination  : {}'.format(reference_spectra_combination))
+        reference_spectra_A_column_list = []
+        # create an array to hold the interpolated reference spectra
+        data = np.zeros((fit_energies.shape[0], len(reference_spectra_combination)))
+        for i, rs in enumerate(reference_spectra_combination):
+            reference_spectra_A_column_list.append(rs.file_name)
+            data[:, i] = rs.interpolant(fit_energies)
+        # use the (time) index from the unknown spectrum for the interpolated reference spectra
+        # this is important because pandas Series and Dataframes will align on their
+        #  indexes for most operations so for example calculating residuals can result
+        #  in the wrong shape
+        reference_spectra_A_df = pd.DataFrame(
+            data=data, index=unknown_spectrum_b.index, columns=reference_spectra_A_column_list)
+        log.debug('reference_spectra_A_df columns: %s', reference_spectra_A_df.columns)
+
+        # it is important to label the columns in the order they were appended
+
+        ls = NonNegativeLinearRegression()
+        ls.fit(reference_spectra_A_df.values, unknown_spectrum_b)
+        reference_spectra_coef_x = ls.reference_spectra_coef_x
+
+        #reference_spectra_coef_x, residual, *extra = nnls(
+        #    reference_spectra_A_df.values,
+        #    unknown_spectrum_b
+        #)
+        #reference_spectra_coef_x, residual, rank, sigma = lstsq(
+        #    reference_spectra_A_df.values,
+        #    unknown_spectrum_b
+        #)
+        # log.debug('A        :\n{}'.format(reference_spectra_A_df))
+        # log.debug('coef     : {}'.format(reference_spectra_coef_x))
+        # log.debug('residual : {}'.format(residual))
+        # log.debug('solution :\n{}'.format(reference_spectra_A_df.dot(reference_spectra_coef_x)))
+        #if np.any(reference_spectra_coef_x < 0.0):
+        #    # this happens a lot with lstsq and is generally not a problem
+        #    # print('{}: least-squares fit has negative coefficients'.format(
+        #    #    unknown_spectrum_file_name
+        #    # ))
+        #    continue
+        ##else:
+        spectrum_fit = SpectrumFit(
+            interpolant_incident_energy=fit_energies,
+            reference_spectra_A_df=reference_spectra_A_df,
+            unknown_spectrum_b=unknown_spectrum_b,
+            reference_spectra_seq=reference_spectra_combination,
+            reference_spectra_coef_x=reference_spectra_coef_x
+        )
+        return spectrum_fit
 
     def sort_fits(self, spectrum, spectrum_fit_list):
         # sort all fits with the same component count
@@ -233,10 +283,10 @@ class AllCombinationFitTask:
         # append an extra empty list for 0-component fits even though there are none
         # this allows component count to work as the list index
         component_count_fit_lists.append([])
-        log.debug('creating one fit list for each component count in self.component_count_range: {}'.format(
-            self.component_count_range
-        ))
-        log.debug('component_count_fit_lists: {}'.format(component_count_fit_lists))
+        log.debug(
+            'creating one fit list for each component count in self.component_count_range: %s',
+            self.component_count_range)
+        log.debug('component_count_fit_lists: %s', component_count_fit_lists)
 
         # populate the component count lists from a sorted list of all fits
         for spectrum_fit in sorted(spectrum_fit_list, key=attrgetter('nss')):
@@ -245,9 +295,9 @@ class AllCombinationFitTask:
 
         for component_count, component_count_fit_list in enumerate(component_count_fit_lists):
             if len(component_count_fit_list) > 0:
-                log.debug('best fit for {} component(s): {}'.format(component_count, component_count_fit_list[0]))
+                log.debug('best fit for {} component(s): %s', component_count, component_count_fit_list[0])
             else:
-                log.debug('no fits for component count {}'.format(component_count))
+                log.debug('no fits for component count %s', component_count)
 
         best_fit_for_component_count_list = [c[0] for c in component_count_fit_lists[1:]]
         best_fit = self.choose_best_component_count(best_fit_for_component_count_list)

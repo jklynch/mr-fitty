@@ -89,7 +89,6 @@ class Spectrum:
         spectrum_data_df = pd.read_csv(
             file_path_or_buffer,
             engine='python',
-            #sep='\t',
             sep='[ \t]+',
             comment='#',
             header=None
@@ -98,11 +97,13 @@ class Spectrum:
         log.debug('  shape is {}'.format(spectrum_data_df.shape))
         if spectrum_data_df.shape[1] < 2:
             raise Exception('{} has fewer than 2 columns'.format(file_path_or_buffer))
+        # keep only the first two columns
+        spectrum_data_df = spectrum_data_df.iloc[:, :2]
         if np.isnan(spectrum_data_df.values).any():
             raise Exception('{} has one or more NaN values'.format(file_path_or_buffer))
-        spectrum_data_df = spectrum_data_df.iloc[:, :2]
         # try to assign names to the first two columns
         spectrum_data_df.columns = ['energy', 'norm']
+        spectrum_data_df.index = spectrum_data_df.energy
         log.debug('  first incident energy is {}'.format(spectrum_data_df.energy.iloc[0]))
         log.debug('  last incident energy is  {}'.format(spectrum_data_df.energy.iloc[-1]))
         return cls(file_path_or_buffer, spectrum_data_df, **kwargs)
@@ -167,6 +168,51 @@ class ReferenceSpectrum(Spectrum):
         return 'ReferenceSpectrum({}, {}, {})'.format(self.file_path, self.data_df.shape, self.mineral_category)
 
 
+class InterpolatedReferenceSpectraSet:
+    def __init__(self, unknown_spectrum, reference_set):
+        self.unknown_spectrum = unknown_spectrum
+        self.interpolated_reference_set_df = InterpolatedReferenceSpectraSet.get_interpolated_reference_set_df(
+            unknown_spectrum=unknown_spectrum,
+            reference_set=reference_set)
+
+    #@profile
+    def get_reference_subset_and_unknown_df(self, reference_list):
+        reference_name_list = sorted([r.file_name for r in reference_list])
+        keep_rows = self.interpolated_reference_set_df.loc[:, reference_name_list].notnull().all(axis=1)
+        reference_subset_df = self.interpolated_reference_set_df.loc[keep_rows.values, reference_name_list]
+        unknown_subset_df = self.unknown_spectrum.data_df.loc[reference_subset_df.index]
+        return reference_subset_df, unknown_subset_df
+
+    @staticmethod
+    def get_interpolated_reference_set_df(unknown_spectrum, reference_set):
+        # the interpolated reference spectra will be unknown_spectrum.data_df.shape[0] x len(reference_set)
+        interpolated_reference_spectra = np.zeros((unknown_spectrum.data_df.shape[0], len(reference_set)))
+        column_names = []
+        for i, reference_spectrum in enumerate(sorted(list(reference_set), key=lambda r: r.file_name)):
+            column_names.append(reference_spectrum.file_name)
+            interpolated_reference_spectra[:, i] = reference_spectrum.interpolant(
+                unknown_spectrum.data_df.energy)
+            ndx = InterpolatedReferenceSpectraSet.get_extrapolated_value_index(
+                unknown_energy=unknown_spectrum.data_df.energy.values,
+                reference_energy=reference_spectrum.data_df.energy.values)
+            # print(ndx)
+            interpolated_reference_spectra[ndx, i] = np.nan
+
+        interpolated_reference_spectra_df = pd.DataFrame(
+            data=interpolated_reference_spectra,
+            index=unknown_spectrum.data_df.energy,
+            columns=column_names)
+
+        return interpolated_reference_spectra_df
+
+    @staticmethod
+    def get_extrapolated_value_index(unknown_energy, reference_energy):
+        extrapolated_value_boolean_index = np.logical_or(
+            unknown_energy < reference_energy[0],
+            unknown_energy > reference_energy[-1] )
+        return np.where(extrapolated_value_boolean_index)
+
+
 class SpectrumFit:
     """SpectrumFit
 
@@ -197,6 +243,7 @@ class SpectrumFit:
     reference_spectra_coef_x :
 
     """
+    #@profile
     def __init__(
         self,
         interpolant_incident_energy,
@@ -208,23 +255,32 @@ class SpectrumFit:
         self.interpolant_incident_energy = interpolant_incident_energy
         self.reference_spectra_seq = reference_spectra_seq
         self.reference_spectra_A_df = reference_spectra_A_df
-        self.unknown_spectrum_b = unknown_spectrum_b
+        # TODO: fix this
+        self.unknown_spectrum_b = unknown_spectrum_b.norm
         self.reference_spectra_coef_x = reference_spectra_coef_x
         self.fit_spectrum_b = reference_spectra_A_df.dot(reference_spectra_coef_x)
         self.residuals = self.fit_spectrum_b - self.unknown_spectrum_b
-        log.debug('self.unknown_spectrum_b :\n{}'.format(self.unknown_spectrum_b))
-        log.debug('self.fit_spectrum_b     :\n{}'.format(self.fit_spectrum_b))
-        log.debug('residuals               :\n{}'.format(self.residuals))
+        log.debug('self.unknown_spectrum_b :\n%s', self.unknown_spectrum_b)
+        log.debug('self.fit_spectrum_b     :\n%s', self.fit_spectrum_b)
+        log.debug('residuals               :\n%s', self.residuals)
+
         self.sum_of_abs_residuals = np.sum(np.abs(self.residuals))
-        self.sum_of_abs_unknown_spectrum_b = np.sum(np.abs(unknown_spectrum_b))
+        self.sum_of_abs_unknown_spectrum_b = np.sum(np.abs(self.unknown_spectrum_b))
         self.sum_of_squared_residuals = np.sum(np.power(self.residuals, 2.0))
-        self.sum_of_squared_unknown_spectrum_b = np.sum(np.power(unknown_spectrum_b, 2.0))
+        self.sum_of_squared_unknown_spectrum_b = np.sum(np.power(self.unknown_spectrum_b, 2.0))
+
         self.nsa = self.sum_of_abs_residuals / self.sum_of_abs_unknown_spectrum_b
         self.nss = self.sum_of_squared_residuals / self.sum_of_squared_unknown_spectrum_b
 
+        self.reference_contribution_percent_sr = None
+        self.total_reference_contribution = None
+        self.residuals_contribution = None
+
         # calculate the approximate area under each curve
-        self.residuals_auc = np.sum(np.abs(self.residuals))
-        self.unknown_spectrum_auc = np.sum(np.abs(self.unknown_spectrum_b))
+        self.residuals_auc = self.sum_of_abs_residuals
+        self.unknown_spectrum_auc = self.sum_of_abs_unknown_spectrum_b
+
+    def get_reference_contributions_sr(self):
 
         # calculate percent contribution for each reference
         #
@@ -235,17 +291,19 @@ class SpectrumFit:
             * self.reference_spectra_coef_x \
             * np.sum(np.abs(self.reference_spectra_A_df), axis=0)
 
-        log.debug('reference_contribution_percent:\n{}'.format(self.reference_contribution_percent_sr))
+        log.debug('reference_contribution_percent:\n%s', self.reference_contribution_percent_sr)
         self.total_reference_contribution = np.sum(self.reference_contribution_percent_sr)
-        log.debug('total_reference_contribution: {}'.format(self.total_reference_contribution))
+        log.debug('total_reference_contribution: %s', self.total_reference_contribution)
         self.residuals_contribution = (100.0 / self.unknown_spectrum_auc) * self.residuals_auc
-        log.debug('residuals_contribution: {}'.format(self.residuals_contribution))
+        log.debug('residuals_contribution: %s', self.residuals_contribution)
+        return self.reference_contribution_percent_sr
 
     def __str__(self):
         contribution_str = 'SpectrumFit: {:5.3f}: NSS'.format(self.nss)
+        reference_contribution_sr = self.get_reference_contributions_sr()
         for reference_spectrum in self.reference_spectra_seq:
             # TODO: something smarter than reference_spectrum.file_name
-            reference_contribution = self.reference_contribution_percent_sr[reference_spectrum.file_name]
+            reference_contribution = reference_contribution_sr[reference_spectrum.file_name]
             contribution_str += ' {:4.2f}: {},'.format(reference_contribution, reference_spectrum.file_name)
         contribution_str += ' {:4.2f}: residuals'.format(self.residuals_contribution)
         return contribution_str
