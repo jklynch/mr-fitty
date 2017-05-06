@@ -67,7 +67,6 @@ Here is an example configuration file: ::
 Input
 =====
 In addition to a configuration file the necessary input files are:
-
   + at least two (but probably more) normalized reference spectrum files
   + one or more normalized spectrum files to be fit by the reference files
 
@@ -111,7 +110,7 @@ Several output files will be produced:
   + a single PDF containing plots of each fitted spectrum
   + a single table in text format with the best fit information for each fitted spectrum
   + one file per fitted spectrum with four columns of data:
-    +  incident energy
-    +  fitted fluourescence value
-    +  residual of the fit
-    +  input fluourescence 
+     +  incident energy
+     +  fitted fluourescence value
+     +  residual of the fit
+     +  input fluourescence 
