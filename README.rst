@@ -27,14 +27,23 @@ MrFitty requires Python 3.4+. The following required packages will be automatica
 Installation
 ============
 Users should consider installing MrFitty in a `Python virtual environment <https://docs.python.org/3.4/library/venv.html>`_.
-This is not necessary but it simplifies package management on systems with many Python requirements. On systems without
-Python 3.4+ the `Anaconda <https://anaconda.org>`_ Python distribution is a good choice. It can be installed without
-administrative priviledges and supports virtual environments. In addition the Anaconda distribution includes pre-built
+This is not necessary but it simplifies package management by separating the system Python from the users' Python environments.
+On systems without Python 3.4+ the `Anaconda <https://anaconda.org>`_ Python distribution is a good choice. It can be installed without
+administrative privileges and supports virtual environments. In addition the Anaconda distribution includes pre-built
 packages which are less trouble to install in some cases, especially on Windows systems.
 
-Once Python 3.4+ is available MrFitty can be installed with pip directly from GitHub: ::
+If the Anaconda Python distribution is not installed a suitable virtual environment can be created with the following commands: ::
 
-    $ pip install git+https://github.com/jklynch/mr-fitty.git
+    $ python3 -m venv mrf --without-pip
+    $ source mrf/bin/activate
+    (mrf) $ wget bootstrap.pypa.io/get-pip.py -O - | python3
+    (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
+
+If the Anaconda distribution has been installed a suitable virtual environment can be created with these commands: ::
+
+    $ conda create python=3.6 --name mrf
+    $ source activate mrf
+    (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
 The required packages will be automatically installed by pip.
 
