@@ -2,14 +2,13 @@
 # -*- encoding: utf-8 -*-
 from __future__ import absolute_import, print_function
 
+import glob
 import io
-import os
 import re
 from glob import glob
 from os.path import basename
 from os.path import dirname
 from os.path import join
-from os.path import relpath
 from os.path import splitext
 
 from setuptools import find_packages
@@ -66,8 +65,8 @@ setup(
         'scikit-learn'
     ],
     data_files=[
-        ('sample_data', ['experiment_arsenic/reference_spectra/arsenate_aqueous_avg_als_cal.e', ]),
-        ('sample_data', ['experiment_arsenic/unknown_spectra/OTT3_55_spot0.e', ])
+        ('sample_data/reference', glob.glob('experiment_arsenic/reference_spectra/*.e')),
+        ('sample_data/unknown', glob.glob('experiment_arsenic/unknown_spectra/*.e'))
     ],
     extras_require={
         # eg:
