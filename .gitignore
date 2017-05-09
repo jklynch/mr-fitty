@@ -1,3 +1,9 @@
+*.log
+*.lprof
+*.html
+*.pdf
+*.txt
+
 *.py[cod]
 
 # C extensions
