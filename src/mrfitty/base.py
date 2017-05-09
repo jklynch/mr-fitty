@@ -168,6 +168,51 @@ class ReferenceSpectrum(Spectrum):
         return 'ReferenceSpectrum({}, {}, {})'.format(self.file_path, self.data_df.shape, self.mineral_category)
 
 
+class InterpolatedSpectrumSet:
+    def __init__(self, spectrum_set):
+        self.interpolated_set_df = InterpolatedSpectrumSet.get_interpolated_spectrum_set_df(
+            spectrum_set=spectrum_set)
+
+    @staticmethod
+    def get_interpolated_spectrum_set_df(energy_range, spectrum_set):
+        """ Return a pandas.DataFrame of spectrum values interpolated at the specified energies.
+
+
+        """
+        # the interpolated spectra will be len(energy_range) x len(reference_set)
+        interpolated_spectra = np.zeros((len(energy_range), len(spectrum_set)))
+        column_names = []
+        for i, spectrum in enumerate(sorted(list(spectrum_set), key=lambda s: s.file_name)):
+            column_names.append(spectrum.file_name)
+            interpolated_spectra[:, i] = spectrum.interpolant(energy_range)
+            # set values that would be extrapolated to NaN
+            ndx = InterpolatedSpectrumSet.get_extrapolated_value_index(
+                interpolated_energy=energy_range,
+                measured_energy=spectrum.data_df.energy.values)
+            # print(ndx)
+            interpolated_spectra[ndx, i] = np.nan
+
+        interpolated_spectra_df = pd.DataFrame(
+            data=interpolated_spectra,
+            index=energy_range,
+            columns=column_names)
+
+        return interpolated_spectra_df
+
+    @staticmethod
+    def get_extrapolated_value_index(interpolated_energy, measured_energy):
+        """Return a boolean array with True indicating interpolated energies outside the measured energy range.
+
+        :param interpolated_energy (np.array)
+        :param measured_energy (np.array)
+        :returns (numpy boolean array) 
+        """
+        extrapolated_value_boolean_index = np.logical_or(
+            interpolated_energy < measured_energy[0],
+            interpolated_energy > measured_energy[-1])
+        return np.where(extrapolated_value_boolean_index)
+
+
 class InterpolatedReferenceSpectraSet:
     def __init__(self, unknown_spectrum, reference_set):
         self.unknown_spectrum = unknown_spectrum

@@ -55,10 +55,12 @@ setup(
         # eg: 'keyword1', 'keyword2', 'keyword3',
     ],
     install_requires=[
+        'bokeh',
         'click',
         'matplotlib',
         'numpy',
         'pandas',
+        'pytest',
         'scipy',
         'scikit-learn'
     ],
