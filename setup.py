@@ -2,7 +2,6 @@
 # -*- encoding: utf-8 -*-
 from __future__ import absolute_import, print_function
 
-import glob
 import io
 import re
 from glob import glob
@@ -65,8 +64,8 @@ setup(
         'scikit-learn'
     ],
     data_files=[
-        ('sample_data/reference', glob.glob('experiment_arsenic/reference_spectra/*.e')),
-        ('sample_data/unknown', glob.glob('experiment_arsenic/unknown_spectra/*.e'))
+        ('sample_data/reference', glob('experiment_arsenic/reference_spectra/*.e')),
+        ('sample_data/unknown', glob('experiment_arsenic/unknown_spectra/*.e'))
     ],
     extras_require={
         # eg:
