@@ -66,8 +66,8 @@ setup(
         'scikit-learn'
     ],
     data_files=[
-        ('mrfitty_sample_ref', ['experiment_arsenic/reference_spectra/arsenate_aqueous_avg_als_cal.e']),
-        ('mrfitty_sample_unknown', ['experiment_arsenic/unknown_spectra/OTT3_55_spot0.e'])
+        ('sample_data', ['experiment_arsenic/reference_spectra/arsenate_aqueous_avg_als_cal.e', ]),
+        ('sample_data', ['experiment_arsenic/unknown_spectra/OTT3_55_spot0.e', ])
     ],
     extras_require={
         # eg:
