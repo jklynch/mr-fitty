@@ -24,7 +24,8 @@ SOFTWARE.
 import logging
 
 import numpy as np
-import sklearn.cross_validation
+import scikits.bootstrap
+import sklearn.model_selection
 import sklearn.linear_model
 
 from mrfitty.combination_fit import AllCombinationFitTask
@@ -55,19 +56,17 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
         log.debug('choosing best component count from {}'.format(best_fit_for_component_count_list))
         component_count_to_cp_list = [np.Inf] * len(best_fit_for_component_count_list)
         component_count_to_median_cp = [np.Inf] * len(best_fit_for_component_count_list)
+        component_count_to_median_cp_ci_lo_hi = [(np.Inf, np.Inf)] * len(best_fit_for_component_count_list)
         # todo: this component_count is off by 1
         for component_count_i, best_fit_for_component_count in enumerate(best_fit_for_component_count_list):
+            log.debug('calculating CI of median C_p for {} component(s)'.format(component_count_i + 1))
             #log.debug(best_fit_for_component_count.reference_spectra_A_df)
             #log.debug(best_fit_for_component_count.unknown_spectrum_b)
             # calculate Cp and 95% confidence interval of the median
             normalized_cp_list = []
             component_count_to_cp_list[component_count_i] = normalized_cp_list
-            cv = sklearn.cross_validation.ShuffleSplit(
-                best_fit_for_component_count.reference_spectra_A_df.values.shape[0],
-                test_size=0.2,
-                n_iter=1000
-            )
-            for train_index, test_index in cv:
+            cv = sklearn.model_selection.ShuffleSplit(n_splits=1000, test_size=0.2)
+            for train_index, test_index in cv.split(best_fit_for_component_count.reference_spectra_A_df.values):
                 lm = sklearn.linear_model.LinearRegression()
                 lm.fit(
                     best_fit_for_component_count.reference_spectra_A_df.values[train_index],
@@ -81,8 +80,26 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
 
             # todo: calculate confidence interval
             component_count_to_median_cp[component_count_i] = np.median(normalized_cp_list)
+            component_count_to_median_cp_ci_lo_hi[component_count_i] = scikits.bootstrap.ci(
+                data=normalized_cp_list,
+                statfunction=np.median)
+
         log.debug('component count to median cp: {}'.format(component_count_to_median_cp))
-        best_fit_component_count_i = np.argmin(np.asarray(component_count_to_median_cp))
+        log.debug('component count to median cp confidence interval: {}'.format(component_count_to_median_cp_ci_lo_hi))
+        #best_fit_component_count_i = np.argmin(np.asarray(component_count_to_median_cp))
+
+        # compare ci_1_lo with ci_2_hi
+        # if ci_1_lo overlaps ci_2_hi then component_count is 1
+        best_fit_component_count_i = len(component_count_to_median_cp_ci_lo_hi) - 1
+        prev_lo = np.Inf
+        for i, (lo, hi) in enumerate(component_count_to_median_cp_ci_lo_hi):
+            print('lo: {} hi: {}'.format(lo, hi))
+            if prev_lo <= hi:
+                best_fit_component_count_i = i
+                break
+            else:
+                prev_lo = lo
+
         best_fit_component_count = 1 + best_fit_component_count_i
         log.info('best fit component count is {}'.format(best_fit_component_count))
         best_fit = best_fit_for_component_count_list[best_fit_component_count_i]
