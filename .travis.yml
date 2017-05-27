@@ -1,7 +1,7 @@
 language: python
 python: 3.5
 sudo: required
-dist: xenial
+dist: trusty
 env:
   global:
     LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
@@ -28,6 +28,6 @@ script:
   - py.test tests/
 notifications:
   email:
-    on_success: never
+    on_success: always
     on_failure: always
 
