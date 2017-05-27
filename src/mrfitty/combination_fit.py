@@ -29,6 +29,7 @@ from operator import attrgetter
 import os.path
 
 import bokeh.io
+import bokeh.models.layouts
 import bokeh.plotting
 
 import matplotlib.pyplot as plt
@@ -427,7 +428,7 @@ class AllCombinationFitTask:
             #    ymax=fit_results.best_fit.unknown_spectrum_b.max()
             #)
             #plot_file.savefig(f)
-        p = bokeh.plotting.vplot(*plot_list)
+        p = bokeh.models.layouts.Column(*plot_list)
         bokeh.io.save(p)
 
     def write_best_fit_arrays(self, best_fit_dir_path):
