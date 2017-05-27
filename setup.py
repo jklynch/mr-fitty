@@ -61,7 +61,8 @@ setup(
         'pandas',
         'pytest',
         'scipy',
-        'scikit-learn'
+        'scikits.bootstrap',
+        'scikit-learn',
     ],
     data_files=[
         ('sample_data/reference', glob('experiment_arsenic/reference_spectra/*.e')),
