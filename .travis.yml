@@ -21,9 +21,7 @@ before_install:
   - conda install --yes -n mrf pip
   - source activate mrf
 install:
-  - conda install --yes pytest
   - pwd
-  - pip install pytest-capturelog
   - pip install -e `pwd`[test]
 script:
   - py.test tests/
