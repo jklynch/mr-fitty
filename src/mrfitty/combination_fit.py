@@ -42,86 +42,6 @@ from mrfitty.base import PRM, ReferenceSpectrum, Spectrum, InterpolatedReference
 from mrfitty.linear_model import NonNegativeLinearRegression
 
 
-log = logging.getLogger(name=__name__)
-
-
-class AdaptiveEnergyRangeBuilder:
-    """AdaptiveEnergyRangeBuilder
-
-    Builds an array of incident energies present in the specified unknown spectrum and the sequence of reference
-    spectra.  For example, given an unknown spectrum like this:
-
-    index             0        1        2        3
-    incident energy   11760.0  11765.0  11771.0  11776.0
-    fluorescence      0.08123  0.08234  0.08345  0.08456
-
-    and two reference spectra like these:
-
-    index             0        1        2        3
-    incident energy   11761.0  11764.0  11770.0  11775.0
-    fluorescence      0.08123  0.08234  0.08345  0.08456
-
-    index             0        1        2        3
-    incident energy   11759.0  11766.0  11772.0  11778.0
-    fluorescence      0.08123  0.08234  0.08345  0.08456
-
-    the incident energies present in the unknown spectrum that will be used to interpolate values from the reference
-    spectra are:
-
-    index
-    incident energy   11765.0  11771.0
-    """
-    def __init__(self):
-        pass
-
-    #@profile
-    def build_range(self, unknown_spectrum, reference_spectrum_seq):
-        """
-
-        :param unknown_spectrum:
-        :param reference_spectrum_seq:
-        :return:
-        """
-        ref_min_last_energy = np.inf
-        ref_max_first_energy = -1.0 * np.inf
-        for reference_spectrum in reference_spectrum_seq:
-            log.debug('s: %s', reference_spectrum)
-            if reference_spectrum.data_df.energy.iloc[-1] < ref_min_last_energy:
-                ref_min_last_energy = reference_spectrum.data_df.energy.iloc[-1]
-            else:
-                pass
-            if reference_spectrum.data_df.energy.iloc[0] > ref_max_first_energy:
-                ref_max_first_energy = reference_spectrum.data_df.energy.iloc[0]
-            else:
-                pass
-
-        fit_energy_indices = np.logical_and(
-            ref_max_first_energy < unknown_spectrum.data_df.energy.values,
-            unknown_spectrum.data_df.energy.values < ref_min_last_energy
-        )
-        log.debug('fit_energy_indices: %s', fit_energy_indices)
-        fit_energies = unknown_spectrum.data_df.energy.iloc[fit_energy_indices]
-        log.debug('fit_energies: %s', fit_energies.values)
-        return fit_energies, fit_energy_indices
-
-
-class FixedEnergyRangeBuilder:
-    def __init__(self, energy_start, energy_stop):
-        self.energy_start = energy_start
-        self.energy_stop = energy_stop
-
-    def build_range(self, unknown_spectrum, reference_spectrum_list):
-        # raise exception if any of the spectra do not include the fixed energy range?
-        fit_energy_indices = np.logical_and(
-            self.energy_start < unknown_spectrum.data_df.energy.values,
-            unknown_spectrum.data_df.energy.values < self.energy_stop
-        )
-        log.debug('fit_energy_indices: %s', fit_energy_indices.values)
-        fit_energies = unknown_spectrum.data_df.energy.iloc[fit_energy_indices]
-        log.debug('fit_energies: %s', fit_energies.values)
-        return fit_energies, fit_energy_indices
-
-
 class CombinationFitResults:
     """CombinationFitResults
 
@@ -133,8 +53,8 @@ class CombinationFitResults:
 
 
 class AllCombinationFitTask:
-    def __init__(self, reference_spectrum_list, unknown_spectrum_list, energy_range_builder, component_count_range=range(4)):
-        self.log = logging.getLogger(self.__class__.__name__)
+    def __init__(self, ls, reference_spectrum_list, unknown_spectrum_list, energy_range_builder, component_count_range=range(4)):
+        self.ls = ls
         self.reference_spectrum_list = reference_spectrum_list
         self.unknown_spectrum_list = unknown_spectrum_list
         self.energy_range_builder = energy_range_builder
@@ -188,8 +108,8 @@ class AllCombinationFitTask:
 
     def reference_combination_iter(self, component_count_range):
         for component_count in component_count_range:
-            for referenece_spectra_combination in itertools.combinations(self.reference_spectrum_list, component_count):
-                yield referenece_spectra_combination
+            for reference_spectra_combination in itertools.combinations(self.reference_spectrum_list, component_count):
+                yield reference_spectra_combination
 
     #@profile
     def fit_references_to_unknown(self, interpolated_reference_spectra, reference_spectra_subset):
@@ -200,9 +120,9 @@ class AllCombinationFitTask:
         #self.log.debug('unknown_spectrum_df:\n%s', unknown_spectrum_df.head())
         #self.log.debug('interpolated_reference_spectra_subset_df:\n%s', interpolated_reference_spectra_subset_df.head())
 
-        ls = NonNegativeLinearRegression()
-        ls.fit(interpolated_reference_spectra_subset_df.values, unknown_spectrum_df.norm.values)
-        reference_spectra_coef_x = ls.reference_spectra_coef_x
+        lm = self.ls()
+        lm.fit(interpolated_reference_spectra_subset_df.values, unknown_spectrum_df.norm.values)
+        reference_spectra_coef_x = lm.coef_
 
         spectrum_fit = SpectrumFit(
             interpolant_incident_energy=interpolated_reference_spectra_subset_df.index,
@@ -215,6 +135,7 @@ class AllCombinationFitTask:
 
     #@profile
     def fit_unknown_spectrum_to_references(self, unknown_spectrum, reference_spectra_combination):
+        log = logging.getLogger(name=self.__class__.__name__)
         fit_energies, fit_energies_ndx = self.energy_range_builder.build_range(
             unknown_spectrum,
             reference_spectra_combination
@@ -234,8 +155,8 @@ class AllCombinationFitTask:
             data[:, i] = rs.interpolant(fit_energies)
         # use the (time) index from the unknown spectrum for the interpolated reference spectra
         # this is important because pandas Series and Dataframes will align on their
-        #  indexes for most operations so for example calculating residuals can result
-        #  in the wrong shape
+        # indexes for most operations so for example calculating residuals can result
+        # in the wrong shape
         reference_spectra_A_df = pd.DataFrame(
             data=data, index=unknown_spectrum_b.index, columns=reference_spectra_A_column_list)
         log.debug('reference_spectra_A_df columns: %s', reference_spectra_A_df.columns)
@@ -244,7 +165,7 @@ class AllCombinationFitTask:
 
         ls = NonNegativeLinearRegression()
         ls.fit(reference_spectra_A_df.values, unknown_spectrum_b)
-        reference_spectra_coef_x = ls.reference_spectra_coef_x
+        reference_spectra_coef_x = ls.coef_
 
         #reference_spectra_coef_x, residual, *extra = nnls(
         #    reference_spectra_A_df.values,
@@ -296,7 +217,7 @@ class AllCombinationFitTask:
 
         for component_count, component_count_fit_list in enumerate(component_count_fit_lists):
             if len(component_count_fit_list) > 0:
-                log.debug('best fit for {} component(s): %s', component_count, component_count_fit_list[0])
+                log.debug('best fit for %d component(s): %s', component_count, component_count_fit_list[0])
             else:
                 log.debug('no fits for component count %s', component_count)
 
@@ -313,6 +234,7 @@ class AllCombinationFitTask:
           a list of fits for component counts 0 to N; there is no 0-component fit
         :return:
         """
+        log = logging.getLogger(name=self.__class__.__name__)
         best_fit = None
         previous_nss = 1.0
         for component_count, component_count_fit_list in enumerate(best_fit_for_component_count_list):
@@ -347,6 +269,7 @@ class AllCombinationFitTask:
                 table_file.write('\n')
 
     def draw_plots_matplotlib(self, plots_pdf_file_path):
+        log = logging.getLogger(name=self.__class__.__name__)
         with PdfPages(plots_pdf_file_path) as plot_file:
             log.info('writing plots file {}'.format(plots_pdf_file_path))
             for spectrum, fit_results in self.fit_table.items():
@@ -387,6 +310,7 @@ class AllCombinationFitTask:
                 plot_file.savefig(f)
 
     def draw_plots_bokeh(self, plots_html_file_path):
+        log = logging.getLogger(name=self.__class__.__name__)
         bokeh.io.output_file(plots_html_file_path)
         #with PdfPages(plots_pdf_file_path) as plot_file:
         log.info('writing plots file {}'.format(plots_html_file_path))
@@ -432,6 +356,7 @@ class AllCombinationFitTask:
         bokeh.io.save(p)
 
     def write_best_fit_arrays(self, best_fit_dir_path):
+        log = logging.getLogger(name=self.__class__.__name__)
         for spectrum, fit_results in self.fit_table.items():
             file_base_name, file_name_ext = os.path.splitext(spectrum.file_name)
             fit_file_path = os.path.join(best_fit_dir_path, file_base_name + '_fit.txt')
@@ -459,6 +384,7 @@ class AllCombinationFitTask:
             maximum component count
             minimum component count
         """
+        log = logging.getLogger(name=cls.__class__.__name__)
         reference_spectrum_list = []
         log.info('reading PRM file {}'.format(prm_file_path))
         prm = PRM.read_prm(prm_file_path)
@@ -535,7 +461,7 @@ class AllCombinationFitTask:
                 reference_spectrum_list, max_cmp, min_cmp = cls.build_reference_spectrum_list_from_config_file(config)
         elif config.has_section('reference_spectra'):
             if config.has_option('reference_spectra', 'prm'):
-                prm_file_path = os.path.expanduser(config.get('reference_spectra', 'pem'))
+                prm_file_path = os.path.expanduser(config.get('reference_spectra', 'prm'))
                 reference_spectrum_list, max_cmp, min_cmp = cls.build_reference_spectrum_list_from_prm_file(prm_file_path)
             else:
                 raise Exception('section [reference_spectra] is missing required parameter prm')

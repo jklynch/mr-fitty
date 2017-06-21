@@ -26,7 +26,7 @@ import logging
 import numpy as np
 import scikits.bootstrap
 import sklearn.model_selection
-import sklearn.linear_model
+#import sklearn.linear_model
 
 from mrfitty.combination_fit import AllCombinationFitTask
 
@@ -34,13 +34,14 @@ from mrfitty.combination_fit import AllCombinationFitTask
 class BestSubsetSelectionFitTask(AllCombinationFitTask):
     def __init__(
             self,
+            ls,
             reference_spectrum_list,
             unknown_spectrum_list,
             energy_range_builder,
             component_count_range
     ):
         super(type(self), self).__init__(
-            reference_spectrum_list, unknown_spectrum_list, energy_range_builder, component_count_range
+            ls, reference_spectrum_list, unknown_spectrum_list, energy_range_builder, component_count_range
         )
 
     def choose_best_component_count(self, best_fit_for_component_count_list):
@@ -67,7 +68,7 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
             component_count_to_cp_list[component_count_i] = normalized_cp_list
             cv = sklearn.model_selection.ShuffleSplit(n_splits=1000, test_size=0.2)
             for train_index, test_index in cv.split(best_fit_for_component_count.reference_spectra_A_df.values):
-                lm = sklearn.linear_model.LinearRegression()
+                lm = self.ls()
                 lm.fit(
                     best_fit_for_component_count.reference_spectra_A_df.values[train_index],
                     best_fit_for_component_count.unknown_spectrum_b.values[train_index]
@@ -78,7 +79,6 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
                 normalized_cp = cp / residuals.shape
                 normalized_cp_list.append(normalized_cp)
 
-            # todo: calculate confidence interval
             component_count_to_median_cp[component_count_i] = np.median(normalized_cp_list)
             component_count_to_median_cp_ci_lo_hi[component_count_i] = scikits.bootstrap.ci(
                 data=normalized_cp_list,

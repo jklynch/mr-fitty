@@ -1,12 +1,14 @@
 """
-pytest-capturelog is required by this test
+pytest-catchlog is required by this test
 """
 from glob import glob
 import logging
 import os
 
-from mrfitty.base import ReferenceSpectrum, Spectrum
-from mrfitty.combination_fit import AdaptiveEnergyRangeBuilder, AllCombinationFitTask
+from sklearn.linear_model import LinearRegression
+
+from mrfitty.base import AdaptiveEnergyRangeBuilder, ReferenceSpectrum, Spectrum
+from mrfitty.combination_fit import AllCombinationFitTask
 
 logging.basicConfig(level=logging.DEBUG, filename='test_arsenic_fit.log')
 log = logging.getLogger(name=__name__)
@@ -22,7 +24,7 @@ def test_arsenic_1(caplog, request):
     :return:
     """
 
-    caplog.setLevel(logging.INFO)
+    caplog.set_level(logging.INFO)
 
     test_arsenic_fit_fp = request.module.__file__
     log.info('test_arsenic_fit_fp: {}'.format(test_arsenic_fit_fp))
@@ -43,6 +45,7 @@ def test_arsenic_1(caplog, request):
     log.info(unknown_spectrum)
 
     task = AllCombinationFitTask(
+        ls=LinearRegression,
         energy_range_builder=AdaptiveEnergyRangeBuilder(),
         reference_spectrum_list=reference_spectrum_list,
         unknown_spectrum_list=[unknown_spectrum, ],
@@ -70,7 +73,7 @@ def test_arsenic_2(caplog, request):
     :return:
     """
 
-    caplog.setLevel(logging.INFO)
+    caplog.set_level(logging.INFO)
 
     test_arsenic_fit_fp = request.module.__file__
     log.info('test_arsenic_fit_fp: {}'.format(test_arsenic_fit_fp))
@@ -91,6 +94,7 @@ def test_arsenic_2(caplog, request):
     log.info(unknown_spectrum)
 
     task = AllCombinationFitTask(
+        ls=LinearRegression,
         energy_range_builder=AdaptiveEnergyRangeBuilder(),
         reference_spectrum_list=reference_spectrum_list,
         unknown_spectrum_list=[unknown_spectrum, ],
@@ -101,4 +105,4 @@ def test_arsenic_2(caplog, request):
 
     unknown_spectrum_fit = task.fit_table[unknown_spectrum]
 
-    assert 3 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
+    assert 2 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
