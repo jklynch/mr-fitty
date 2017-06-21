@@ -81,7 +81,7 @@ def test_arsenic_2(caplog, request):
 
     #reference_file_path_pattern = os.path.join(test_arsenic_fit_dir_path, 'reference', 'arsenate_*.e')
     reference_file_path_pattern = os.path.join(test_arsenic_fit_dir_path, 'reference', '*.e')
-    data_file_path = os.path.join(test_arsenic_fit_dir_path, 'reference', 'arsenate_aqueous_avg_als_cal.e')
+    #data_file_path = os.path.join(test_arsenic_fit_dir_path, 'reference', 'arsenate_aqueous_avg_als_cal.e')
 
     reference_spectrum_list = [
         ReferenceSpectrum.read_file(file_path)
@@ -90,14 +90,14 @@ def test_arsenic_2(caplog, request):
     ]
     log.info(reference_spectrum_list)
 
-    unknown_spectrum = Spectrum.read_file(data_file_path)
+    unknown_spectrum = reference_spectrum_list[0]
     log.info(unknown_spectrum)
 
     task = AllCombinationFitTask(
         ls=LinearRegression,
         energy_range_builder=AdaptiveEnergyRangeBuilder(),
         reference_spectrum_list=reference_spectrum_list,
-        unknown_spectrum_list=[unknown_spectrum, ],
+        unknown_spectrum_list=[unknown_spectrum],
         component_count_range=range(1, 3+1)
     )
 
