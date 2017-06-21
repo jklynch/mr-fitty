@@ -2,6 +2,7 @@ language: python
 python: 3.5
 sudo: required
 dist: trusty
+group: edge
 env:
   global:
     LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
@@ -23,7 +24,7 @@ install:
   - conda install --yes pytest
   - pwd
   - pip install pytest-capturelog
-  - pip install -e `pwd`
+  - pip install -e `pwd`[test]
 script:
   - py.test tests/
 notifications:
