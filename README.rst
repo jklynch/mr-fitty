@@ -2,7 +2,7 @@
 MrFitty
 =======
 
-.. image:: https://travis-ci.org/jklynch/mr-fitty.svg?branch=develop
+.. image:: https://travis-ci.org/jklynch/mr-fitty.svg?branch=master
     :target: https://travis-ci.org/jklynch/mr-fitty
 
 MrFitty is an open-source Python package for fitting XANES data to a set of reference spectra using linear least
