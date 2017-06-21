@@ -1,6 +1,0 @@
-coverage
-pyfakefs
-pytest-catchlog
-pytest-cov
-sphinx
-tox
