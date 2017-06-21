@@ -34,7 +34,7 @@ packages which are less trouble to install in some cases, especially on Windows 
 
 If the standard Python 3.4+ distribution is available then MrFitty can be installed for the user with pip: ::
 
-    $ pip install -U git+https://github.com/jklynch/mr-fitty.git
+    $ pip install --user git+https://github.com/jklynch/mr-fitty.git
 
 Alternatively, MrFitty can be installed in a virtual environment using the standard Python 3.4+ distribution with the following commands: ::
 
@@ -49,7 +49,7 @@ If the Anaconda distribution has been installed then MrFitty can be installed in
     $ source activate mrf
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
-All required packages will be automatically installed by pip.
+In all cases the required packages will be automatically installed by pip.
 
 Usage
 =====
