@@ -12,6 +12,8 @@ import os.path
 
 from click.testing import CliRunner
 
+import pytest
+
 from mrfitty.__main__ import main
 from mrfitty.fit_task_builder import get_config_parser
 
@@ -19,6 +21,7 @@ logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(name=__name__)
 
 
+@pytest.mark.skip()
 def test_main(fs):
     runner = CliRunner()
 
@@ -32,9 +35,7 @@ def test_main(fs):
     #   table txt
     #   sample fit files
 
-
-    fs.CreateFile('ref_1.e',
-'''\
+    fs.CreateFile('ref_1.e', '''\
 1000.0\t0.01
 1000.1\t0.02
 1000.2\t0.03
@@ -42,8 +43,7 @@ def test_main(fs):
 1000.4\t0.05
 ''')
 
-    fs.CreateFile('ref_2.e',
-'''\
+    fs.CreateFile('ref_2.e', '''\
 1000.0\t0.05
 1000.1\t0.04
 1000.2\t0.03
@@ -51,8 +51,7 @@ def test_main(fs):
 1000.4\t0.01
 ''')
 
-    fs.CreateFile('ref_3.e',
-'''\
+    fs.CreateFile('ref_3.e', '''\
 1000.0\t0.01
 1000.1\t0.01
 1000.2\t0.01
@@ -60,8 +59,7 @@ def test_main(fs):
 1000.4\t0.01
 ''')
 
-    fs.CreateFile('test_main.prm',
-'''\
+    fs.CreateFile('test_main.prm', '''\
 NbCompoMax=3
 NbCompoMin=1
 ref=ref_1.e
@@ -70,24 +68,21 @@ ref=ref_3.e
 ''')
 
     # sample 1 is twice ref_1
-    fs.CreateFile('sample_1.e',
-'''\
+    fs.CreateFile('sample_1.e', '''\
 1000.1\t0.02
 1000.2\t0.04
 1000.3\t0.06
 ''')
 
     # sample 2 is half ref_2
-    write_spectrum_file('sample_2.e',
-'''\
+    fs.CreateFile('sample_2.e', '''\
 1000.1\t0.015
 1000.2\t0.010
 1000.3\t0.005
 ''')
 
     # sample 3 is ref_1 plus ref_3
-    write_spectrum_file('sample_3.e',
-'''\
+    fs.CreateFile('sample_3.e', '''\
 1000.1\t0.03
 1000.2\t0.04
 1000.3\t0.05
@@ -100,10 +95,6 @@ prm = test_main.prm
 
 [data]
 sample*.e
-
-[fit]
-
-[parameters]
 
 [output]
 best_fit_files_dir = .
