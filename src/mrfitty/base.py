@@ -86,7 +86,7 @@ class Spectrum:
         -------
         Instance of class Spectrum or subclass.
         """
-        spectrum_data_df = pd.read_csv(
+        spectrum_data_df = pd.read_table(
             file_path_or_buffer,
             engine='python',
             sep='[ \t]+',
@@ -157,7 +157,7 @@ class ReferenceSpectrum(Spectrum):
     interpolant : scipy.interpolate.InterpolatedUnivariateSpline
     """
     def __init__(self, file_path, reference_spectrum_data, mineral_category=None):
-        super(type(self), self).__init__(file_path, reference_spectrum_data)
+        super().__init__(file_path, reference_spectrum_data)
         self.mineral_category = mineral_category
         self.interpolant = InterpolatedUnivariateSpline(
             reference_spectrum_data.energy.values,
@@ -352,6 +352,85 @@ class SpectrumFit:
             contribution_str += ' {:4.2f}: {},'.format(reference_contribution, reference_spectrum.file_name)
         contribution_str += ' {:4.2f}: residuals'.format(self.residuals_contribution)
         return contribution_str
+
+class AdaptiveEnergyRangeBuilder:
+    """AdaptiveEnergyRangeBuilder
+
+    Builds an array of incident energies present in the specified unknown spectrum and the sequence of reference
+    spectra.  For example, given an unknown spectrum like this:
+
+    index             0        1        2        3
+    incident energy   11760.0  11765.0  11771.0  11776.0
+    fluorescence      0.08123  0.08234  0.08345  0.08456
+
+    and two reference spectra like these:
+
+    index             0        1        2        3
+    incident energy   11761.0  11764.0  11770.0  11775.0
+    fluorescence      0.08123  0.08234  0.08345  0.08456
+
+    index             0        1        2        3
+    incident energy   11759.0  11766.0  11772.0  11778.0
+    fluorescence      0.08123  0.08234  0.08345  0.08456
+
+    the incident energies present in the unknown spectrum that will be used to interpolate values from the reference
+    spectra are:
+
+    index
+    incident energy   11765.0  11771.0
+    """
+    def __init__(self):
+        pass
+
+    #@profile
+    def build_range(self, unknown_spectrum, reference_spectrum_seq):
+        """
+
+        :param unknown_spectrum:
+        :param reference_spectrum_seq:
+        :return:
+        """
+        log = logging.getLogger(name=self.__class__.__name__)
+        ref_min_last_energy = np.inf
+        ref_max_first_energy = -1.0 * np.inf
+        for reference_spectrum in reference_spectrum_seq:
+            log.debug('s: %s', reference_spectrum)
+            if reference_spectrum.data_df.energy.iloc[-1] < ref_min_last_energy:
+                ref_min_last_energy = reference_spectrum.data_df.energy.iloc[-1]
+            else:
+                pass
+            if reference_spectrum.data_df.energy.iloc[0] > ref_max_first_energy:
+                ref_max_first_energy = reference_spectrum.data_df.energy.iloc[0]
+            else:
+                pass
+
+        fit_energy_indices = np.logical_and(
+            ref_max_first_energy < unknown_spectrum.data_df.energy.values,
+            unknown_spectrum.data_df.energy.values < ref_min_last_energy
+        )
+        log.debug('fit_energy_indices: %s', fit_energy_indices)
+        fit_energies = unknown_spectrum.data_df.energy.iloc[fit_energy_indices]
+        log.debug('fit_energies: %s', fit_energies.values)
+        return fit_energies, fit_energy_indices
+
+
+class FixedEnergyRangeBuilder:
+    def __init__(self, energy_start, energy_stop):
+        self.energy_start = energy_start
+        self.energy_stop = energy_stop
+
+    def build_range(self, unknown_spectrum, reference_spectrum_list):
+        log = logging.getLogger(name=self.__class__.__name__)
+        # raise exception if any of the spectra do not include the fixed energy range?
+        fit_energy_indices = np.logical_and(
+            self.energy_start < unknown_spectrum.data_df.energy.values,
+            unknown_spectrum.data_df.energy.values < self.energy_stop
+        )
+        log.debug('fit_energy_indices: %s', fit_energy_indices.values)
+        fit_energies = unknown_spectrum.data_df.energy.iloc[fit_energy_indices]
+        log.debug('fit_energies: %s', fit_energies.values)
+        return fit_energies, fit_energy_indices
+
 
 """
 A .prm file looks like this:

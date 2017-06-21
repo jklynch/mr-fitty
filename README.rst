@@ -1,6 +1,10 @@
 =======
 MrFitty
 =======
+
+.. image:: https://travis-ci.org/jklynch/mr-fitty.svg?branch=master
+    :target: https://travis-ci.org/jklynch/mr-fitty
+
 MrFitty is an open-source Python package for fitting XANES data to a set of reference spectra using linear least
 squares and best subset selection as described in *An Introduction to Statistical Learning with Applications in R* by
 Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani. It runs on any system with a Python 3.4+ interpreter
@@ -10,8 +14,6 @@ MrFitty functions similarly to the spectra-fitting tools in the LabView software
 Dr. Matthew Marcus at the Berkeley Synchrotron available `here <https://sites.google.com/a/lbl.gov/als-beamline1032/software-download>`_.
 
 * Free software: MIT license
-
-Project skeleton generated with https://github.com/ionelmc/cookiecutter-pylibrary.
 
 Requirements
 ============
@@ -32,20 +34,24 @@ On systems without Python 3.4+ the `Anaconda <https://anaconda.org>`_ Python dis
 administrative privileges and supports virtual environments. In addition the Anaconda distribution includes pre-built
 packages which are less trouble to install in some cases, especially on Windows systems.
 
-If the Anaconda Python distribution is not installed a suitable virtual environment can be created with the following commands: ::
+If the standard Python 3.4+ distribution is available then MrFitty can be installed for the user with pip: ::
+
+    $ pip install --user git+https://github.com/jklynch/mr-fitty.git
+
+Alternatively, MrFitty can be installed in a virtual environment using the standard Python 3.4+ distribution with the following commands: ::
 
     $ python3 -m venv mrf --without-pip
     $ source mrf/bin/activate
     (mrf) $ wget bootstrap.pypa.io/get-pip.py -O - | python3
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
-If the Anaconda distribution has been installed a suitable virtual environment can be created with these commands: ::
+If the Anaconda distribution has been installed then MrFitty can be installed in a virtual environment with these commands: ::
 
     $ conda create python=3.6 --name mrf
     $ source activate mrf
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
-The required packages will be automatically installed by pip.
+In all cases the required packages will be automatically installed by pip.
 
 Usage
 =====

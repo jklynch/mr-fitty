@@ -1,5 +1,6 @@
 coverage
-pytest-capturelog
+pyfakefs
+pytest-catchlog
 pytest-cov
 sphinx
 tox

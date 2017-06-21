@@ -1,12 +1,14 @@
 """
-pytest-capturelog is required by this test
+pytest-catchlog is required by this test
 """
 from glob import glob
 import logging
 import os
 
-from mrfitty.base import ReferenceSpectrum, Spectrum
-from mrfitty.combination_fit import AdaptiveEnergyRangeBuilder, AllCombinationFitTask
+from sklearn.linear_model import LinearRegression
+
+from mrfitty.base import AdaptiveEnergyRangeBuilder, ReferenceSpectrum, Spectrum
+from mrfitty.combination_fit import AllCombinationFitTask
 
 logging.basicConfig(level=logging.DEBUG, filename='test_arsenic_fit.log')
 log = logging.getLogger(name=__name__)
@@ -22,7 +24,7 @@ def test_arsenic_1(caplog, request):
     :return:
     """
 
-    caplog.setLevel(logging.INFO)
+    caplog.set_level(logging.INFO)
 
     test_arsenic_fit_fp = request.module.__file__
     log.info('test_arsenic_fit_fp: {}'.format(test_arsenic_fit_fp))
@@ -43,6 +45,7 @@ def test_arsenic_1(caplog, request):
     log.info(unknown_spectrum)
 
     task = AllCombinationFitTask(
+        ls=LinearRegression,
         energy_range_builder=AdaptiveEnergyRangeBuilder(),
         reference_spectrum_list=reference_spectrum_list,
         unknown_spectrum_list=[unknown_spectrum, ],
@@ -70,7 +73,7 @@ def test_arsenic_2(caplog, request):
     :return:
     """
 
-    caplog.setLevel(logging.INFO)
+    caplog.set_level(logging.INFO)
 
     test_arsenic_fit_fp = request.module.__file__
     log.info('test_arsenic_fit_fp: {}'.format(test_arsenic_fit_fp))
@@ -78,7 +81,7 @@ def test_arsenic_2(caplog, request):
 
     #reference_file_path_pattern = os.path.join(test_arsenic_fit_dir_path, 'reference', 'arsenate_*.e')
     reference_file_path_pattern = os.path.join(test_arsenic_fit_dir_path, 'reference', '*.e')
-    data_file_path = os.path.join(test_arsenic_fit_dir_path, 'reference', 'arsenate_aqueous_avg_als_cal.e')
+    #data_file_path = os.path.join(test_arsenic_fit_dir_path, 'reference', 'arsenate_aqueous_avg_als_cal.e')
 
     reference_spectrum_list = [
         ReferenceSpectrum.read_file(file_path)
@@ -87,13 +90,14 @@ def test_arsenic_2(caplog, request):
     ]
     log.info(reference_spectrum_list)
 
-    unknown_spectrum = Spectrum.read_file(data_file_path)
+    unknown_spectrum = reference_spectrum_list[0]
     log.info(unknown_spectrum)
 
     task = AllCombinationFitTask(
+        ls=LinearRegression,
         energy_range_builder=AdaptiveEnergyRangeBuilder(),
         reference_spectrum_list=reference_spectrum_list,
-        unknown_spectrum_list=[unknown_spectrum, ],
+        unknown_spectrum_list=[unknown_spectrum],
         component_count_range=range(1, 3+1)
     )
 
@@ -101,4 +105,4 @@ def test_arsenic_2(caplog, request):
 
     unknown_spectrum_fit = task.fit_table[unknown_spectrum]
 
-    assert 3 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
+    assert 2 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
