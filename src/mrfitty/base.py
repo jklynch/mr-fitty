@@ -30,8 +30,6 @@ import pandas as pd
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 
-log = logging.getLogger(name=__name__)
-
 
 class Spectrum:
     """Spectrum
@@ -86,6 +84,7 @@ class Spectrum:
         -------
         Instance of class Spectrum or subclass.
         """
+        log = logging.getLogger(name=cls.__name__)
         spectrum_data_df = pd.read_table(
             file_path_or_buffer,
             engine='python',
@@ -115,6 +114,7 @@ class Spectrum:
         :param file_glob_list: list of paths or file globs
         :return: set of ReferenceSpectrum instances
         """
+        log = logging.getLogger(name=cls.__name__)
         # keep a list of config file entries for error reporting
         reference_spectrum_file_path_set = set()
 
@@ -297,6 +297,7 @@ class SpectrumFit:
         reference_spectra_seq,
         reference_spectra_coef_x
     ):
+        log = logging.getLogger(name=self.__class__.__name__)
         self.interpolant_incident_energy = interpolant_incident_energy
         self.reference_spectra_seq = reference_spectra_seq
         self.reference_spectra_A_df = reference_spectra_A_df
@@ -326,7 +327,7 @@ class SpectrumFit:
         self.unknown_spectrum_auc = self.sum_of_abs_unknown_spectrum_b
 
     def get_reference_contributions_sr(self):
-
+        log = logging.getLogger(name=self.__class__.__name__)
         # calculate percent contribution for each reference
         #
         #  pct_i = coef_i * auc_ref_i * (100.0 / unknown_spectrum_auc)
@@ -352,6 +353,7 @@ class SpectrumFit:
             contribution_str += ' {:4.2f}: {},'.format(reference_contribution, reference_spectrum.file_name)
         contribution_str += ' {:4.2f}: residuals'.format(self.residuals_contribution)
         return contribution_str
+
 
 class AdaptiveEnergyRangeBuilder:
     """AdaptiveEnergyRangeBuilder
@@ -465,6 +467,7 @@ class PRM:
         self.reference_file_path_to_mineral_category = {}
 
     def add_reference_file_path(self, reference_file_path, mineral_category=None):
+        log = logging.getLogger(name=self.__class__.__name__)
         if reference_file_path in self.reference_file_path_list:
             #raise Exception('{} appears more than once in the prm'.format(reference_file_path))
             log.warning('{} appears more than once in prm'.format(reference_file_path))
@@ -486,6 +489,7 @@ class PRM:
 
     @classmethod
     def read_prm(cls, prm_file_path):
+        log = logging.getLogger(name=cls.__name__)
         reference_dir_path = os.path.split(prm_file_path)[0]
         log.debug('reading PRM {}'.format(prm_file_path))
         with open(prm_file_path) as prm_file:
