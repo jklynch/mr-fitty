@@ -35,11 +35,10 @@ import bokeh.plotting
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
-import numpy as np
 import pandas as pd
 
 from mrfitty.base import PRM, ReferenceSpectrum, Spectrum, InterpolatedReferenceSpectraSet, SpectrumFit
-from mrfitty.linear_model import NonNegativeLinearRegression
+from mrfitty.base import AdaptiveEnergyRangeBuilder, FixedEnergyRangeBuilder
 
 
 class CombinationFitResults:
@@ -133,69 +132,8 @@ class AllCombinationFitTask:
         )
         return spectrum_fit
 
-    #@profile
-    def fit_unknown_spectrum_to_references(self, unknown_spectrum, reference_spectra_combination):
-        log = logging.getLogger(name=self.__class__.__name__)
-        fit_energies, fit_energies_ndx = self.energy_range_builder.build_range(
-            unknown_spectrum,
-            reference_spectra_combination
-        )
-        # interpolate the reference spectra at the fit_energies
-        log.debug('fit energies.shape: %s', fit_energies.shape)
-        # reference_spectra_A_df is energies x components
-        unknown_spectrum_b = unknown_spectrum.data_df.loc[fit_energies_ndx, 'norm']
-        # log.debug('unknown_spectrum_b.shape: {}'.format(unknown_spectrum_b.shape))
-        log.debug('unknown_spectrum_b      : %s', unknown_spectrum_b)
-        # log.debug('reference combination  : {}'.format(reference_spectra_combination))
-        reference_spectra_A_column_list = []
-        # create an array to hold the interpolated reference spectra
-        data = np.zeros((fit_energies.shape[0], len(reference_spectra_combination)))
-        for i, rs in enumerate(reference_spectra_combination):
-            reference_spectra_A_column_list.append(rs.file_name)
-            data[:, i] = rs.interpolant(fit_energies)
-        # use the (time) index from the unknown spectrum for the interpolated reference spectra
-        # this is important because pandas Series and Dataframes will align on their
-        # indexes for most operations so for example calculating residuals can result
-        # in the wrong shape
-        reference_spectra_A_df = pd.DataFrame(
-            data=data, index=unknown_spectrum_b.index, columns=reference_spectra_A_column_list)
-        log.debug('reference_spectra_A_df columns: %s', reference_spectra_A_df.columns)
-
-        # it is important to label the columns in the order they were appended
-
-        ls = NonNegativeLinearRegression()
-        ls.fit(reference_spectra_A_df.values, unknown_spectrum_b)
-        reference_spectra_coef_x = ls.coef_
-
-        #reference_spectra_coef_x, residual, *extra = nnls(
-        #    reference_spectra_A_df.values,
-        #    unknown_spectrum_b
-        #)
-        #reference_spectra_coef_x, residual, rank, sigma = lstsq(
-        #    reference_spectra_A_df.values,
-        #    unknown_spectrum_b
-        #)
-        # log.debug('A        :\n{}'.format(reference_spectra_A_df))
-        # log.debug('coef     : {}'.format(reference_spectra_coef_x))
-        # log.debug('residual : {}'.format(residual))
-        # log.debug('solution :\n{}'.format(reference_spectra_A_df.dot(reference_spectra_coef_x)))
-        #if np.any(reference_spectra_coef_x < 0.0):
-        #    # this happens a lot with lstsq and is generally not a problem
-        #    # print('{}: least-squares fit has negative coefficients'.format(
-        #    #    unknown_spectrum_file_name
-        #    # ))
-        #    continue
-        ##else:
-        spectrum_fit = SpectrumFit(
-            interpolant_incident_energy=fit_energies,
-            reference_spectra_A_df=reference_spectra_A_df,
-            unknown_spectrum_b=unknown_spectrum_b,
-            reference_spectra_seq=reference_spectra_combination,
-            reference_spectra_coef_x=reference_spectra_coef_x
-        )
-        return spectrum_fit
-
     def sort_fits(self, spectrum, spectrum_fit_list):
+        # TODO: use a dict {int -> list} rather than list of lists for component_count_fit_lists
         # sort all fits with the same component count
         log = logging.getLogger(name=spectrum.file_name)
         # compare the top fits for each component count
@@ -275,39 +213,45 @@ class AllCombinationFitTask:
             for spectrum, fit_results in self.fit_table.items():
                 log.info('plotting fit for {}'.format(spectrum.file_name))
 
-                longest_name_len = max([len(name) for name in fit_results.best_fit.reference_contribution_percent_sr.index])
-                # the format string should look like '{:N}{:5.2f}' where N is the length of the longest reference name
-                contribution_format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f}'
-                contribution_desc_lines = []
-                fit_results.best_fit.reference_contribution_percent_sr.sort_values(ascending=False, inplace=True)
-                for name, value in fit_results.best_fit.reference_contribution_percent_sr.iteritems():
-                    contribution_desc_lines.append(contribution_format_str.format(name, value))
-                contribution_desc_lines.append(
-                    contribution_format_str.format('residual', fit_results.best_fit.residuals_contribution))
-                contribution_desc = '\n'.join(contribution_desc_lines)
-
-                f, ax = plt.subplots()
-                f.suptitle(spectrum.file_name)
-                log.info(fit_results.best_fit.fit_spectrum_b.shape)
-                ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.fit_spectrum_b)
-                log.info(fit_results.best_fit.residuals.shape)
-                ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.unknown_spectrum_b, '.')
-                ax.plot(fit_results.best_fit.interpolant_incident_energy, fit_results.best_fit.residuals)
-
-                at = AnchoredText(contribution_desc, loc=1, prop=dict(fontname='Monospace', size=10))
-                ax.add_artist(at)
-
-                #log.info('fit_results.best_fit.interpolant_incident_energy:\n{}'.format(
-                #    fit_results.best_fit.interpolant_incident_energy)
-                #)
-                #ax.vlines(x=[
-                #        fit_results.best_fit.interpolant_incident_energy.iloc[0],
-                #        fit_results.best_fit.interpolant_incident_energy.iloc[-1]
-                #    ],
-                #    ymin=fit_results.best_fit.unknown_spectrum_b.min(),
-                #    ymax=fit_results.best_fit.unknown_spectrum_b.max()
-                #)
+                f = self.plot_fit(spectrum, fit_results.best_fit)
                 plot_file.savefig(f)
+
+    def plot_fit(self, spectrum, any_given_fit):
+        log = logging.getLogger(name=self.__class__.__name__)
+
+        longest_name_len = max([len(name) for name in any_given_fit.reference_contribution_percent_sr.index])
+        # the format string should look like '{:N}{:5.2f}' where N is the length of the longest reference name
+        contribution_format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f}'
+        contribution_desc_lines = []
+        any_given_fit.reference_contribution_percent_sr.sort_values(ascending=False, inplace=True)
+        for name, value in any_given_fit.reference_contribution_percent_sr.iteritems():
+            contribution_desc_lines.append(contribution_format_str.format(name, value))
+        contribution_desc_lines.append(
+            contribution_format_str.format('residual', any_given_fit.residuals_contribution))
+        contribution_desc = '\n'.join(contribution_desc_lines)
+
+        f, ax = plt.subplots()
+        f.suptitle(spectrum.file_name)
+        log.info(any_given_fit.fit_spectrum_b.shape)
+        ax.plot(any_given_fit.interpolant_incident_energy, any_given_fit.fit_spectrum_b)
+        log.info(any_given_fit.residuals.shape)
+        ax.plot(any_given_fit.interpolant_incident_energy, any_given_fit.unknown_spectrum_b, '.')
+        ax.plot(any_given_fit.interpolant_incident_energy, any_given_fit.residuals)
+
+        at = AnchoredText(contribution_desc, loc=1, prop=dict(fontname='Monospace', size=10))
+        ax.add_artist(at)
+
+        #log.info('any_given_fit.interpolant_incident_energy:\n{}'.format(
+        #    any_given_fit.interpolant_incident_energy)
+        #)
+        #ax.vlines(x=[
+        #        any_given_fit.interpolant_incident_energy.iloc[0],
+        #        any_given_fit.interpolant_incident_energy.iloc[-1]
+        #    ],
+        #    ymin=any_given_fit.unknown_spectrum_b.min(),
+        #    ymax=any_given_fit.unknown_spectrum_b.max()
+        #)
+        return f
 
     def draw_plots_bokeh(self, plots_html_file_path):
         log = logging.getLogger(name=self.__class__.__name__)
