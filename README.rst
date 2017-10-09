@@ -34,9 +34,9 @@ On systems without Python 3.4+ the `Anaconda <https://anaconda.org>`_ Python dis
 administrative privileges and supports virtual environments. In addition the Anaconda distribution includes pre-built
 packages which are less trouble to install in some cases, especially on Windows systems.
 
-If the standard Python 3.4+ distribution is available then MrFitty can be installed for the user with pip: ::
+If the standard Python 3.4+ distribution is available then MrFitty can be installed with pip: ::
 
-    $ pip install --user git+https://github.com/jklynch/mr-fitty.git
+    $ pip install git+https://github.com/jklynch/mr-fitty.git
 
 Alternatively, MrFitty can be installed in a virtual environment using the standard Python 3.4+ distribution with the following commands: ::
 
