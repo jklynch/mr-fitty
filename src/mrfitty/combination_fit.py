@@ -36,7 +36,7 @@ import matplotlib
 matplotlib.use('pdf', warn=False, force=True)
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+from matplotlib.offsetbox import AnchoredText
 import numpy as np
 import pandas as pd
 
