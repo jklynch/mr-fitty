@@ -4,6 +4,8 @@ pytest-catchlog is required by this test
 from glob import glob
 import logging
 import os
+import sys
+import tempfile
 
 from sklearn.linear_model import LinearRegression
 
@@ -52,15 +54,16 @@ def test_arsenic_1(caplog, request):
         component_count_range=range(1, 3+1)
     )
 
-    task.fit_all()
+    with tempfile.TemporaryDirectory() as plots_pdf_dp:
+        task.fit_all(plots_pdf_dp=plots_pdf_dp)
 
-    unknown_spectrum_fit = task.fit_table[unknown_spectrum]
+        unknown_spectrum_fit = task.fit_table[unknown_spectrum]
 
-    assert unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape == unknown_spectrum_fit.best_fit.fit_spectrum_b.shape
-    assert unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape == unknown_spectrum_fit.best_fit.unknown_spectrum_b.shape
-    assert unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape == unknown_spectrum_fit.best_fit.residuals.shape
+        assert unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape == unknown_spectrum_fit.best_fit.fit_spectrum_b.shape
+        assert unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape == unknown_spectrum_fit.best_fit.unknown_spectrum_b.shape
+        assert unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape == unknown_spectrum_fit.best_fit.residuals.shape
 
-    assert 3 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
+        assert 3 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
 
 
 def test_arsenic_2(caplog, request):
@@ -101,8 +104,9 @@ def test_arsenic_2(caplog, request):
         component_count_range=range(1, 3+1)
     )
 
-    task.fit_all()
+    with tempfile.TemporaryDirectory() as plots_pdf_dp:
+        task.fit_all(plots_pdf_dp=plots_pdf_dp)
 
-    unknown_spectrum_fit = task.fit_table[unknown_spectrum]
+        unknown_spectrum_fit = task.fit_table[unknown_spectrum]
 
-    assert 2 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
+        assert 2 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
