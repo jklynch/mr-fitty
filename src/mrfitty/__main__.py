@@ -49,7 +49,11 @@ def main(config_fp):
 
     try:
         fitter = build_fit_task(config)
-        fitter.fit_all()
+        plots_pdf_file_dir = os.path.expanduser(config.get('output', 'plots_pdf_dir', fallback=None))
+        if not os.path.exists(plots_pdf_file_dir):
+            log.info('output directory "%s" will be created', plots_pdf_file_dir)
+            os.makedirs(plots_pdf_file_dir)
+        fitter.fit_all(plots_pdf_dp=plots_pdf_file_dir)
     except ConfigurationFileError as e:
         log.error(e)
         log.exception('configuration file error in "%s"', config_fp)
@@ -62,15 +66,15 @@ def main(config_fp):
     else:
         log.warning('No file path specified for table output')
 
-    plots_pdf_file_path = os.path.expanduser(config.get('output', 'plots_pdf_fp', fallback=None))
-    if plots_pdf_file_path:
-        log.info('writing plots to PDF {}'.format(plots_pdf_file_path))
-        fitter.draw_plots_matplotlib(plots_pdf_file_path)
-        plots_html_file_path = os.path.splitext(plots_pdf_file_path)[0] + '.html'
-        log.info('writing plots to HTML {}'.format(plots_html_file_path))
-        fitter.draw_plots_bokeh(plots_html_file_path)
-    else:
-        log.warning('No file path specified for plot output')
+    #plots_pdf_file_path = os.path.expanduser(config.get('output', 'plots_pdf_fp', fallback=None))
+    #if plots_pdf_file_path:
+    #    log.info('writing plots to PDF {}'.format(plots_pdf_file_path))
+    #    fitter.draw_plots_matplotlib(plots_pdf_file_path)
+    #    plots_html_file_path = os.path.splitext(plots_pdf_file_path)[0] + '.html'
+    #    log.info('writing plots to HTML {}'.format(plots_html_file_path))
+    #    fitter.draw_plots_bokeh(plots_html_file_path)
+    #else:
+    #    log.warning('No file path specified for plot output')
 
     best_fit_files_dir_path = os.path.expanduser(config.get('output', 'best_fit_files_dir', fallback=None))
     if best_fit_files_dir_path:
