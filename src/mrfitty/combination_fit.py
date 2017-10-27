@@ -32,9 +32,12 @@ import bokeh.io
 import bokeh.models.layouts
 import bokeh.plotting
 
+import matplotlib
+matplotlib.use('pdf', warn=False, force=True)
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
+from matplotlib.offsetbox import AnchoredText
+
 import pandas as pd
 
 from mrfitty.base import InterpolatedReferenceSpectraSet, SpectrumFit
