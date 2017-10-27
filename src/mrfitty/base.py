@@ -288,7 +288,6 @@ class SpectrumFit:
     reference_spectra_coef_x :
 
     """
-    #@profile
     def __init__(
         self,
         interpolant_incident_energy,
