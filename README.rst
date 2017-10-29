@@ -88,7 +88,7 @@ In addition to a configuration file the necessary input files are
   + one or more normalized spectrum files to be fit by the reference files
 
 All input files must contain at least two columns of data. One column is
-incident energy and the other column is fluorescence. Initial rows beginning
+incident energy and the other column is normalized absorbance. Initial rows beginning
 with '#' will be ignored except for the last row which must contain column headers.
 For example, the following normalized file written by Athena can be used as
 input to mr-fitty::
@@ -130,6 +130,6 @@ Several output files will be produced:
   + one file per fitted spectrum with four columns of data:
 
      +  incident energy
-     +  fitted fluorescence value
+     +  fitted normalized absorbance value
      +  residual of the fit
-     +  input fluorescence
+     +  input normalized absorbance
