@@ -38,10 +38,11 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
             reference_spectrum_list,
             unknown_spectrum_list,
             energy_range_builder,
+            best_fits_plot_limit,
             component_count_range
     ):
         super(type(self), self).__init__(
-            ls, reference_spectrum_list, unknown_spectrum_list, energy_range_builder, component_count_range
+            ls, reference_spectrum_list, unknown_spectrum_list, energy_range_builder, best_fits_plot_limit, component_count_range
         )
 
     def choose_best_component_count(self, all_counts_spectrum_fit_table):
