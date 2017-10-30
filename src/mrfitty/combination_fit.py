@@ -36,7 +36,6 @@ import matplotlib
 matplotlib.use('pdf', warn=False, force=True)
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.offsetbox import AnchoredText
 
 import pandas as pd
 
@@ -54,12 +53,14 @@ class CombinationFitResults:
 
 
 class AllCombinationFitTask:
-    def __init__(self, ls, reference_spectrum_list, unknown_spectrum_list, energy_range_builder, component_count_range=range(4)):
+    def __init__(self, ls, reference_spectrum_list, unknown_spectrum_list, energy_range_builder, best_fits_plot_limit, component_count_range=range(4)):
         self.ls = ls
         self.reference_spectrum_list = reference_spectrum_list
         self.unknown_spectrum_list = unknown_spectrum_list
         self.energy_range_builder = energy_range_builder
+        self.best_fits_plot_limit = best_fits_plot_limit
         self.component_count_range = component_count_range
+
         self.fit_table = collections.OrderedDict()
 
     def fit_all(self, plots_pdf_dp):
@@ -91,6 +92,8 @@ class AllCombinationFitTask:
                 f = self.plot_stacked_fit(spectrum=unknown_spectrum, any_given_fit=fit_results.best_fit, title='Best Fit')
                 plot_file.savefig(f)
 
+                ordinal_list = ('1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th')
+
                 # plot the best n-component fit
                 for n in sorted(fit_table.keys()):
                     log.info('plotting %d-component fit for %s', n, unknown_spectrum.file_name)
@@ -106,12 +109,14 @@ class AllCombinationFitTask:
                             plot_file.savefig(f)
                         else:
                             # plot just the best fit for n component(s)
-                            f = self.plot_fit(
-                                spectrum=unknown_spectrum,
-                                any_given_fit=n_component_fit_results[0],
-                                title='Best {}-Component Fit'.format(n))
-                            plot_file.savefig(f)
-                            break
+                            if i < self.best_fits_plot_limit:
+                                f = self.plot_fit(
+                                    spectrum=unknown_spectrum,
+                                    any_given_fit=n_component_fit_results[i],
+                                    title='{} Best {}-Component Fit'.format(ordinal_list[i], n))
+                                plot_file.savefig(f)
+                            else:
+                                break
 
                 f = self.plot_nss_path(spectrum=unknown_spectrum, fit_results=fit_results, title='NSS Path')
                 plot_file.savefig(f)
@@ -263,62 +268,119 @@ class AllCombinationFitTask:
     def plot_fit(self, spectrum, any_given_fit, title):
         log = logging.getLogger(name=self.__class__.__name__)
 
-        reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
-        longest_name_len = max([len(name) for name in reference_contributions_percent_sr.index])
-        # the format string should look like '{:N}{:5.2f}' where N is the length of the longest reference name
-        contribution_format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f}'
-        contribution_desc_lines = []
-        reference_contributions_percent_sr.sort_values(ascending=False, inplace=True)
-        for name, value in reference_contributions_percent_sr.items():
-            contribution_desc_lines.append(contribution_format_str.format(name, value))
-        contribution_desc_lines.append(
-            contribution_format_str.format('residual', any_given_fit.residuals_contribution))
-        contribution_desc = '\n'.join(contribution_desc_lines)
-
         f, ax = plt.subplots()
         f.suptitle(spectrum.file_name + '\n' + title)
         log.info(any_given_fit.fit_spectrum_b.shape)
-        ax.plot(any_given_fit.interpolant_incident_energy, any_given_fit.fit_spectrum_b)
-        log.info(any_given_fit.residuals.shape)
-        ax.plot(any_given_fit.interpolant_incident_energy, any_given_fit.unknown_spectrum_b, '.', alpha=0.5)
-        ax.plot(any_given_fit.interpolant_incident_energy, any_given_fit.residuals)
-        ax.set_xlabel('eV')
 
-        at = AnchoredText(contribution_desc, loc=1, prop=dict(fontname='Monospace', size=8))
-        ax.add_artist(at)
+        reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
+        reference_only_contributions_percent_sr = any_given_fit.get_reference_only_contributions_sr()
+        longest_name_len = max([len(name) for name in reference_contributions_percent_sr.index] + [len(spectrum.file_name)])
+        # the format string should look like '{:N}{:5.2f} ({:5.2f})' where N is the length of the longest reference name
+        reference_contribution_format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f} ({:5.2f})'
+        residuals_contribution_format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f}'
+
+        # add fits in descending order of reference contribution
+        reference_line_list = []
+        reference_label_list = []
+        reference_contributions_percent_sr.sort_values(ascending=False, inplace=True)
+        reference_only_contributions_percent_sr.sort_values(ascending=False, inplace=True)
+        log.info('plotting reference components')
+        log.info(reference_contributions_percent_sr.head())
+        for (ref_name, ref_contrib), (ref_only_name, ref_only_contrib) \
+                in zip(reference_contributions_percent_sr.items(), reference_only_contributions_percent_sr.items()):
+            log.info('reference contribution {} {}'.format(ref_name, ref_contrib))
+            log.info('reference-only contribution {} {}'.format(ref_only_name, ref_only_contrib))
+            reference_label = reference_contribution_format_str.format(ref_name, ref_contrib, ref_only_contrib)
+            reference_label_list.append(reference_label)
+
+            # plot once for each reference just to build the legend
+            # ax.plot returns a list
+            reference_line_list.extend(
+                ax.plot(
+                    any_given_fit.interpolant_incident_energy,
+                    any_given_fit.fit_spectrum_b,
+                    label=reference_label,
+                    color='w',
+                    alpha=0.0))
+
+        log.info(any_given_fit.residuals.shape)
+        residuals_label = residuals_contribution_format_str.format('residuals', any_given_fit.residuals_contribution)
+        residuals_line = ax.plot(
+            any_given_fit.interpolant_incident_energy,
+            any_given_fit.residuals,
+            label=residuals_label)
+
+        fit_line_label = 'fit'
+        fit_line = ax.plot(
+            any_given_fit.interpolant_incident_energy,
+            any_given_fit.fit_spectrum_b,
+            label=fit_line_label)
+
+        spectrum_points = ax.plot(
+            any_given_fit.interpolant_incident_energy,
+            any_given_fit.unknown_spectrum_b,
+            '.',
+            label=spectrum.file_name,
+            alpha=0.5)
+
+        ax.set_xlabel('eV')
+        ax.set_ylabel('normalized absorbance')
+        # 20171029
+        ax.legend(
+            [*reference_line_list, *spectrum_points, *residuals_line, *fit_line],
+            [*reference_label_list, spectrum.file_name, residuals_label, fit_line_label],
+            prop=dict(family='Monospace', size=7))
 
         return f
 
     def plot_stacked_fit(self, spectrum, any_given_fit, title):
         log = logging.getLogger(name=self.__class__.__name__)
 
-        reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
-        longest_name_len = max([len(name) for name in reference_contributions_percent_sr.index])
-        # the format string should look like '{:N}{:5.2f}' where N is the length of the longest reference name
-        contribution_format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f}'
-        contribution_desc_lines = []
-        reference_contributions_percent_sr.sort_values(ascending=False, inplace=True)
-        for name, value in reference_contributions_percent_sr.items():
-            contribution_desc_lines.append(contribution_format_str.format(name, value))
-        contribution_desc_lines.append(
-            contribution_format_str.format('residual', any_given_fit.residuals_contribution))
-
-        contribution_desc = '\n'.join(contribution_desc_lines)
-
-        sort_ndx = reversed(any_given_fit.reference_spectra_coef_x.argsort())
-
-        ys = any_given_fit.reference_spectra_coef_x * any_given_fit.reference_spectra_A_df
-        print(ys.head())
-
         f, ax = plt.subplots()
         f.suptitle(spectrum.file_name + '\n' + title)
         log.info(any_given_fit.fit_spectrum_b.shape)
-        ax.stackplot(ys.index, *[ys.iloc[:, i] for i in sort_ndx])
-        ax.plot(any_given_fit.interpolant_incident_energy, any_given_fit.unknown_spectrum_b, '.', alpha=0.5)
-        ax.set_xlabel('eV')
 
-        at = AnchoredText(contribution_desc, loc=1, prop=dict(fontname='Monospace', size=8))
-        ax.add_artist(at)
+        reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
+        longest_name_len = max([len(name) for name in reference_contributions_percent_sr.index] + [len(spectrum.file_name)])
+        # the format string should look like '{:N}{:5.2f}' where N is the length of the longest reference name
+        contribution_format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f}'
+
+        log.info(any_given_fit.residuals.shape)
+        residuals_label = contribution_format_str.format('residuals', any_given_fit.residuals_contribution)
+        residuals_line = ax.plot(
+            any_given_fit.interpolant_incident_energy,
+            any_given_fit.residuals,
+            label=residuals_label)
+
+        spectrum_points = ax.plot(
+            any_given_fit.interpolant_incident_energy,
+            any_given_fit.unknown_spectrum_b,
+            '.',
+            label=spectrum.file_name,
+            alpha=0.5)
+
+        # add fits in descending order of reference contribution
+        reference_label_list = []
+        reference_contributions_percent_sr.sort_values(ascending=False, inplace=True)
+        sort_ndx = reversed(any_given_fit.reference_spectra_coef_x.argsort())
+        ys = any_given_fit.reference_spectra_coef_x * any_given_fit.reference_spectra_A_df
+        log.info('plotting reference components')
+        log.info(reference_contributions_percent_sr.head())
+        reference_contributions_percent_sr.sort_values(ascending=False)
+        for name, value in reference_contributions_percent_sr.items():
+            log.info('reference component {} {}'.format(name, value))
+            reference_label = contribution_format_str.format(name, value)
+            reference_label_list.append(reference_label)
+
+        reference_line_list = ax.stackplot(ys.index, *[ys.iloc[:, i] for i in sort_ndx], labels=reference_label_list)
+
+        ax.set_xlabel('eV')
+        ax.set_ylabel('normalized absorbance')
+        ax.legend(
+            # these arguments are documented but this does not seem to work
+            [*spectrum_points, *reference_line_list, *residuals_line],
+            [spectrum.file_name, *reference_label_list, residuals_label],
+            prop=dict(family='Monospace', size=7))
 
         return f
 
