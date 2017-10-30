@@ -23,7 +23,7 @@ def read(*names, **kwargs):
 
 setup(
     name='mrfitty',
-    version='0.1.0',
+    version='0.10.0',
     license='MIT',
     description='A package for linear least squares fitting XANES data.',
     long_description='%s\n%s' % (read('README.rst'), re.sub(':[a-z]+:`~?(.*?)`', r'``\1``', read('CHANGELOG.rst'))),
@@ -45,7 +45,7 @@ setup(
         'Operating System :: POSIX',
         'Operating System :: Microsoft :: Windows',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',
         'Topic :: Utilities',
     ],
@@ -54,7 +54,6 @@ setup(
     ],
     install_requires=[
         'bokeh',
-        'click',
         'jupyter',
         'matplotlib',
         'numpy',
