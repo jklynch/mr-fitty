@@ -79,6 +79,9 @@ Here is an example configuration file: ::
     plots_pdf_fp = test_arsenic_fit_plots.pdf
     table_fp = test_arsenic_fit_table.txt
 
+    [plots]
+    best_fits_plot_limit = 3
+
 Input
 =====
 In addition to a configuration file the necessary input files are
