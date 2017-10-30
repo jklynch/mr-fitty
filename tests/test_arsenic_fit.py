@@ -51,6 +51,7 @@ def test_arsenic_1(caplog, request):
         energy_range_builder=AdaptiveEnergyRangeBuilder(),
         reference_spectrum_list=reference_spectrum_list,
         unknown_spectrum_list=[unknown_spectrum, ],
+        best_fits_plot_limit=1,
         component_count_range=range(1, 3+1)
     )
 
@@ -101,6 +102,7 @@ def test_arsenic_2(caplog, request):
         energy_range_builder=AdaptiveEnergyRangeBuilder(),
         reference_spectrum_list=reference_spectrum_list,
         unknown_spectrum_list=[unknown_spectrum],
+        best_fits_plot_limit=1,
         component_count_range=range(1, 3+1)
     )
 
