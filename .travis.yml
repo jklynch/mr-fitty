@@ -24,7 +24,7 @@ install:
   - pwd
   - pip install -e `pwd`[test]
 script:
-  - py.test tests/
+  - py.test tests/ -s
 notifications:
   email:
     on_success: always

@@ -30,7 +30,7 @@ import sys
 from mrfitty.fit_task_builder import ConfigurationFileError, build_fit_task, get_config_parser
 
 
-__version__ = '0.10.0'
+__version__ = '0.10.1'
 
 
 def main():

@@ -7,7 +7,7 @@ MrFitty
 
 MrFitty is an open-source Python package for fitting XANES data to a set of reference spectra using linear least
 squares and best subset selection as described in *An Introduction to Statistical Learning with Applications in R* by
-Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani. It runs on any system with a Python 3.4+ interpreter
+Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani. It runs on any system with a Python 3.6+ interpreter
 including Linux, OS X, and Windows.
 
 MrFitty functions similarly to the spectra-fitting tools in the LabView software suite written by
@@ -17,7 +17,7 @@ Dr. Matthew Marcus at the Berkeley Synchrotron available `here <https://sites.go
 
 Requirements
 ============
-MrFitty requires Python 3.4+. The following required packages will be automatically installed (as described in the Installation section):
+MrFitty requires Python 3.6+. The following required packages will be automatically installed (as described in the Installation section):
 
     1. click >= 5.1
     2. matplotlib >= 1.4.3
@@ -28,17 +28,17 @@ MrFitty requires Python 3.4+. The following required packages will be automatica
 
 Installation
 ============
-Users should consider installing MrFitty in a `Python virtual environment <https://docs.python.org/3.4/library/venv.html>`_.
+Users should consider installing MrFitty in a `Python virtual environment <https://docs.python.org/3.6/library/venv.html>`_.
 This is not necessary but it simplifies package management by separating the system Python from the users' Python environments.
-On systems without Python 3.4+ the `Anaconda <https://anaconda.org>`_ Python distribution is a good choice. It can be installed without
+On systems without Python 3.6+ the `Anaconda <https://anaconda.org>`_ Python distribution is a good choice. It can be installed without
 administrative privileges and supports virtual environments. In addition the Anaconda distribution includes pre-built
 packages which are less trouble to install in some cases, especially on Windows systems.
 
-If the standard Python 3.4+ distribution is available then MrFitty can be installed with pip: ::
+If the standard Python 3.6+ distribution is available then MrFitty can be installed with pip: ::
 
     $ pip install git+https://github.com/jklynch/mr-fitty.git
 
-Alternatively, MrFitty can be installed in a virtual environment using the standard Python 3.4+ distribution with the following commands: ::
+Alternatively, MrFitty can be installed in a virtual environment using the standard Python 3.6+ distribution with the following commands: ::
 
     $ python3 -m venv mrf --without-pip
     $ source mrf/bin/activate
