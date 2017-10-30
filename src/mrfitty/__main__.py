@@ -21,18 +21,35 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+import argparse
 import io
 import logging
 import os
-
-import click
+import sys
 
 from mrfitty.fit_task_builder import ConfigurationFileError, build_fit_task, get_config_parser
 
 
-@click.command()
-@click.argument('config_fp', type=click.Path(exists=True))
-def main(config_fp):
+__version__ = '0.10.0'
+
+
+def main():
+    cli(sys.argv[1:])
+
+
+def cli(argv):
+    print('argv: {}'.format(argv))
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('config_fp', metavar='FILE', help='path to a configuration file')
+    argparser.add_argument('--version', action='version', version='MrFitty version {}'.format(__version__))
+
+    parsed_args = argparser.parse_args(argv)
+    print('parsed args: {}'.format(parsed_args))
+    fit(parsed_args)
+
+
+def fit(args):
+    config_fp = args.config_fp
     config = get_config_parser()
     print('reading configuration file path: %s', config_fp)
     with open(config_fp) as config_file:
@@ -66,21 +83,25 @@ def main(config_fp):
     else:
         log.warning('No file path specified for table output')
 
-    #plots_pdf_file_path = os.path.expanduser(config.get('output', 'plots_pdf_fp', fallback=None))
-    #if plots_pdf_file_path:
-    #    log.info('writing plots to PDF {}'.format(plots_pdf_file_path))
-    #    fitter.draw_plots_matplotlib(plots_pdf_file_path)
-    #    plots_html_file_path = os.path.splitext(plots_pdf_file_path)[0] + '.html'
-    #    log.info('writing plots to HTML {}'.format(plots_html_file_path))
-    #    fitter.draw_plots_bokeh(plots_html_file_path)
-    #else:
-    #    log.warning('No file path specified for plot output')
+        #plots_pdf_file_path = os.path.expanduser(config.get('output', 'plots_pdf_fp', fallback=None))
+        #if plots_pdf_file_path:
+        #    log.info('writing plots to PDF {}'.format(plots_pdf_file_path))
+        #    fitter.draw_plots_matplotlib(plots_pdf_file_path)
+        #    plots_html_file_path = os.path.splitext(plots_pdf_file_path)[0] + '.html'
+        #    log.info('writing plots to HTML {}'.format(plots_html_file_path))
+        #    fitter.draw_plots_bokeh(plots_html_file_path)
+        #else:
+        #    log.warning('No file path specified for plot output')
 
-    best_fit_files_dir_path = os.path.expanduser(config.get('output', 'best_fit_files_dir', fallback=None))
-    if best_fit_files_dir_path:
-        if not os.path.expanduser(best_fit_files_dir_path):
-            log.info('creating directory %s', best_fit_files_dir_path)
-            os.makedirs(best_fit_files_dir_path)
-        fitter.write_best_fit_arrays(best_fit_files_dir_path)
-    else:
-        log.warning('No directory specified for best fit files')
+        best_fit_files_dir_path = os.path.expanduser(config.get('output', 'best_fit_files_dir', fallback=None))
+        if best_fit_files_dir_path:
+            if not os.path.expanduser(best_fit_files_dir_path):
+                log.info('creating directory %s', best_fit_files_dir_path)
+                os.makedirs(best_fit_files_dir_path)
+            fitter.write_best_fit_arrays(best_fit_files_dir_path)
+        else:
+            log.warning('No directory specified for best fit files')
+
+
+if __name__ == '__main__':
+    main()
