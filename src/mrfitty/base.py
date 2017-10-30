@@ -301,6 +301,8 @@ class SpectrumFit:
         self.reference_spectra_seq = reference_spectra_seq
         self.reference_spectra_A_df = reference_spectra_A_df
         # TODO: fix this
+        # TODO: remember what needs fixing
+        # TODO: now I remember, make '.norm' configurable
         self.unknown_spectrum_b = unknown_spectrum_b.norm
         self.reference_spectra_coef_x = reference_spectra_coef_x
         self.fit_spectrum_b = reference_spectra_A_df.dot(reference_spectra_coef_x)
@@ -318,6 +320,7 @@ class SpectrumFit:
         self.nss = self.sum_of_squared_residuals / self.sum_of_squared_unknown_spectrum_b
 
         self.reference_contribution_percent_sr = None
+        self.reference_only_contribution_percent_sr = None
         self.total_reference_contribution = None
         self.residuals_contribution = None
 
@@ -342,6 +345,20 @@ class SpectrumFit:
         self.residuals_contribution = (100.0 / self.unknown_spectrum_auc) * self.residuals_auc
         log.debug('residuals_contribution: %s', self.residuals_contribution)
         return self.reference_contribution_percent_sr
+
+    def get_reference_only_contributions_sr(self):
+        # calculate reference-only contributions as well
+        # scaled_references_abs_sums_sr looks like this:
+        #   Arsenopyrite_Julcani_OA.e           0.508400
+        #   arsenate_sorbed_diop_avg_als_cal.e  0.092146
+        #   orpiment_all_ref_als_cal.e          0.399454
+        #   dtype: float64
+        scaled_references_df = self.reference_spectra_coef_x * self.reference_spectra_A_df
+        scaled_references_abs_sums_sr = scaled_references_df.abs().sum()
+
+        self.reference_only_contribution_percent_sr = \
+            100.0 * scaled_references_abs_sums_sr / scaled_references_abs_sums_sr.sum()
+        return self.reference_only_contribution_percent_sr
 
     def __str__(self):
         contribution_str = 'SpectrumFit: {:5.3f}: NSS'.format(self.nss)
