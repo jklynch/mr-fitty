@@ -2,7 +2,7 @@
 MrFitty
 =======
 
-.. image:: https://travis-ci.org/jklynch/mr-fitty.svg?branch=master
+.. image:: https://travis-ci.org/jklynch/mr-fitty.svg?branch=develop
     :target: https://travis-ci.org/jklynch/mr-fitty
 
 MrFitty is an open-source Python package for fitting XANES data to a set of reference spectra using linear least
@@ -79,6 +79,9 @@ Here is an example configuration file: ::
     plots_pdf_fp = test_arsenic_fit_plots.pdf
     table_fp = test_arsenic_fit_table.txt
 
+    [plots]
+    best_fits_plot_limit = 3
+
 Input
 =====
 In addition to a configuration file the necessary input files are
@@ -88,7 +91,7 @@ In addition to a configuration file the necessary input files are
   + one or more normalized spectrum files to be fit by the reference files
 
 All input files must contain at least two columns of data. One column is
-incident energy and the other column is fluourescence. Initial rows beginning
+incident energy and the other column is normalized absorbance. Initial rows beginning
 with '#' will be ignored except for the last row which must contain column headers.
 For example, the following normalized file written by Athena can be used as
 input to mr-fitty::
@@ -130,6 +133,6 @@ Several output files will be produced:
   + one file per fitted spectrum with four columns of data:
 
      +  incident energy
-     +  fitted fluourescence value
+     +  fitted normalized absorbance value
      +  residual of the fit
-     +  input fluourescence 
+     +  input normalized absorbance

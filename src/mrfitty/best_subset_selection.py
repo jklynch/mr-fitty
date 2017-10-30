@@ -22,11 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 import logging
+import time
 
 import numpy as np
 import scikits.bootstrap
 import sklearn.model_selection
-#import sklearn.linear_model
 
 from mrfitty.combination_fit import AllCombinationFitTask
 
@@ -38,71 +38,95 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
             reference_spectrum_list,
             unknown_spectrum_list,
             energy_range_builder,
+            best_fits_plot_limit,
             component_count_range
     ):
         super(type(self), self).__init__(
-            ls, reference_spectrum_list, unknown_spectrum_list, energy_range_builder, component_count_range
+            ls, reference_spectrum_list, unknown_spectrum_list, energy_range_builder, best_fits_plot_limit, component_count_range
         )
 
-    def choose_best_component_count(self, best_fit_for_component_count_list):
+    def choose_best_component_count(self, all_counts_spectrum_fit_table):
         """
         Calculate the prediction error for each subset.
-        :param best_fit_for_component_count_list:
-          a list of fits for component counts 0 to N; there is no 0-component fit
+        :param all_counts_spectrum_fit_table:
+          dictionary with component count keys, sorted list of spectrum fit list values
         :return:
         """
         log = logging.getLogger(__name__)
-        log.setLevel(logging.DEBUG)
 
-        log.debug('choosing best component count from {}'.format(best_fit_for_component_count_list))
-        component_count_to_cp_list = [np.Inf] * len(best_fit_for_component_count_list)
-        component_count_to_median_cp = [np.Inf] * len(best_fit_for_component_count_list)
-        component_count_to_median_cp_ci_lo_hi = [(np.Inf, np.Inf)] * len(best_fit_for_component_count_list)
-        # todo: this component_count is off by 1
-        for component_count_i, best_fit_for_component_count in enumerate(best_fit_for_component_count_list):
-            log.debug('calculating CI of median C_p for {} component(s)'.format(component_count_i + 1))
-            #log.debug(best_fit_for_component_count.reference_spectra_A_df)
-            #log.debug(best_fit_for_component_count.unknown_spectrum_b)
-            # calculate Cp and 95% confidence interval of the median
-            normalized_cp_list = []
-            component_count_to_cp_list[component_count_i] = normalized_cp_list
-            cv = sklearn.model_selection.ShuffleSplit(n_splits=1000, test_size=0.2)
-            for train_index, test_index in cv.split(best_fit_for_component_count.reference_spectra_A_df.values):
-                lm = self.ls()
-                lm.fit(
-                    best_fit_for_component_count.reference_spectra_A_df.values[train_index],
-                    best_fit_for_component_count.unknown_spectrum_b.values[train_index]
-                )
-                predicted_b = lm.predict(best_fit_for_component_count.reference_spectra_A_df.values[test_index])
-                residuals = best_fit_for_component_count.unknown_spectrum_b.values[test_index] - predicted_b
-                cp = np.sqrt(np.sum(np.square(residuals)))
-                normalized_cp = cp / residuals.shape
-                normalized_cp_list.append(normalized_cp)
+        log.debug('choosing best component count from {}'.format(all_counts_spectrum_fit_table))
+        component_count_to_median_cp = {
+            component_count: np.Inf
+            for component_count in all_counts_spectrum_fit_table.keys()
+        }
+        component_count_to_median_cp_ci_lo_hi = {
+            component_count: (np.Inf, np.Inf)
+            for component_count in all_counts_spectrum_fit_table.keys()
+        }
 
-            component_count_to_median_cp[component_count_i] = np.median(normalized_cp_list)
+        for component_count_i in sorted(all_counts_spectrum_fit_table.keys()):
+            log.debug('calculating CI of median C_p for {} component(s)'.format(component_count_i))
+
+            best_fit_for_component_count = all_counts_spectrum_fit_table[component_count_i][0]
+            t0 = time.time()
+            prediction_error_list = self.calculate_prediction_error_list(best_fit_for_component_count)
+            t1 = time.time()
+            log.info('%5.2fs to calculate prediction error list', t1-t0)
+            component_count_to_median_cp[component_count_i] = np.median(prediction_error_list)
             component_count_to_median_cp_ci_lo_hi[component_count_i] = scikits.bootstrap.ci(
-                data=normalized_cp_list,
+                data=prediction_error_list,
                 statfunction=np.median)
 
         log.debug('component count to median cp: {}'.format(component_count_to_median_cp))
         log.debug('component count to median cp confidence interval: {}'.format(component_count_to_median_cp_ci_lo_hi))
-        #best_fit_component_count_i = np.argmin(np.asarray(component_count_to_median_cp))
 
-        # compare ci_1_lo with ci_2_hi
-        # if ci_1_lo overlaps ci_2_hi then component_count is 1
-        best_fit_component_count_i = len(component_count_to_median_cp_ci_lo_hi) - 1
-        prev_lo = np.Inf
-        for i, (lo, hi) in enumerate(component_count_to_median_cp_ci_lo_hi):
-            print('lo: {} hi: {}'.format(lo, hi))
-            if prev_lo <= hi:
-                best_fit_component_count_i = i
-                break
-            else:
-                prev_lo = lo
-
-        best_fit_component_count = 1 + best_fit_component_count_i
-        log.info('best fit component count is {}'.format(best_fit_component_count))
-        best_fit = best_fit_for_component_count_list[best_fit_component_count_i]
-
+        best_component_count = self.get_best_ci_component_count(component_count_to_median_cp_ci_lo_hi)
+        best_fit = all_counts_spectrum_fit_table[best_component_count][0]
         log.info('best fit: {}'.format(best_fit))
         return best_fit
+
+    @staticmethod
+    def get_best_ci_component_count(component_count_to_median_cp_ci_lo_hi):
+        """
+        Use the 'best subset selection' criterion to choose the 'best' component count using
+        confidence intervals for median C_p (prediction error). Choose the component count with
+        the smallest median C_p. If two C_p confidence intervals overlap choose the lower count.
+
+        component count  lo    hi
+        1                0.3   0.4
+        2                0.1   0.2
+
+        :param component_count_to_median_cp_ci_lo_hi:
+        :return: (int) best component count
+        """
+        log = logging.getLogger(name=__name__)
+        best_component_count = max(component_count_to_median_cp_ci_lo_hi.keys())
+        for n in sorted(component_count_to_median_cp_ci_lo_hi.keys())[:-1]:
+            n_lo, n_hi = component_count_to_median_cp_ci_lo_hi[n]
+            n_plus_1_lo, n_plus_1_hi = component_count_to_median_cp_ci_lo_hi[n+1]
+            log.debug('comparing C_p ci for %d with C_p ci for %d', n, n+1)
+            # must handle two cases:
+            #   n_plus_1_hi >= n_lo -> choose n
+            #   n_plus_1_hi <  n_lo -> try n+1
+            if n_plus_1_hi >= n_lo:
+                best_component_count = n
+                break
+
+        return best_component_count
+
+    def calculate_prediction_error_list(self, fit):
+        # calculate Cp and 95% confidence interval of the median
+        normalized_cp_list = []
+        cv = sklearn.model_selection.ShuffleSplit(n_splits=1000, test_size=0.2)
+        for train_index, test_index in cv.split(fit.reference_spectra_A_df.values):
+            lm = self.ls()
+            lm.fit(
+                fit.reference_spectra_A_df.values[train_index],
+                fit.unknown_spectrum_b.values[train_index]
+            )
+            predicted_b = lm.predict(fit.reference_spectra_A_df.values[test_index])
+            residuals = fit.unknown_spectrum_b.values[test_index] - predicted_b
+            cp = np.sqrt(np.sum(np.square(residuals)))
+            normalized_cp = cp / residuals.shape
+            normalized_cp_list.append(normalized_cp)
+        return normalized_cp_list

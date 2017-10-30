@@ -158,6 +158,8 @@ def get_fit_parameters_from_config_file(config, prm_max_cmp, prm_min_cmp):
     # these are the options specified in the [fit] section:
     #   maximum_component_count
     #   minimum_component_count
+    #   fit_method: lsq or nnlsq
+    #   component_count_method: combination_fit or best_subset_selection
     #
     log = logging.getLogger(name=__name__)
 
@@ -209,6 +211,16 @@ def get_fit_parameters_from_config_file(config, prm_max_cmp, prm_min_cmp):
     return max_cmp, min_cmp, fit_method_class, fit_task_class
 
 
+def get_plotting_parameters_from_config_file(config):
+    if not config.has_section('plots'):
+        raise ConfigurationFileError(
+            'required section [plots] is missing from configuration file' )
+    else:
+        best_fits_plot_limit = config.getint('plots', 'best_fits_plot_limit', fallback=3)
+
+    return best_fits_plot_limit
+
+
 def build_fit_task(config):
     log = logging.getLogger(name=__name__)
 
@@ -244,6 +256,8 @@ def build_fit_task(config):
     max_cmp, min_cmp, fit_method_class, fit_task_class = get_fit_parameters_from_config_file(
         config, prm_max_cmp, prm_min_cmp)
 
+    best_fits_plot_limit = get_plotting_parameters_from_config_file(config)
+
     if 0 < min_cmp <= max_cmp:
         component_count_range = range(min_cmp, max_cmp+1)
         logging.info('component count range: {}'.format(component_count_range))
@@ -255,7 +269,8 @@ def build_fit_task(config):
         reference_spectrum_list=reference_spectrum_list,
         unknown_spectrum_list=unknown_spectrum_list,
         energy_range_builder=energy_range,
-        component_count_range=component_count_range
+        component_count_range=component_count_range,
+        best_fits_plot_limit=best_fits_plot_limit
     )
 
     return fit_task

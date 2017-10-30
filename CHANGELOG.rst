@@ -2,7 +2,19 @@
 Changelog
 =========
 
-0.1.0 (2015-06-10)
+0.10.0 (2017-10-27)
 -----------------------------------------
 
-* First release on PyPI.
+* Write output files after each fit
+* Add NSS path plot
+* Add stacked plot
+* Add [plots] section to configuration file
+* Configure number of best fit plots with best_fits_plot_limit in [plots]
+* Report best fit(s) for each component count
+* Add reference-only percent contributions to plot
+
+0.9.0 (2017-06-21)
+-----------------------------------------
+
+* First release
+

@@ -30,8 +30,6 @@ import pandas as pd
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 
-log = logging.getLogger(name=__name__)
-
 
 class Spectrum:
     """Spectrum
@@ -86,6 +84,7 @@ class Spectrum:
         -------
         Instance of class Spectrum or subclass.
         """
+        log = logging.getLogger(name=cls.__name__)
         spectrum_data_df = pd.read_table(
             file_path_or_buffer,
             engine='python',
@@ -115,6 +114,7 @@ class Spectrum:
         :param file_glob_list: list of paths or file globs
         :return: set of ReferenceSpectrum instances
         """
+        log = logging.getLogger(name=cls.__name__)
         # keep a list of config file entries for error reporting
         reference_spectrum_file_path_set = set()
 
@@ -288,7 +288,6 @@ class SpectrumFit:
     reference_spectra_coef_x :
 
     """
-    #@profile
     def __init__(
         self,
         interpolant_incident_energy,
@@ -297,10 +296,13 @@ class SpectrumFit:
         reference_spectra_seq,
         reference_spectra_coef_x
     ):
+        log = logging.getLogger(name=self.__class__.__name__)
         self.interpolant_incident_energy = interpolant_incident_energy
         self.reference_spectra_seq = reference_spectra_seq
         self.reference_spectra_A_df = reference_spectra_A_df
         # TODO: fix this
+        # TODO: remember what needs fixing
+        # TODO: now I remember, make '.norm' configurable
         self.unknown_spectrum_b = unknown_spectrum_b.norm
         self.reference_spectra_coef_x = reference_spectra_coef_x
         self.fit_spectrum_b = reference_spectra_A_df.dot(reference_spectra_coef_x)
@@ -318,6 +320,7 @@ class SpectrumFit:
         self.nss = self.sum_of_squared_residuals / self.sum_of_squared_unknown_spectrum_b
 
         self.reference_contribution_percent_sr = None
+        self.reference_only_contribution_percent_sr = None
         self.total_reference_contribution = None
         self.residuals_contribution = None
 
@@ -326,7 +329,7 @@ class SpectrumFit:
         self.unknown_spectrum_auc = self.sum_of_abs_unknown_spectrum_b
 
     def get_reference_contributions_sr(self):
-
+        log = logging.getLogger(name=self.__class__.__name__)
         # calculate percent contribution for each reference
         #
         #  pct_i = coef_i * auc_ref_i * (100.0 / unknown_spectrum_auc)
@@ -343,6 +346,20 @@ class SpectrumFit:
         log.debug('residuals_contribution: %s', self.residuals_contribution)
         return self.reference_contribution_percent_sr
 
+    def get_reference_only_contributions_sr(self):
+        # calculate reference-only contributions as well
+        # scaled_references_abs_sums_sr looks like this:
+        #   Arsenopyrite_Julcani_OA.e           0.508400
+        #   arsenate_sorbed_diop_avg_als_cal.e  0.092146
+        #   orpiment_all_ref_als_cal.e          0.399454
+        #   dtype: float64
+        scaled_references_df = self.reference_spectra_coef_x * self.reference_spectra_A_df
+        scaled_references_abs_sums_sr = scaled_references_df.abs().sum()
+
+        self.reference_only_contribution_percent_sr = \
+            100.0 * scaled_references_abs_sums_sr / scaled_references_abs_sums_sr.sum()
+        return self.reference_only_contribution_percent_sr
+
     def __str__(self):
         contribution_str = 'SpectrumFit: {:5.3f}: NSS'.format(self.nss)
         reference_contribution_sr = self.get_reference_contributions_sr()
@@ -352,6 +369,7 @@ class SpectrumFit:
             contribution_str += ' {:4.2f}: {},'.format(reference_contribution, reference_spectrum.file_name)
         contribution_str += ' {:4.2f}: residuals'.format(self.residuals_contribution)
         return contribution_str
+
 
 class AdaptiveEnergyRangeBuilder:
     """AdaptiveEnergyRangeBuilder
@@ -465,6 +483,7 @@ class PRM:
         self.reference_file_path_to_mineral_category = {}
 
     def add_reference_file_path(self, reference_file_path, mineral_category=None):
+        log = logging.getLogger(name=self.__class__.__name__)
         if reference_file_path in self.reference_file_path_list:
             #raise Exception('{} appears more than once in the prm'.format(reference_file_path))
             log.warning('{} appears more than once in prm'.format(reference_file_path))
@@ -486,6 +505,7 @@ class PRM:
 
     @classmethod
     def read_prm(cls, prm_file_path):
+        log = logging.getLogger(name=cls.__name__)
         reference_dir_path = os.path.split(prm_file_path)[0]
         log.debug('reading PRM {}'.format(prm_file_path))
         with open(prm_file_path) as prm_file:
