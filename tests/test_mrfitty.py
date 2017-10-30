@@ -10,11 +10,9 @@ py.test tests/ --cov=src/mrfitty
 import logging
 import os.path
 
-from click.testing import CliRunner
-
 import pytest
 
-from mrfitty.__main__ import main
+from mrfitty.__main__ import cli
 from mrfitty.fit_task_builder import get_config_parser
 
 logging.basicConfig(level=logging.DEBUG)
@@ -23,7 +21,6 @@ log = logging.getLogger(name=__name__)
 
 @pytest.mark.skip()
 def test_main(fs):
-    runner = CliRunner()
 
     # write the necessary input files:
     #   configuration file
@@ -103,7 +100,7 @@ table_fp = test_main_table.txt
 reference_plots_pdf = test_main_reference_plots.pdf
 ''')
 
-    result = runner.invoke(main, ['test_main.cfg'])
+    result = cli(['test_main.cfg'])
 
     assert result.exit_code == 0
     assert os.path.exists('test_main_plots.pdf')
