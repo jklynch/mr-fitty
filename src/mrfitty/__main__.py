@@ -30,9 +30,6 @@ import sys
 from mrfitty.fit_task_builder import ConfigurationFileError, build_fit_task, get_config_parser
 
 
-__version__ = '0.10.1'
-
-
 def main():
     cli(sys.argv[1:])
 
@@ -51,7 +48,7 @@ def cli(argv):
 def fit(args):
     config_fp = args.config_fp
     config = get_config_parser()
-    print('reading configuration file path: %s', config_fp)
+    print('reading configuration file path: {}'.format(config_fp))
     with open(config_fp) as config_file:
         config.read_file(config_file)
 
