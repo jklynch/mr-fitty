@@ -2,6 +2,11 @@
 Changelog
 =========
 
+0.11.0 (2017-11-30)
+-----------------------------------------
+* negative coefficients from linear regression are handled correctly (again)
+* print more decimal places for NSS in table output
+
 0.10.0 (2017-10-27)
 -----------------------------------------
 
