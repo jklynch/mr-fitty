@@ -41,6 +41,10 @@ import pandas as pd
 from mrfitty.base import InterpolatedReferenceSpectraSet, SpectrumFit
 
 
+class FitFailed(Exception):
+    pass
+
+
 class CombinationFitResults:
     """CombinationFitResults
 
@@ -141,18 +145,27 @@ class AllCombinationFitTask:
         for reference_spectra_combination in self.reference_combination_iter(self.component_count_range):
             log.debug('fitting to reference_spectra {}'.format(reference_spectra_combination))
 
-            spectrum_fit = self.fit_references_to_unknown(
-                interpolated_reference_spectra=interpolated_reference_spectra,
-                reference_spectra_subset=reference_spectra_combination)
-            reference_count = len(reference_spectra_combination)
-            spectrum_fit_list = all_counts_spectrum_fit_table[reference_count]
-            spectrum_fit_list.append(spectrum_fit)
-            spectrum_fit_list.sort(key=attrgetter('nss'))
-            # when there are many reference spectra the list of fits can get extremely long
-            # and eat up all the memory
-            # keep only the top 100 fits for each component count
-            if len(spectrum_fit_list) > 100:
-                spectrum_fit_list.pop()
+            try:
+                spectrum_fit = self.fit_references_to_unknown(
+                    interpolated_reference_spectra=interpolated_reference_spectra,
+                    reference_spectra_subset=reference_spectra_combination)
+                reference_count = len(reference_spectra_combination)
+                spectrum_fit_list = all_counts_spectrum_fit_table[reference_count]
+                spectrum_fit_list.append(spectrum_fit)
+                spectrum_fit_list.sort(key=attrgetter('nss'))
+                # when there are many reference spectra the list of fits can get extremely long
+                # and eat up all the memory
+                # keep only the top 100 fits for each component count
+                if len(spectrum_fit_list) > 100:
+                    spectrum_fit_list.pop()
+            except FitFailed as ff:
+                # this is a common occurrence when using ordinary linear regression
+                # it is not an 'error' just something that happens and needs to be handled
+                log.debug(
+                    'failed to fit unknown "%s" to references\n\t%s',
+                    unknown_spectrum.file_name,
+                    '\n\t'.join([r.file_name for r in reference_spectra_combination]))
+                log.debug(ff)
 
         """
         TODO: this should go somewhere else
@@ -187,16 +200,20 @@ class AllCombinationFitTask:
 
         lm = self.ls()
         lm.fit(interpolated_reference_spectra_subset_df.values, unknown_spectrum_df.norm.values)
-        reference_spectra_coef_x = lm.coef_
+        if any(lm.coef_ < 0.0):
+            msg = 'negative coefficients while fitting:\n{}'.format(lm.coef_)
+            raise FitFailed(msg)
+        else:
+            reference_spectra_coef_x = lm.coef_
 
-        spectrum_fit = SpectrumFit(
-            interpolant_incident_energy=interpolated_reference_spectra_subset_df.index,
-            reference_spectra_A_df=interpolated_reference_spectra_subset_df,
-            unknown_spectrum_b=unknown_spectrum_df,
-            reference_spectra_seq=reference_spectra_subset,
-            reference_spectra_coef_x=reference_spectra_coef_x
-        )
-        return spectrum_fit
+            spectrum_fit = SpectrumFit(
+                interpolant_incident_energy=interpolated_reference_spectra_subset_df.index,
+                reference_spectra_A_df=interpolated_reference_spectra_subset_df,
+                unknown_spectrum_b=unknown_spectrum_df,
+                reference_spectra_seq=reference_spectra_subset,
+                reference_spectra_coef_x=reference_spectra_coef_x
+            )
+            return spectrum_fit
 
     def choose_best_component_count(self, all_counts_spectrum_fit_table):
         """
@@ -231,7 +248,7 @@ class AllCombinationFitTask:
             for spectrum, fit_results in self.fit_table.items():
                 table_file.write(spectrum.file_name)
                 table_file.write('\t')
-                table_file.write('{:5.3f}\t'.format(fit_results.best_fit.nss))
+                table_file.write('{:8.5f}\t'.format(fit_results.best_fit.nss))
                 table_file.write('{:5.3f}'.format(fit_results.best_fit.residuals_contribution))
                 for ref_name, ref_pct in fit_results.best_fit.reference_contribution_percent_sr.sort_values(ascending=False).items():
                     table_file.write('\t')
@@ -287,8 +304,8 @@ class AllCombinationFitTask:
         log.info(reference_contributions_percent_sr.head())
         for (ref_name, ref_contrib), (ref_only_name, ref_only_contrib) \
                 in zip(reference_contributions_percent_sr.items(), reference_only_contributions_percent_sr.items()):
-            log.info('reference contribution {} {}'.format(ref_name, ref_contrib))
-            log.info('reference-only contribution {} {}'.format(ref_only_name, ref_only_contrib))
+            log.info('reference contribution {} {:5.2f}'.format(ref_name, ref_contrib))
+            log.info('reference-only contribution {} {:5.2f}'.format(ref_only_name, ref_only_contrib))
             reference_label = reference_contribution_format_str.format(ref_name, ref_contrib, ref_only_contrib)
             reference_label_list.append(reference_label)
 
