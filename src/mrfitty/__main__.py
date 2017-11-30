@@ -27,6 +27,7 @@ import logging
 import os
 import sys
 
+from mrfitty import __version__
 from mrfitty.fit_task_builder import ConfigurationFileError, build_fit_task, get_config_parser
 
 
