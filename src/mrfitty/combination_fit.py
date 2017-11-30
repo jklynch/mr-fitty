@@ -285,7 +285,7 @@ class AllCombinationFitTask:
         log = logging.getLogger(name=self.__class__.__name__)
 
         f, ax = plt.subplots()
-        f.suptitle(spectrum.file_name + '\n' + title)
+        f.suptitle(spectrum.file_name + '\n' + title + ' (NSS: {:8.5f})'.format(any_given_fit.nss))
         log.info(any_given_fit.fit_spectrum_b.shape)
 
         reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
@@ -353,7 +353,7 @@ class AllCombinationFitTask:
         log = logging.getLogger(name=self.__class__.__name__)
 
         f, ax = plt.subplots()
-        f.suptitle(spectrum.file_name + '\n' + title)
+        f.suptitle(spectrum.file_name + '\n' + title + ' (NSS: {:8.5f})'.format(any_given_fit.nss))
         log.info(any_given_fit.fit_spectrum_b.shape)
 
         reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()

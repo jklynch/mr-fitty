@@ -2,8 +2,15 @@
 Changelog
 =========
 
+0.12.0 (2017-11-30)
+-----------------------------------------
+
+* add NSS to title in plots
+* add update instructions to README
+
 0.11.0 (2017-11-30)
 -----------------------------------------
+
 * negative coefficients from linear regression are handled correctly (again)
 * print more decimal places for NSS in table output
 

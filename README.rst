@@ -17,14 +17,7 @@ Dr. Matthew Marcus at the Berkeley Synchrotron available `here <https://sites.go
 
 Requirements
 ============
-MrFitty requires Python 3.6+. The following required packages will be automatically installed (as described in the Installation section):
-
-    1. click >= 5.1
-    2. matplotlib >= 1.4.3
-    3. numpy >= 1.10
-    4. pandas >= 0.16
-    5. scipy >= 0.16
-    6. scikit-learn >= 0.17.1
+MrFitty requires Python 3.6+. Required packages will be installed by pip.
 
 Installation
 ============
@@ -53,6 +46,14 @@ If the Anaconda distribution has been installed then MrFitty can be installed in
 
 In all cases the required packages will be automatically installed by pip.
 
+Update
+======
+
+Update MrFitty with pip as follows: ::
+
+    (mrf) $ pip uninstall mrfitty
+    (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
+
 Usage
 =====
 MrFitty runs from the command line.  The --help option will display usage instructions: ::
@@ -67,7 +68,7 @@ The required CONFIG_FP argument specifies the path to a configuration file writt
 
     $ mrfitty ~/fit_arsenic_spectra.cfg
 
-Here is an example configuration file: ::
+Here is an example configuration file that uses an existing PRM file: ::
 
     [references]
     prm = reference/As_database_for_llsq_25_refs.prm
@@ -76,8 +77,31 @@ Here is an example configuration file: ::
     data/*.e
 
     [output]
-    plots_pdf_fp = test_arsenic_fit_plots.pdf
-    table_fp = test_arsenic_fit_table.txt
+    best_fit_files_dir = output
+    plots_pdf_dir = output
+    table_fp = output/fit_table.txt
+
+    [plots]
+    best_fits_plot_limit = 3
+
+Here is an example configuration file that specifies reference files and fit parameters directly: ::
+
+    [fit]
+    minimum_component_count = 1
+    maximum_component_count = 3
+    fit_method = lsq
+    component_count_method = combination_fit
+
+    [references]
+    reference/*.e
+
+    [data]
+    data/*.e
+
+    [output]
+    best_fit_files_dir = output
+    plots_pdf_dir = output
+    table_fp = output/fit_table.txt
 
     [plots]
     best_fits_plot_limit = 3
