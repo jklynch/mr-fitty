@@ -100,7 +100,7 @@ def test_arsenic_2(caplog, request):
 
     task = AllCombinationFitTask(
         ls=LinearRegression,
-        energy_range_builder=FixedEnergyRangeBuilder(energy_start=11834.5, energy_stop=12096.0),
+        energy_range_builder=FixedEnergyRangeBuilder(energy_start=11850.0, energy_stop=12090.0),
         reference_spectrum_list=reference_spectrum_list,
         unknown_spectrum_list=[unknown_spectrum],
         best_fits_plot_limit=1,
