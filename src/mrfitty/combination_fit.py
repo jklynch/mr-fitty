@@ -196,7 +196,7 @@ class AllCombinationFitTask:
     def fit_references_to_unknown(self, interpolated_reference_spectra, reference_spectra_subset):
         interpolated_reference_spectra_subset_df, unknown_spectrum_df = \
             interpolated_reference_spectra.get_reference_subset_and_unknown_df(
-                reference_list=reference_spectra_subset)
+                reference_list=reference_spectra_subset, energy_range_builder=self.energy_range_builder)
 
         lm = self.ls()
         lm.fit(interpolated_reference_spectra_subset_df.values, unknown_spectrum_df.norm.values)
