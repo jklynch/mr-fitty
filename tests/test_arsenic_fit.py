@@ -4,12 +4,11 @@ pytest-catchlog is required by this test
 from glob import glob
 import logging
 import os
-import sys
 import tempfile
 
 from sklearn.linear_model import LinearRegression
 
-from mrfitty.base import AdaptiveEnergyRangeBuilder, ReferenceSpectrum, Spectrum
+from mrfitty.base import AdaptiveEnergyRangeBuilder, FixedEnergyRangeBuilder, ReferenceSpectrum, Spectrum
 from mrfitty.combination_fit import AllCombinationFitTask
 
 logging.basicConfig(level=logging.DEBUG, filename='test_arsenic_fit.log')
@@ -101,7 +100,7 @@ def test_arsenic_2(caplog, request):
 
     task = AllCombinationFitTask(
         ls=LinearRegression,
-        energy_range_builder=AdaptiveEnergyRangeBuilder(),
+        energy_range_builder=FixedEnergyRangeBuilder(energy_start=11850.0, energy_stop=12090.0),
         reference_spectrum_list=reference_spectrum_list,
         unknown_spectrum_list=[unknown_spectrum],
         best_fits_plot_limit=1,

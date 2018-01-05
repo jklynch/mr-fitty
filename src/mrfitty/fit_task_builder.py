@@ -277,12 +277,16 @@ def build_fit_task(config):
 
 
 def get_energy_range_from_config(config):
+    log = logging.getLogger(name=__name__)
     if config.has_option('parameters', 'fit_energy_start') and config.has_option('parameters', 'fit_energy_stop'):
         fit_energy_start = config.getfloat('parameters', 'fit_energy_start')
         fit_energy_stop = config.getfloat('parameters', 'fit_energy_stop')
         energy_range = FixedEnergyRangeBuilder(fit_energy_start, fit_energy_stop)
-    elif not(config.has_option('parameters', 'fit_energy_start') or config.has_option('parameters', 'fit_energy_stop')):
+        log.info('fitting with fixed energy range %d to %d', fit_energy_start, fit_energy_stop)
+    elif not(config.has_option('parameters', 'fit_energy_start')) \
+            and not(config.has_option('parameters', 'fit_energy_stop')):
         energy_range = AdaptiveEnergyRangeBuilder()
+        log.info('fitting with adaptive energy ranges')
     else:
         raise Exception('only one of fit_energy_start and fit_energy_stop was specified in the configuration')
 
