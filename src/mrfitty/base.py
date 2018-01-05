@@ -92,8 +92,8 @@ class Spectrum:
             comment='#',
             header=None
         )
-        log.info('read {}'.format(file_path_or_buffer))
-        log.debug('  shape is {}'.format(spectrum_data_df.shape))
+        log.info('read %s', file_path_or_buffer)
+        log.debug('  shape is %s', spectrum_data_df.shape)
         if spectrum_data_df.shape[1] < 2:
             raise Exception('{} has fewer than 2 columns'.format(file_path_or_buffer))
         # keep only the first two columns
@@ -103,9 +103,16 @@ class Spectrum:
         # try to assign names to the first two columns
         spectrum_data_df.columns = ['energy', 'norm']
         spectrum_data_df.index = spectrum_data_df.energy
-        log.debug('  first incident energy is {}'.format(spectrum_data_df.energy.iloc[0]))
-        log.debug('  last incident energy is  {}'.format(spectrum_data_df.energy.iloc[-1]))
-        return cls(file_path_or_buffer, spectrum_data_df, **kwargs)
+        log.debug('  first incident energy is %d', spectrum_data_df.energy.iloc[0])
+        log.debug('  last incident energy is  %d', spectrum_data_df.energy.iloc[-1])
+
+        if isinstance(file_path_or_buffer, str):
+            file_path = file_path_or_buffer
+        else:
+            file_path = 'in-memory'
+
+        return cls(file_path, spectrum_data_df, **kwargs)
+
 
     @classmethod
     def read_all(cls, file_glob_list):
@@ -221,12 +228,23 @@ class InterpolatedReferenceSpectraSet:
             reference_set=reference_set)
 
     #@profile
-    def get_reference_subset_and_unknown_df(self, reference_list):
+    def get_reference_subset_and_unknown_df(self, reference_list, energy_range_builder):
         reference_name_list = sorted([r.file_name for r in reference_list])
         keep_rows = self.interpolated_reference_set_df.loc[:, reference_name_list].notnull().all(axis=1)
         reference_subset_df = self.interpolated_reference_set_df.loc[keep_rows.values, reference_name_list]
         unknown_subset_df = self.unknown_spectrum.data_df.loc[reference_subset_df.index]
-        return reference_subset_df, unknown_subset_df
+
+        fit_energies, fit_energy_indices = energy_range_builder.build_range(
+            unknown_spectrum=self.unknown_spectrum,
+            reference_spectrum_seq=reference_list)
+
+        #print('fit_energies.shape: {}'.format(fit_energies.shape))
+        #print('fit_energy_indices.shape: {}'.format(fit_energy_indices.shape))
+
+        #print('unknown_subset_df.shape: {}'.format(unknown_subset_df.shape))
+        #print('reference_subset_df: {}'.format(reference_subset_df.head()))
+
+        return reference_subset_df.loc[fit_energies], unknown_subset_df.loc[fit_energies]
 
     @staticmethod
     def get_interpolated_reference_set_df(unknown_spectrum, reference_set):
@@ -437,16 +455,31 @@ class FixedEnergyRangeBuilder:
         self.energy_start = energy_start
         self.energy_stop = energy_stop
 
-    def build_range(self, unknown_spectrum, reference_spectrum_list):
+    def build_range(self, unknown_spectrum, reference_spectrum_seq):
         log = logging.getLogger(name=self.__class__.__name__)
-        # raise exception if any of the spectra do not include the fixed energy range?
+        # raise exception if any of the reference spectra do not include the fixed energy range?
         fit_energy_indices = np.logical_and(
-            self.energy_start < unknown_spectrum.data_df.energy.values,
-            unknown_spectrum.data_df.energy.values < self.energy_stop
+            self.energy_start <= unknown_spectrum.data_df.energy.values,
+            unknown_spectrum.data_df.energy.values <= self.energy_stop
         )
-        log.debug('fit_energy_indices: %s', fit_energy_indices.values)
+        log.debug('fit_energy_indices: %s', fit_energy_indices)
         fit_energies = unknown_spectrum.data_df.energy.iloc[fit_energy_indices]
         log.debug('fit_energies: %s', fit_energies.values)
+        for reference_spectrum in reference_spectrum_seq:
+            if reference_spectrum.data_df.energy.iloc[0] > fit_energies.iloc[0]:
+                raise Exception('reference spectrum {} lowest energy is above the specified start of {}'.format(
+                    reference_spectrum.file_name, self.energy_start
+                ))
+            else:
+                pass
+
+            if reference_spectrum.data_df.energy.iloc[-1] < fit_energies.iloc[-1]:
+                raise Exception('refrence spectrum {} highest energy is below the specified stop of {}'.format(
+                    reference_spectrum.file_name, self.energy_stop
+                ))
+            else:
+                pass
+
         return fit_energies, fit_energy_indices
 
 
