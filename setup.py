@@ -67,7 +67,7 @@ setup(
         ('sample_data/unknown', glob('experiment_arsenic/unknown_spectra/*.e'))
     ],
     extras_require={
-        'test': ['pytest', 'pyfakefs', 'coverage', 'pytest-catchlog', 'pytest-cov'],
+        'test': ['pytest', 'pyfakefs', 'coverage', 'pytest-cov'],
     },
     entry_points={
         'console_scripts': [
