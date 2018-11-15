@@ -76,6 +76,12 @@ The required CONFIG_FP argument specifies the path to a configuration file writt
 
 Here is an example configuration file that uses an existing PRM file: ::
 
+    [fit]
+    minimum_component_count = 1
+    maximum_component_count = 3
+    fit_method = lsq
+    component_count_method = combination_fit
+
     [references]
     prm = reference/As_database_for_llsq_25_refs.prm
 
