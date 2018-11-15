@@ -4,8 +4,10 @@ Changelog
 
 0.14.0
 -----------------------------------------
-
-
+* move sample data from experiment_arsenic to src/example/arsenic
+* add C_p plots
+* create output directories if they do not exist
+* explicitly close Matplotlib figures
 
 0.13.0 (2018-01-04)
 -----------------------------------------
