@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015 Joshua Lynch, Sarah Nicholas
+Copyright (c) 2015-2018 Joshua Lynch, Sarah Nicholas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 import collections
+import datetime
 import itertools
 import logging
 from operator import attrgetter
@@ -34,11 +35,21 @@ import bokeh.plotting
 
 import matplotlib
 matplotlib.use('pdf', warn=False, force=True)
+
 import matplotlib.pyplot as plt
+
 from matplotlib.backends.backend_pdf import PdfPages
+
+import numpy as np
+
 import pandas as pd
 
-from mrfitty.base import InterpolatedReferenceSpectraSet, SpectrumFit
+import scipy.cluster.hierarchy as hc
+from scipy.spatial.distance import pdist
+
+from sklearn.utils import shuffle
+
+from mrfitty.base import AdaptiveEnergyRangeBuilder, InterpolatedSpectrumSet, InterpolatedReferenceSpectraSet, SpectrumFit
 
 
 class FitFailed(Exception):
@@ -68,7 +79,10 @@ class AllCombinationFitTask:
 
     def fit_all(self, plots_pdf_dp):
         log = logging.getLogger(name='fit_all')
-        for unknown_spectrum in self.unknown_spectrum_list:
+
+        os.makedirs(plots_pdf_dp, exist_ok=True)
+
+        for unknown_spectrum in sorted(self.unknown_spectrum_list, key=lambda s: s.file_name):
             log.debug('fitting %s', unknown_spectrum.file_name)
             t0 = time.time()
             best_fit, fit_table = self.fit(unknown_spectrum)
@@ -89,11 +103,57 @@ class AllCombinationFitTask:
                 # create plot
                 log.info('plotting fit for %s', unknown_spectrum.file_name)
 
+                f_list = self.plot_fit_path(spectrum=unknown_spectrum, fit_results=fit_results)
+                for f in f_list:
+                    plot_file.savefig(f)
+                    plt.close(f)
+
                 f = self.plot_fit(spectrum=unknown_spectrum, any_given_fit=fit_results.best_fit, title='Best Fit')
                 plot_file.savefig(f)
+                plt.close(f)
 
-                f = self.plot_stacked_fit(spectrum=unknown_spectrum, any_given_fit=fit_results.best_fit, title='Best Fit')
+                f = self.plot_stacked_fit(
+                    spectrum=unknown_spectrum,
+                    any_given_fit=fit_results.best_fit,
+                    title='Best Fit')
                 plot_file.savefig(f)
+                plt.close(f)
+
+                clustering_parameters = {
+                    'linkage_method': 'complete',
+                    'pdist_metric': 'correlation'
+                }
+
+                # use these for reference tree plots
+                interpolation_energy_range, _ = AdaptiveEnergyRangeBuilder().build_range(
+                    unknown_spectrum=unknown_spectrum,
+                    reference_spectrum_seq=self.reference_spectrum_list)
+                interpolated_reference_set_df = InterpolatedSpectrumSet.get_interpolated_spectrum_set_df(
+                    energy_range=interpolation_energy_range,
+                    spectrum_set=set(self.reference_spectrum_list))
+
+                reference_spectra_linkage, cutoff_distance = self.cluster_reference_spectra(
+                    interpolated_reference_set_df,
+                    **clustering_parameters)
+
+                g = self.plot_reference_tree(
+                    linkage_distance_variable_by_sample=reference_spectra_linkage,
+                    reference_df=interpolated_reference_set_df,
+                    cutoff_distance=cutoff_distance,
+                    title='Best Fit',
+                    **clustering_parameters)
+
+                reference_spectra_names = tuple([r.file_name for r in fit_results.best_fit.reference_spectra_seq])
+
+                leaf_colors = plt.cm.get_cmap("Accent", 2)
+                for i, leaf_label in enumerate(plt.gca().get_ymajorticklabels()):
+                    if leaf_label.get_text() in reference_spectra_names:
+                        leaf_label.set_color(leaf_colors(1))
+                    else:
+                        leaf_label.set_color(leaf_colors(0))
+
+                plot_file.savefig(g)
+                plt.close(g)
 
                 ordinal_list = ('1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th')
 
@@ -101,31 +161,44 @@ class AllCombinationFitTask:
                 for n in sorted(fit_table.keys()):
                     log.info('plotting %d-component fit for %s', n, unknown_spectrum.file_name)
                     n_component_fit_results = fit_table[n]
-                    # TODO: move this loop to best subset selection
+                    # TODO: move this loop to best subset selection?
                     # here only plot the best fit for each component count
+
                     for i, fit in enumerate(n_component_fit_results):
-                        if hasattr(fit, 'median_Cp'):
+                        if i < self.best_fits_plot_limit:
+                            title = 'Best {}-Component Fit ({})'.format(n, i)
+
                             f = self.plot_fit(
                                 spectrum=unknown_spectrum,
                                 any_given_fit=fit,
-                                title='Best {}-Component Fit ({})'.format(n, i))
+                                title=title)
                             plot_file.savefig(f)
+
+                            g = self.plot_reference_tree(
+                                linkage_distance_variable_by_sample=reference_spectra_linkage,
+                                reference_df=interpolated_reference_set_df,
+                                cutoff_distance=cutoff_distance,
+                                title=title,
+                                **clustering_parameters)
+
+                            reference_spectra_names = tuple([r.file_name for r in fit.reference_spectra_seq])
+
+                            leaf_colors = plt.cm.get_cmap("Accent", 2)
+                            for i, leaf_label in enumerate(plt.gca().get_ymajorticklabels()):
+                                if leaf_label.get_text() in reference_spectra_names:
+                                    leaf_label.set_color(leaf_colors(1))
+                                else:
+                                    leaf_label.set_color(leaf_colors(0))
+
+                            plot_file.savefig(g)
+                            plt.close(g)
+
+                            h = self.plot_prediction_errors(spectrum=unknown_spectrum, fit=fit)
+                            plot_file.savefig(h)
+                            plt.close(h)
+
                         else:
-                            # plot just the best fit for n component(s)
-                            if i < self.best_fits_plot_limit:
-                                f = self.plot_fit(
-                                    spectrum=unknown_spectrum,
-                                    any_given_fit=n_component_fit_results[i],
-                                    title='{} Best {}-Component Fit'.format(ordinal_list[i], n))
-                                plot_file.savefig(f)
-                            else:
-                                break
-
-                f = self.plot_nss_path(spectrum=unknown_spectrum, fit_results=fit_results, title='NSS Path')
-                plot_file.savefig(f)
-
-            nss_path_plot_fp = os.path.join(plots_pdf_dp, file_base_name + '_nss_path.html')
-            self.bokeh_nss_path(spectrum=unknown_spectrum, fit_results=fit_results, output_fp=nss_path_plot_fp)
+                            break
 
         return self.fit_table
 
@@ -167,24 +240,6 @@ class AllCombinationFitTask:
                     '\n\t'.join([r.file_name for r in reference_spectra_combination]))
                 log.debug(ff)
 
-        """
-        TODO: this should go somewhere else
-        # calculate prediction error on the best fits to find indistinguishable fits
-        for component_count, fit_list in all_counts_spectrum_fit_table.items():
-            for f, fit in enumerate(fit_list):
-                prediction_error_list = self.calculate_prediction_error_list(fit)
-                fit.median_Cp = np.median(prediction_error_list)
-                fit.median_Cp_ci_lo, fit.median_Cp_ci_hi = scikits.bootstrap.ci(
-                    data=prediction_error_list,
-                    statfunction=np.median)
-                log.info(
-                    'fit %d has Cp %8.5f <-- %8.5f --> %8.5f',
-                    f, fit.median_Cp_ci_lo, fit.median_Cp, fit.median_Cp_ci_hi)
-                # in the first iteration fit_list[0] == fit
-                if fit_list[0].median_Cp_ci_hi < fit.median_Cp_ci_lo:
-                    log.info('median Cp confidence interval for fit %d does not overlap that of the best fit', f)
-                    break
-        """
         best_fit = self.choose_best_component_count(all_counts_spectrum_fit_table)
         return best_fit, all_counts_spectrum_fit_table
 
@@ -243,6 +298,11 @@ class AllCombinationFitTask:
         :param table_file_path:
         :return:
         """
+        log = logging.getLogger(name=self.__class__.__name__)
+
+        table_file_dir_path, _ = os.path.split(table_file_path)
+        os.makedirs(table_file_dir_path, exist_ok=True)
+
         with open(table_file_path, 'wt') as table_file:
             table_file.write('spectrum\tNSS\tresidual percent\treference 1\tpercent 1\treference 2\tpercent 2\treference 3\tpercent 3\n')
             for spectrum, fit_results in self.fit_table.items():
@@ -270,27 +330,52 @@ class AllCombinationFitTask:
                 #for n_fit_list in fit_results:
                 # plot the best 2-component fit
 
-    def plot_nss_path(self, spectrum, fit_results, title):
+    def add_date_time_footer(self, ax):
+        ax.annotate(
+            datetime.datetime.now().isoformat(),
+            xy=(0.025, 0.025),
+            xycoords='figure fraction',
+            horizontalalignment='left',
+            verticalalignment='top',
+            fontsize=4)
+
+    def plot_fit_path(self, spectrum, fit_results):
         log = logging.getLogger(name=self.__class__.__name__)
 
-        f, ax = plt.subplots()
-        f.suptitle(spectrum.file_name + '\n' + title)
-        for component_count in fit_results.component_count_fit_table.keys():
-            sorted_fits = fit_results.component_count_fit_table[component_count]
-            ax.plot(range(len(sorted_fits)), [spectrum_fit.nss for spectrum_fit in sorted_fits])
+        figure_list = []
+        for i, component_count in enumerate(fit_results.component_count_fit_table.keys()):
+            f, ax = plt.subplots()
+            f.suptitle(spectrum.file_name + '\n' + 'Fit Path')
 
-        return f
+            sorted_fits = fit_results.component_count_fit_table[component_count][:10]
+            ax.scatter(
+                y=range(len(sorted_fits)),
+                x=[spectrum_fit.nss for spectrum_fit in sorted_fits])
+            ax.set_title('{} component(s)'.format(component_count))
+            ax.set_xlabel('NSS')
+            ax.set_ylabel('order')
+
+            self.add_date_time_footer(ax)
+
+            f.tight_layout()
+            figure_list.append(f)
+
+        return figure_list
+
+    def get_fit_quality_score_text(self, any_given_fit):
+        return ' (NSS: {:8.5f})'.format(any_given_fit.nss)
 
     def plot_fit(self, spectrum, any_given_fit, title):
         log = logging.getLogger(name=self.__class__.__name__)
 
         f, ax = plt.subplots()
-        f.suptitle(spectrum.file_name + '\n' + title + ' (NSS: {:8.5f})'.format(any_given_fit.nss))
+        ax.set_title(spectrum.file_name + '\n' + title + '\n' + self.get_fit_quality_score_text(any_given_fit))
         log.info(any_given_fit.fit_spectrum_b.shape)
 
         reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
         reference_only_contributions_percent_sr = any_given_fit.get_reference_only_contributions_sr()
-        longest_name_len = max([len(name) for name in reference_contributions_percent_sr.index] + [len(spectrum.file_name)])
+        longest_name_len = max(
+            [len(name) for name in reference_contributions_percent_sr.index] + [len(spectrum.file_name)])
         # the format string should look like '{:N}{:5.2f} ({:5.2f})' where N is the length of the longest reference name
         reference_contribution_format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f} ({:5.2f})'
         residuals_contribution_format_str = '{:' + str(longest_name_len + 4) + '}{:5.2f}'
@@ -341,11 +426,18 @@ class AllCombinationFitTask:
 
         ax.set_xlabel('eV')
         ax.set_ylabel('normalized absorbance')
-        # 20171029
+        # TODO: make these configurable
+        legend_location = 'best'
+        legend_font_size = 6
         ax.legend(
             [*reference_line_list, *spectrum_points, *residuals_line, *fit_line],
             [*reference_label_list, spectrum.file_name, residuals_label, fit_line_label],
-            prop=dict(family='Monospace', size=7))
+            loc=legend_location,
+            prop=dict(family='Monospace', size=legend_font_size))
+
+        self.add_date_time_footer(ax)
+
+        plt.tight_layout()
 
         return f
 
@@ -353,7 +445,7 @@ class AllCombinationFitTask:
         log = logging.getLogger(name=self.__class__.__name__)
 
         f, ax = plt.subplots()
-        f.suptitle(spectrum.file_name + '\n' + title + ' (NSS: {:8.5f})'.format(any_given_fit.nss))
+        ax.set_title(spectrum.file_name + '\n' + title + '\n' + self.get_fit_quality_score_text(any_given_fit))
         log.info(any_given_fit.fit_spectrum_b.shape)
 
         reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
@@ -397,6 +489,94 @@ class AllCombinationFitTask:
             [*spectrum_points, *reference_line_list, *residuals_line],
             [spectrum.file_name, *reference_label_list, residuals_label],
             prop=dict(family='Monospace', size=7))
+
+        self.add_date_time_footer(ax)
+
+        plt.tight_layout()
+
+        return f
+
+    def permute_row_elements(self, df):
+        for i in range(df.shape[0]):
+            df.values[i, :] = shuffle(df.values[i, :])
+        return df
+
+    def cluster_reference_spectra(self, reference_df, pdist_metric='correlation', linkage_method='complete'):
+        log = logging.getLogger(name=self.__class__.__name__)
+
+        distance_for_sample_pairs = pdist(
+            X=np.transpose(reference_df.values),
+            metric=pdist_metric)
+
+        # plt.figure()
+        # plt.title(title)
+        # plt.hist(distance_for_sample_pairs)
+        # plt.xlabel('{} distance'.format(pdist_metric))
+        # plt.ylabel('{} pairs'.format(variable_by_sample_df.shape))
+        # plt.show()
+
+        resample_count = 1000
+        expected_distance_list = []
+        for i in range(resample_count):
+            # permute the elements of each row of variable_by_sample_df
+            p_variable_by_sample_df = self.permute_row_elements(reference_df.copy())
+            p_distance_for_sample_pairs = pdist(X=np.transpose(p_variable_by_sample_df.values), metric=pdist_metric)
+            p_linkage_distance_variable_by_sample = hc.linkage(y=p_distance_for_sample_pairs, method=linkage_method)
+            p_dendrogram = hc.dendrogram(Z=p_linkage_distance_variable_by_sample, no_plot=True)
+            expected_distance_list.extend([d for (_, _, d, _) in p_dendrogram['dcoord']])
+
+        p = 95.0
+        alpha = 1.0 - p / 100.0
+        cutoff_distance = np.percentile(expected_distance_list, q=p)
+        print('cutoff distance is {}'.format(cutoff_distance))
+
+        # plt.figure()
+        # plt.hist(expected_distance_list)
+        # plt.title('dendrogram distance null distribution')
+        # plt.show()
+
+        linkage_distance_variable_by_sample = hc.linkage(y=distance_for_sample_pairs, method=linkage_method)
+
+        return linkage_distance_variable_by_sample, cutoff_distance
+
+    def plot_reference_tree(self, linkage_distance_variable_by_sample, reference_df, cutoff_distance, title, pdist_metric, linkage_method):
+        log = logging.getLogger(name=self.__class__.__name__)
+
+        f, ax = plt.subplots()
+        dendrogram = hc.dendrogram(
+            ax=ax,
+            Z=linkage_distance_variable_by_sample,
+            orientation='left',
+            leaf_font_size=8,
+            labels=reference_df.columns)
+
+        #leaf_colors = plt.cm.get_cmap("Accent", 2)
+        #for i, leaf_label in enumerate(plt.gca().get_ymajorticklabels()):
+        #    leaf_label.set_color(leaf_colors(i % 2))
+
+        icoords = tuple([i for i in itertools.chain(dendrogram['icoord'])])
+        ax.vlines(cutoff_distance, ymin=np.min(icoords), ymax=np.max(icoords))
+        ax.set_title('{}\n{} linkage'.format(title, linkage_method))
+        ax.set_xlabel('{} distance'.format(pdist_metric))
+
+        self.add_date_time_footer(ax)
+
+        plt.tight_layout()
+
+        return f
+
+    def plot_prediction_errors(self, spectrum, fit):
+        log = logging.getLogger(name=self.__class__.__name__)
+
+        f, ax = plt.subplots()
+        ax.set_title(spectrum.file_name + '\n' + 'Prediction Errors')
+
+        #prediction_errors = list(itertools.chain.from_iterable(fit.prediction_errors))
+        ax.hist(fit.prediction_errors)
+        ax.set_xlabel('Prediction Error')
+        ax.set_ylabel('Count')
+
+        self.add_date_time_footer(ax)
 
         return f
 
