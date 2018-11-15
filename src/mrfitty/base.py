@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015 Joshua Lynch, Sarah Nicholas
+Copyright (c) 2015-2018 Joshua Lynch, Sarah Nicholas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -57,13 +57,36 @@ class Spectrum:
 
     data_df : pandas.Dataframe
     """
-    def __init__(self, file_path, data_df):
+    def __init__(self, file_path, data_df, header_fields):
         self.file_path = file_path
         self.file_name = os.path.split(file_path)[1]
         self.data_df = data_df
+        self.header_fields = header_fields
 
     def __repr__(self):
         return 'Spectrum({}, {})'.format(self.file_path, self.data_df.shape)
+
+    @classmethod
+    def read_header(cls, file_path_or_buffer):
+        if isinstance(file_path_or_buffer, str):
+            with open(file_path_or_buffer, 'rt') as f:
+                return cls.read_header_(f)
+        else:
+            header_fields = cls.read_header_(file_path_or_buffer)
+            file_path_or_buffer.seek(0)
+            return header_fields
+
+    @classmethod
+    def read_header_(cls, file_):
+        header_fields = {}
+        header_field_pattern = re.compile("^#\s*(?P<field>[^:]+)\s*:\s*(?P<value>.+)\s*$")
+        for line in file_:
+            m = header_field_pattern.match(line.strip())
+            if m is not None:
+                header_fields[m.group('field')] = m.group('value')
+            else:
+                pass
+        return header_fields
 
     @classmethod
     def read_file(cls, file_path_or_buffer, **kwargs):
@@ -85,6 +108,9 @@ class Spectrum:
         Instance of class Spectrum or subclass.
         """
         log = logging.getLogger(name=cls.__name__)
+
+        header_fields = cls.read_header(file_path_or_buffer)
+
         spectrum_data_df = pd.read_table(
             file_path_or_buffer,
             engine='python',
@@ -111,8 +137,7 @@ class Spectrum:
         else:
             file_path = 'in-memory'
 
-        return cls(file_path, spectrum_data_df, **kwargs)
-
+        return cls(file_path, spectrum_data_df, header_fields, **kwargs)
 
     @classmethod
     def read_all(cls, file_glob_list):
@@ -163,13 +188,16 @@ class ReferenceSpectrum(Spectrum):
 
     interpolant : scipy.interpolate.InterpolatedUnivariateSpline
     """
-    def __init__(self, file_path, reference_spectrum_data, mineral_category=None):
-        super().__init__(file_path, reference_spectrum_data)
+    def __init__(self, file_path, reference_spectrum_data, header_fields, mineral_category=None):
+        super().__init__(file_path, reference_spectrum_data, header_fields)
         self.mineral_category = mineral_category
         self.interpolant = InterpolatedUnivariateSpline(
             reference_spectrum_data.energy.values,
             reference_spectrum_data.norm.values
         )
+
+        if 'Valence group' in self.header_fields:
+            self.file_name = '{} [{}]'.format(self.file_name, self.header_fields['Valence group'])
 
     def __repr__(self):
         return 'ReferenceSpectrum({}, {}, {})'.format(self.file_path, self.data_df.shape, self.mineral_category)
@@ -186,7 +214,7 @@ class InterpolatedSpectrumSet:
 
 
         """
-        # the interpolated spectra will be len(energy_range) x len(reference_set)
+        # the interpolated spectra will be len(energy_range) x len(spectrum_set)
         interpolated_spectra = np.zeros((len(energy_range), len(spectrum_set)))
         column_names = []
         for i, spectrum in enumerate(sorted(list(spectrum_set), key=lambda s: s.file_name)):
@@ -258,7 +286,7 @@ class InterpolatedReferenceSpectraSet:
             ndx = InterpolatedReferenceSpectraSet.get_extrapolated_value_index(
                 unknown_energy=unknown_spectrum.data_df.energy.values,
                 reference_energy=reference_spectrum.data_df.energy.values)
-            # print(ndx)
+            #print(ndx)
             interpolated_reference_spectra[ndx, i] = np.nan
 
         interpolated_reference_spectra_df = pd.DataFrame(
