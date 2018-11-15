@@ -46,8 +46,6 @@ setup(
         'Operating System :: Microsoft :: Windows',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: Implementation :: CPython',
-        'Topic :: Utilities',
     ],
     keywords=[
         # eg: 'keyword1', 'keyword2', 'keyword3',
@@ -60,14 +58,11 @@ setup(
         'pandas',
         'scipy',
         'scikits.bootstrap',
-        'scikit-learn'
-    ],
-    data_files=[
-        ('sample_data/reference', glob('experiment_arsenic/reference_spectra/*.e')),
-        ('sample_data/unknown', glob('experiment_arsenic/unknown_spectra/*.e'))
+        'scikit-learn',
+        'sqlalchemy'
     ],
     extras_require={
-        'test': ['pytest', 'pyfakefs', 'coverage', 'pytest-catchlog', 'pytest-cov'],
+        'test': ['pytest', 'pyfakefs', 'pytest-catchlog', 'pytest-cov'],
     },
     entry_points={
         'console_scripts': [
