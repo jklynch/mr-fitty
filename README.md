@@ -21,7 +21,7 @@ differing numbers of reference spectra is not always straightforward.
 
 A common measure of a fit's quality is the 'mean squared error' (MSE) defined by
 
-<p align="center"><img src="/tex/1cbb9e2238ee85bfdf2851e406d74613.svg?invert_in_darkmode&sanitize=true" align=middle width=80.9705094pt height=16.90145655pt/></p>
+<p align="center"><img src="/tex/0e5f13d1178b928a29abe537de9cd992.svg?invert_in_darkmode&sanitize=true" align=middle width=80.73949455pt height=32.990165999999995pt/></p>
 
 where the <img src="/tex/4ebf880807deff5796460f39aea46f80.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=22.465723500000017pt/> are the unknown spectrum and <img src="/tex/2be6465cf4c2b10c94edc20ad177aef4.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=26.97711060000001pt/> are the fitted spectrum.
 
