@@ -148,14 +148,20 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
                 log.info('***')
 
             best_fit_for_component_count = all_counts_spectrum_fit_table[component_count_i][0]
-            t0 = time.time()
-            prediction_errors, _ = self.calculate_prediction_error_list(best_fit_for_component_count)
-            t1 = time.time()
-            log.info('%5.2fs to calculate prediction error list', t1-t0)
-            component_count_to_median_cp[component_count_i] = np.median(prediction_errors)
-            component_count_to_median_cp_ci_lo_hi[component_count_i] = scikits.bootstrap.ci(
-                data=prediction_errors,
-                statfunction=np.median)
+            #t0 = time.time()
+            #prediction_errors, _ = self.calculate_prediction_error_list(best_fit_for_component_count)
+            #t1 = time.time()
+            #log.info('%5.2fs to calculate prediction error list', t1-t0)
+
+            component_count_to_median_cp[component_count_i] = best_fit_for_component_count.median_C_p
+            component_count_to_median_cp_ci_lo_hi[component_count_i] = (
+                best_fit_for_component_count.median_C_p_ci_lo,
+                best_fit_for_component_count.median_C_p_ci_hi
+            )
+            #component_count_to_median_cp[component_count_i] = np.median(prediction_errors)
+            #component_count_to_median_cp_ci_lo_hi[component_count_i] = scikits.bootstrap.ci(
+            #    data=prediction_errors,
+            #    statfunction=np.median)
 
         log.debug('component count to median cp: {}'.format(component_count_to_median_cp))
         log.debug('component count to median cp confidence interval: {}'.format(component_count_to_median_cp_ci_lo_hi))
@@ -233,7 +239,54 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
             normalized_C_p_list.append(normalized_cp)
         return normalized_C_p_list, model_residuals
 
-    def plot_fit_path(self, spectrum, fit_results):
+    def plot_top_fits(self, spectrum, fit_results):
+        log = logging.getLogger(name=self.__class__.__name__)
+
+        figure_list = []
+        for i, component_count in enumerate(fit_results.component_count_fit_table.keys()):
+            f, ax = plt.subplots()
+
+            sorted_fits = fit_results.component_count_fit_table[component_count][:10]
+            ax.boxplot(
+                x=[fit_i.prediction_errors for fit_i in sorted_fits],
+                usermedians=[fit_i.median_C_p for fit_i in sorted_fits],
+                conf_intervals=[[fit_i.median_C_p_ci_lo, fit_i.median_C_p_ci_hi] for fit_i in sorted_fits],
+                notch=True
+            )
+
+            ax.set_title('Best Fits' + '\n' + spectrum.file_name + '\n' + '{} component(s)'.format(component_count))
+            ax.set_xlabel('best fits')
+            ax.set_ylabel('Normalized Prediction Error')
+
+            self.add_date_time_footer(ax)
+
+            f.tight_layout()
+            figure_list.append(f)
+
+        for i, component_count in enumerate(fit_results.component_count_fit_table.keys()):
+            f, ax = plt.subplots()
+
+            sorted_fits = fit_results.component_count_fit_table[component_count][:10]
+            ax.errorbar(
+                y=[spectrum_fit.median_C_p for spectrum_fit in sorted_fits],
+                x=range(len(sorted_fits)),
+                yerr=[
+                    [s.median_C_p - s.median_C_p_ci_lo for s in sorted_fits],
+                    [s.median_C_p_ci_hi - s.median_C_p for s in sorted_fits]],
+                fmt='o')
+            ax.set_title('Best Fits' + '\n' + spectrum.file_name + '\n' + '{} component(s)'.format(component_count))
+            ax.set_xlabel('best fits')
+            ax.set_ylabel('Normalized Prediction Error')
+            ax.grid()
+
+            self.add_date_time_footer(ax)
+
+            f.tight_layout()
+            figure_list.append(f)
+
+        return figure_list
+
+    def plot_fit_path_old(self, spectrum, fit_results):
         log = logging.getLogger(name=self.__class__.__name__)
 
         figure_list = []
@@ -242,9 +295,9 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
 
             sorted_fits = fit_results.component_count_fit_table[component_count][:10]
             ax.errorbar(
-                x=[spectrum_fit.median_C_p for spectrum_fit in sorted_fits],
-                y=range(len(sorted_fits)),
-                xerr=[
+                y=[spectrum_fit.median_C_p for spectrum_fit in sorted_fits],
+                x=range(len(sorted_fits)),
+                yerr=[
                     [s.median_C_p - s.median_C_p_ci_lo for s in sorted_fits],
                     [s.median_C_p_ci_hi - s.median_C_p for s in sorted_fits]],
                 fmt='o')
@@ -258,4 +311,3 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
             figure_list.append(f)
 
         return figure_list
-
