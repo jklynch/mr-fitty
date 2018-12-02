@@ -24,16 +24,28 @@ SOFTWARE.
 from tests import test_spectrum_fit
 
 
-def test_spec_insert_query_fit(fit_db):
+def test_spec_insert_query_fit(fit_db, arsenic_references, arsenic_unknowns):
     """
     Insert fits with 1, 2, 3 components.
 
     """
-    fit_1 = test_spectrum_fit.generate_spectrum_fit(reference_count=1)
-    fit_2 = test_spectrum_fit.generate_spectrum_fit(reference_count=2)
-    fit_3 = test_spectrum_fit.generate_spectrum_fit(reference_count=3)
+    fit_1 = test_spectrum_fit.generate_spectrum_fit(
+        reference_count=1,
+        reference_spectra=arsenic_references,
+        unknown_spectrum=arsenic_unknowns[0]
+    )
+    fit_2 = test_spectrum_fit.generate_spectrum_fit(
+        reference_count=2,
+        reference_spectra=arsenic_references,
+        unknown_spectrum=arsenic_unknowns[0]
+    )
+    fit_3 = test_spectrum_fit.generate_spectrum_fit(
+        reference_count=3,
+        reference_spectra=arsenic_references,
+        unknown_spectrum=arsenic_unknowns[0]
+    )
 
-    fit_db.insert(fit_1)
+    #fit_db.insert(fit_1)
 
 
 def test_spec_query_fit():
