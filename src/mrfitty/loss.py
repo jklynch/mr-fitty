@@ -23,7 +23,7 @@ SOFTWARE.
 """
 import logging
 
-import sklearn.cross_validation
+import sklearn.model_selection
 import numpy as np
 
 import mrfitty.linear_model as linear_model
@@ -46,12 +46,12 @@ class PredictionError:
     def loss(self, reference_spectra_A_df, unknown_spectrum_b):
         self.normalized_cp_list = []
 
-        cv = sklearn.cross_validation.ShuffleSplit(
-            reference_spectra_A_df.values.shape[0],
+        cv = sklearn.model_selection.ShuffleSplit(
+            #reference_spectra_A_df.values.shape[0],
             test_size=self.test_size,
-            n_iter=self.n_iter
+            n_splits=self.n_iter
         )
-        for train_index, test_index in cv:
+        for train_index, test_index in cv.split(X=reference_spectra_A_df.values):
             #lm = sklearn.linear_model.LinearRegression()
             lm = linear_model.NonNegativeLinearRegression()
             lm.fit(
