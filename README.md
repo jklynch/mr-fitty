@@ -21,9 +21,9 @@ differing numbers of reference spectra is not always straightforward.
 
 A common measure of a fit's quality is the 'mean squared error' (MSE) defined by
 
-<p align="center"><img src="/tex/f4df54010a277dba2e211d3209faf7e6.svg?invert_in_darkmode&sanitize=true" align=middle width=109.19606939999998pt height=47.806078649999996pt/></p>
+<p align="center"><img src="/tex/728aa7f63279a788d5c758d0dda7707d.svg?invert_in_darkmode&sanitize=true" align=middle width=184.22840534999997pt height=47.806078649999996pt/></p>
 
-where the <img src="/tex/4ebf880807deff5796460f39aea46f80.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=22.465723500000017pt/> are the unknown spectrum and <img src="/tex/2be6465cf4c2b10c94edc20ad177aef4.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=26.97711060000001pt/> are the fitted spectrum.
+where the <img src="/tex/4ebf880807deff5796460f39aea46f80.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=22.465723500000017pt/> are the unknown spectrum and <img src="/tex/f0bf9ccd62edffbd6f0358887464f8a6.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=31.141535699999984pt/> are the fitted spectrum.
 
 
 ## Requirements
