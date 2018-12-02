@@ -63,8 +63,8 @@ arsenate_aqueous_avg_als_cal.e
 arsenate_sorbed_anth_avg_als_cal.e
 """)
 
-    fs.CreateFile(file_path='arsenate_aqueous_avg_als_cal.e', contents=_spectrum_file_content)
-    fs.CreateFile(file_path='arsenate_sorbed_anth_avg_als_cal.e', contents=_spectrum_file_content)
+    fs.create_file(file_path='arsenate_aqueous_avg_als_cal.e', contents=_spectrum_file_content)
+    fs.create_file(file_path='arsenate_sorbed_anth_avg_als_cal.e', contents=_spectrum_file_content)
 
     max_count, min_count, reference_list = \
         fit_task_builder.build_reference_spectrum_list_from_config_prm_section(reference_config)
@@ -84,8 +84,8 @@ arsenate_aqueous_avg_als_cal.e
 arsenate_sorbed_anth_avg_als_cal.e
 """)
 
-    fs.CreateFile(file_path='arsenate_aqueous_avg_als_cal.e', contents=_spectrum_file_content)
-    fs.CreateFile(file_path='arsenate_sorbed_anth_avg_als_cal.e', contents=_spectrum_file_content)
+    fs.create_file(file_path='arsenate_aqueous_avg_als_cal.e', contents=_spectrum_file_content)
+    fs.create_file(file_path='arsenate_sorbed_anth_avg_als_cal.e', contents=_spectrum_file_content)
 
     with pytest.raises(fit_task_builder.ConfigurationFileError):
         fit_task_builder.build_reference_spectrum_list_from_config_prm_section(reference_config)
@@ -98,9 +98,9 @@ def test_build_reference_spectrum_list_from_config_file(fs):
 references/*.e    
 """)
 
-    fs.CreateDirectory(directory_path='references')
-    fs.CreateFile(file_path='references/arsenate_aqueous_avg_als_cal.e', contents=_spectrum_file_content)
-    fs.CreateFile(file_path='references/arsenate_sorbed_anth_avg_als_cal.e', contents=_spectrum_file_content)
+    fs.create_dir(directory_path='references')
+    fs.create_file(file_path='references/arsenate_aqueous_avg_als_cal.e', contents=_spectrum_file_content)
+    fs.create_file(file_path='references/arsenate_sorbed_anth_avg_als_cal.e', contents=_spectrum_file_content)
 
     reference_list = fit_task_builder.build_reference_spectrum_list_from_config_file(reference_config)
 
@@ -114,9 +114,9 @@ def test_build_unknown_spectrum_list_from_config_file(fs):
 data/*.e
 """)
 
-    fs.CreateDirectory(directory_path='data')
-    fs.CreateFile(file_path='data/data_0.e', contents=_spectrum_file_content)
-    fs.CreateFile(file_path='data/data_1.e', contents=_spectrum_file_content)
+    fs.create_dir(directory_path='data')
+    fs.create_file(file_path='data/data_0.e', contents=_spectrum_file_content)
+    fs.create_file(file_path='data/data_1.e', contents=_spectrum_file_content)
 
     data_list = fit_task_builder.build_unknown_spectrum_list_from_config_file(data_config)
 
