@@ -21,9 +21,9 @@ differing numbers of reference spectra is not always straightforward.
 
 A common measure of a fit's quality is the 'mean squared error' (MSE) defined by
 
-$$MSE = \frac{1}{N} \sum_{i=1}^{N}$$
+$$MSE = \frac{1}{N} \sum_{i=1}^{N}(A_i-\hat{A}_i)^2$$
 
-where the $A_i$ are the unknown spectrum and $\bar{A}_i$ are the fitted spectrum.
+where the $A_i$ are the unknown spectrum and $\hat{A}_i$ are the fitted spectrum.
 
 
 ## Requirements
