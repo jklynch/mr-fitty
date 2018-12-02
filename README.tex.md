@@ -34,9 +34,9 @@ MrFitty requires Python 3.6+. Required packages will be installed by pip.
 
 ## Installation
 
-Users should consider installing MrFitty in a `Python virtual environment <https://docs.python.org/3.6/library/venv.html>`_.
+Users should consider installing MrFitty in a [Python virtual environment](https://docs.python.org/3.6/library/venv.html).
 This is not necessary but it simplifies package management by separating the system Python from the users' Python environments.
-On systems without Python 3.6+ the `Anaconda <https://anaconda.org>`_ Python distribution is a good choice. It can be installed without
+On systems without Python 3.6+ the [Anaconda](https://anaconda.org) Python distribution is a good choice. It can be installed without
 administrative privileges and supports virtual environments. In addition the Anaconda distribution includes pre-built
 packages which are less trouble to install in some cases, especially on Windows systems.
 
