@@ -15,6 +15,24 @@ Dr. Matthew Marcus at the Berkeley Synchrotron available `here <https://sites.go
 
 * Free software: MIT license
 
+Overview
+========
+XANES spectrum fitting is a basic application of linear least squares: given the spectrum of an unknown sample and a library
+of reference specta find the combination of references that best fit the unknown. Fitting each individual group of references
+to the unknown is trivial, but selecting the 'best' combination of references is problematic because comparing fits with
+differing numbers of reference spectra is not always straightforward.
+
+A common measure of a fit's quality is the 'mean squared error' (MSE) defined by
+
+.. math::
+
+    MSE = \frac{1}{N}\sum_{i=1}^{N}({A_i-\bar{A}_i)^2
+
+where the :math:`A_i` are the unknown spectrum and :math:`\bar{A}_i` are the fitted spectrum.
+
+
+
+
 Requirements
 ============
 MrFitty requires Python 3.6+. Required packages will be installed by pip.
@@ -131,6 +149,7 @@ incident energy and the other column is normalized absorbance. Initial rows begi
 with '#' will be ignored except for the last row which must contain column headers.
 For example, the following normalized file written by Athena can be used as
 input to mr-fitty::
+
     # Athena data file -- Athena version 0.8.056
     # Saving OTT3_55_spot0 as normalized mu(E)
     # .  Element=As   Edge=K
