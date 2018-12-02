@@ -25,27 +25,27 @@ A common measure of a fit's quality is the 'mean squared error' (MSE) defined by
 
 where the <img src="/tex/4ebf880807deff5796460f39aea46f80.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=22.465723500000017pt/> are the unknown spectrum and <img src="/tex/f0bf9ccd62edffbd6f0358887464f8a6.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=31.141535699999984pt/> are the fitted spectrum.
 
+The problem in using MSE to compare, for example, the fit using references (X, Y)
+to the fit using references (X, Y, Z) is that the 3-component fit will always have a better MSE than the 2-component fit.
 
 ## Requirements
 
 MrFitty requires Python 3.6+. Required packages will be installed by pip.
 
-Installation
-============
+## Installation
+
 Users should consider installing MrFitty in a `Python virtual environment <https://docs.python.org/3.6/library/venv.html>`_.
 This is not necessary but it simplifies package management by separating the system Python from the users' Python environments.
 On systems without Python 3.6+ the `Anaconda <https://anaconda.org>`_ Python distribution is a good choice. It can be installed without
 administrative privileges and supports virtual environments. In addition the Anaconda distribution includes pre-built
 packages which are less trouble to install in some cases, especially on Windows systems.
 
-Method 1 (not recommended)
---------------------------
+### Method 1 (not recommended!)
 If the standard Python 3.6+ distribution is available then MrFitty can be installed with pip: ::
 
     $ pip install git+https://github.com/jklynch/mr-fitty.git
 
-Method 2 (recommended)
-----------------------
+### Method 2 (recommended)
 Alternatively, MrFitty can be installed in a virtual environment using the standard Python 3.6+ distribution with the following commands: ::
 
     $ python3 -m venv mrf --without-pip
@@ -53,8 +53,7 @@ Alternatively, MrFitty can be installed in a virtual environment using the stand
     (mrf) $ wget bootstrap.pypa.io/get-pip.py -O - | python3
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
-Method 3 (recommended)
-----------------------
+### Method 3 (recommended)
 If the Anaconda distribution has been installed then MrFitty can be installed in a virtual environment with these commands: ::
 
     $ conda create python=3.6 --name mrf
@@ -64,15 +63,13 @@ If the Anaconda distribution has been installed then MrFitty can be installed in
 
 In all cases the required packages will be automatically installed by pip.
 
-Update
-======
+## Update
 Update MrFitty with pip as follows: ::
 
     (mrf) $ pip uninstall mrfitty
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
-Usage
-=====
+## Usage
 MrFitty runs from the command line.  The --help option will display usage instructions: ::
 
     $ mrfitty --help
@@ -129,8 +126,7 @@ Here is an example configuration file that specifies reference files and fit par
     [plots]
     best_fits_plot_limit = 3
 
-Input
-=====
+## Input
 In addition to a configuration file the necessary input files are
 
   + at least two (but probably more) normalized reference spectrum files
@@ -172,8 +168,7 @@ input to mr-fitty::
       11776.697       0.40723503E-02   0.40724678E-02   0.17648519E-04
       ...
 
-Output
-======
+## Output
 Several output files will be produced:
 
   + a single PDF containing plots of each fitted spectrum
