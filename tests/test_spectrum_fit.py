@@ -21,12 +21,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-import pandas as pd
+from sklearn.linear_model import LinearRegression
 
-import mrfitty.base as base
+from mrfitty.base import AdaptiveEnergyRangeBuilder
+from mrfitty.combination_fit import AllCombinationFitTask
 
 
-def generate_spectrum_fit(reference_count):
+def generate_spectrum_fit(reference_count, reference_spectra, unknown_spectrum):
     """
 
     Parameters
@@ -37,12 +38,18 @@ def generate_spectrum_fit(reference_count):
     -------
     SpectrumFit instance
     """
-    spectrum_fit = base.SpectrumFit(
-        interpolant_incident_energy=None,
-        reference_spectra_A_df=pd.DataFrame(),
-        unknown_spectrum_b=pd.DataFrame(columns=('energy', 'norm')),
-        reference_spectra_seq=(),
-        reference_spectra_coef_x=pd.Series())
 
+    energy_range_builder = AdaptiveEnergyRangeBuilder()
+
+    fitter = AllCombinationFitTask(
+        ls=LinearRegression,
+        reference_spectrum_list=reference_spectra,
+        unknown_spectrum_list=(unknown_spectrum, ),
+        energy_range_builder=energy_range_builder,
+        best_fits_plot_limit=0,
+        component_count_range=(reference_count, )
+    )
+
+    spectrum_fit, _ = fitter.fit(unknown_spectrum=unknown_spectrum)
 
     return spectrum_fit
