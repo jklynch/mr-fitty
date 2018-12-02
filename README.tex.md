@@ -41,12 +41,12 @@ administrative privileges and supports virtual environments. In addition the Ana
 packages which are less trouble to install in some cases, especially on Windows systems.
 
 ### Method 1 (not recommended!)
-If the standard Python 3.6+ distribution is available then MrFitty can be installed with pip: ::
+If the standard Python 3.6+ distribution is available then MrFitty can be installed with pip:
 
     $ pip install git+https://github.com/jklynch/mr-fitty.git
 
 ### Method 2 (recommended)
-Alternatively, MrFitty can be installed in a virtual environment using the standard Python 3.6+ distribution with the following commands: ::
+Alternatively, MrFitty can be installed in a virtual environment using the standard Python 3.6+ distribution with the following commands:
 
     $ python3 -m venv mrf --without-pip
     $ source mrf/bin/activate
@@ -54,7 +54,7 @@ Alternatively, MrFitty can be installed in a virtual environment using the stand
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
 ### Method 3 (recommended)
-If the Anaconda distribution has been installed then MrFitty can be installed in a virtual environment with these commands: ::
+If the Anaconda distribution has been installed then MrFitty can be installed in a virtual environment with these commands:
 
     $ conda create python=3.6 --name mrf
     $ source activate mrf
@@ -64,13 +64,13 @@ If the Anaconda distribution has been installed then MrFitty can be installed in
 In all cases the required packages will be automatically installed by pip.
 
 ## Update
-Update MrFitty with pip as follows: ::
+Update MrFitty with pip as follows:
 
     (mrf) $ pip uninstall mrfitty
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
 ## Usage
-MrFitty runs from the command line.  The --help option will display usage instructions: ::
+MrFitty runs from the command line.  The --help option will display usage instructions:
 
     $ mrfitty --help
     Usage: mrfitty [OPTIONS] CONFIG_FP
@@ -78,11 +78,11 @@ MrFitty runs from the command line.  The --help option will display usage instru
     Options:
       --help   Show this message and exit.
 
-The required CONFIG_FP argument specifies the path to a configuration file written by the user, e.g. ::
+The required CONFIG_FP argument specifies the path to a configuration file written by the user, e.g.
 
     $ mrfitty ~/fit_arsenic_spectra.cfg
 
-Here is an example configuration file that uses an existing PRM file: ::
+Here is an example configuration file that uses an existing PRM file:
 
     [fit]
     minimum_component_count = 1
@@ -104,7 +104,7 @@ Here is an example configuration file that uses an existing PRM file: ::
     [plots]
     best_fits_plot_limit = 3
 
-Here is an example configuration file that specifies reference files and fit parameters directly: ::
+Here is an example configuration file that specifies reference files and fit parameters directly:
 
     [fit]
     minimum_component_count = 1
@@ -137,7 +137,7 @@ All input files must contain at least two columns of data. One column is
 incident energy and the other column is normalized absorbance. Initial rows beginning
 with '#' will be ignored except for the last row which must contain column headers.
 For example, the following normalized file written by Athena can be used as
-input to mr-fitty::
+input to mr-fitty
 
     # Athena data file -- Athena version 0.8.056
     # Saving OTT3_55_spot0 as normalized mu(E)
