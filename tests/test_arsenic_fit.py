@@ -21,15 +21,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-
-from glob import glob
 import logging
-import os
 import tempfile
 
 from sklearn.linear_model import LinearRegression
 
-from mrfitty.base import AdaptiveEnergyRangeBuilder, FixedEnergyRangeBuilder, ReferenceSpectrum, Spectrum
+from mrfitty.base import AdaptiveEnergyRangeBuilder, FixedEnergyRangeBuilder
 from mrfitty.combination_fit import AllCombinationFitTask
 
 logging.basicConfig(level=logging.DEBUG, filename='test_arsenic_fit.log')
@@ -37,45 +34,28 @@ log = logging.getLogger(name=__name__)
 
 
 """
+These are smoke tests for the fitting code. Configuration code is not tested.
+
 pytest-catchlog is required by these tests
 """
 
 
-def test_arsenic_1(caplog, request):
+def test_arsenic_1(caplog, arsenic_references, arsenic_unknowns):
     """
-    Test fits for known arsenic data and reference_spectra.
-    Expect to find PRM, data, and reference files in a directory called 'test_arsenic_fit'.
-    See also: http://stackoverflow.com/questions/29627341/pytest-where-to-store-expected-data.
+    Test fits for known arsenic data and reference_spectra using AdaptiveEnergyRangeBuilder.
 
-    :param request: pytest fixture with information about the path to this test file
+    :param caplog: logging fixture
+    :param arsenic_references: list of arsenic reference spectra from mr-fitty/src/example/arsenic
+    :param arsenic_unknowns: list of arsenic unknown spectra from mr-fitty/src/example/arsenic
     :return:
     """
-
     caplog.set_level(logging.INFO)
-
-    test_arsenic_fit_fp = request.module.__file__
-    log.info('test_arsenic_fit_fp: {}'.format(test_arsenic_fit_fp))
-    test_arsenic_fit_dir_path, _ = os.path.splitext(test_arsenic_fit_fp)
-
-    #reference_file_path_pattern = os.path.join(test_arsenic_fit_dir_path, 'reference', 'arsenate_*.e')
-    reference_file_path_pattern = os.path.join(test_arsenic_fit_dir_path, 'reference', '*.e')
-    data_file_path = os.path.join(test_arsenic_fit_dir_path, 'data', 'OTT3_55_spot0.e')
-
-    reference_spectrum_list = [
-        ReferenceSpectrum.read_file(file_path)
-        for file_path
-        in glob(reference_file_path_pattern)
-    ]
-    log.info(reference_spectrum_list)
-
-    unknown_spectrum = Spectrum.read_file(data_file_path)
-    log.info(unknown_spectrum)
 
     task = AllCombinationFitTask(
         ls=LinearRegression,
         energy_range_builder=AdaptiveEnergyRangeBuilder(),
-        reference_spectrum_list=reference_spectrum_list,
-        unknown_spectrum_list=[unknown_spectrum, ],
+        reference_spectrum_list=arsenic_references,
+        unknown_spectrum_list=[arsenic_unknowns[0], ],
         best_fits_plot_limit=1,
         component_count_range=range(1, 3+1)
     )
@@ -83,7 +63,7 @@ def test_arsenic_1(caplog, request):
     with tempfile.TemporaryDirectory() as plots_pdf_dp:
         task.fit_all(plots_pdf_dp=plots_pdf_dp)
 
-        unknown_spectrum_fit = task.fit_table[unknown_spectrum]
+        unknown_spectrum_fit = task.fit_table[arsenic_unknowns[0]]
 
         assert unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape == unknown_spectrum_fit.best_fit.fit_spectrum_b.shape
         assert unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape == unknown_spectrum_fit.best_fit.unknown_spectrum_b.shape
@@ -92,43 +72,22 @@ def test_arsenic_1(caplog, request):
         assert 3 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
 
 
-def test_arsenic_2(caplog, request):
+def test_arsenic_2(caplog, arsenic_references, arsenic_unknowns):
     """
-    Test fits for a single reference against all reference_spectra..
-    Expect to find PRM, data, and reference files in a directory called 'test_arsenic_fit'.
-    See also: http://stackoverflow.com/questions/29627341/pytest-where-to-store-expected-data.
+    Test fits for a single reference against all reference_spectra using FixedEnergyRangeBuilder.
 
-    This test is not reliable. Fix it.
-
-    :param request: pytest fixture with information about the path to this test file
+    :param caplog: logging fixture
+    :param arsenic_references: list of arsenic reference spectra from mr-fitty/src/example/arsenic
+    :param arsenic_unknowns: list of arsenic unknown spectra from mr-fitty/src/example/arsenic
     :return:
     """
-
     caplog.set_level(logging.INFO)
-
-    test_arsenic_fit_fp = request.module.__file__
-    log.info('test_arsenic_fit_fp: {}'.format(test_arsenic_fit_fp))
-    test_arsenic_fit_dir_path, _ = os.path.splitext(test_arsenic_fit_fp)
-
-    #reference_file_path_pattern = os.path.join(test_arsenic_fit_dir_path, 'reference', 'arsenate_*.e')
-    reference_file_path_pattern = os.path.join(test_arsenic_fit_dir_path, 'reference', '*.e')
-    #data_file_path = os.path.join(test_arsenic_fit_dir_path, 'reference', 'arsenate_aqueous_avg_als_cal.e')
-
-    reference_spectrum_list = [
-        ReferenceSpectrum.read_file(file_path)
-        for file_path
-        in glob(reference_file_path_pattern)
-    ]
-    log.info(reference_spectrum_list)
-
-    unknown_spectrum = reference_spectrum_list[0]
-    log.info(unknown_spectrum)
 
     task = AllCombinationFitTask(
         ls=LinearRegression,
         energy_range_builder=FixedEnergyRangeBuilder(energy_start=11850.0, energy_stop=12090.0),
-        reference_spectrum_list=reference_spectrum_list,
-        unknown_spectrum_list=[unknown_spectrum],
+        reference_spectrum_list=arsenic_references,
+        unknown_spectrum_list=[arsenic_unknowns[0], ],
         best_fits_plot_limit=1,
         component_count_range=range(1, 3+1)
     )
@@ -136,7 +95,7 @@ def test_arsenic_2(caplog, request):
     with tempfile.TemporaryDirectory() as plots_pdf_dp:
         task.fit_all(plots_pdf_dp=plots_pdf_dp)
 
-        unknown_spectrum_fit = task.fit_table[unknown_spectrum]
+        unknown_spectrum_fit = task.fit_table[arsenic_unknowns[0]]
 
         best_fit_ref_count = len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
         assert 2 <= best_fit_ref_count <= 3
