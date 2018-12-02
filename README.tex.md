@@ -23,7 +23,7 @@ A common measure of a fit's quality is the 'mean squared error' (MSE) defined by
 
 $$
 
-MSE =
+MSE = \frac{1}{N}
 
 $$
 
