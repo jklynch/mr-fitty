@@ -49,7 +49,7 @@ from scipy.spatial.distance import pdist
 
 from sklearn.utils import shuffle
 
-from mrfitty.base import AdaptiveEnergyRangeBuilder, InterpolatedSpectrumSet, InterpolatedReferenceSpectraSet, SpectrumFit
+from mrfitty.base import InterpolatedSpectrumSet, InterpolatedReferenceSpectraSet, SpectrumFit
 
 
 class FitFailed(Exception):
@@ -103,7 +103,7 @@ class AllCombinationFitTask:
                 # create plot
                 log.info('plotting fit for %s', unknown_spectrum.file_name)
 
-                f_list = self.plot_fit_path(spectrum=unknown_spectrum, fit_results=fit_results)
+                f_list = self.plot_top_fits(spectrum=unknown_spectrum, fit_results=fit_results)
                 for f in f_list:
                     plot_file.savefig(f)
                     plt.close(f)
@@ -125,7 +125,7 @@ class AllCombinationFitTask:
                 }
 
                 # use these for reference tree plots
-                interpolation_energy_range, _ = AdaptiveEnergyRangeBuilder().build_range(
+                interpolation_energy_range, _ = self.energy_range_builder.build_range(
                     unknown_spectrum=unknown_spectrum,
                     reference_spectrum_seq=self.reference_spectrum_list)
                 interpolated_reference_set_df = InterpolatedSpectrumSet.get_interpolated_spectrum_set_df(
@@ -193,9 +193,9 @@ class AllCombinationFitTask:
                             plot_file.savefig(g)
                             plt.close(g)
 
-                            h = self.plot_prediction_errors(spectrum=unknown_spectrum, fit=fit)
-                            plot_file.savefig(h)
-                            plt.close(h)
+                            #h = self.plot_prediction_errors(spectrum=unknown_spectrum, fit=fit)
+                            #plot_file.savefig(h)
+                            #plt.close(h)
 
                         else:
                             break
@@ -330,7 +330,8 @@ class AllCombinationFitTask:
                 #for n_fit_list in fit_results:
                 # plot the best 2-component fit
 
-    def add_date_time_footer(self, ax):
+    @staticmethod
+    def add_date_time_footer(ax):
         ax.annotate(
             datetime.datetime.now().isoformat(),
             xy=(0.025, 0.025),
@@ -339,7 +340,7 @@ class AllCombinationFitTask:
             verticalalignment='top',
             fontsize=4)
 
-    def plot_fit_path(self, spectrum, fit_results):
+    def plot_top_fits(self, spectrum, fit_results):
         log = logging.getLogger(name=self.__class__.__name__)
 
         figure_list = []
@@ -496,7 +497,8 @@ class AllCombinationFitTask:
 
         return f
 
-    def permute_row_elements(self, df):
+    @staticmethod
+    def permute_row_elements(df):
         for i in range(df.shape[0]):
             df.values[i, :] = shuffle(df.values[i, :])
         return df
