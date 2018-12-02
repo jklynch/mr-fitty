@@ -30,13 +30,18 @@ import mrfitty
 from mrfitty.base import ReferenceSpectrum, Spectrum
 
 
-@pytest.fixture(scope="module")
-def arsenic_references():
+@pytest.fixture(scope='module')
+def arsenic_example_path():
     mrfitty_init_fp = mrfitty.__file__
     mrfitty_dir_path, _ = os.path.split(mrfitty_init_fp)
-    src_dir_path, _ =os.path.split(mrfitty_dir_path)
+    src_dir_path, _ = os.path.split(mrfitty_dir_path)
 
-    reference_file_path_pattern = os.path.join(src_dir_path, 'example', 'arsenic', 'reference', '*.e')
+    return os.path.join(src_dir_path, 'example', 'arsenic')
+
+
+@pytest.fixture(scope="module")
+def arsenic_references(arsenic_example_path):
+    reference_file_path_pattern = os.path.join(arsenic_example_path, 'reference', '*.e')
 
     reference_spectrum_list = [
         ReferenceSpectrum.read_file(file_path)
@@ -48,12 +53,12 @@ def arsenic_references():
 
 
 @pytest.fixture(scope='module')
-def arsenic_unknowns():
+def arsenic_unknowns(arsenic_example_path):
     mrfitty_init_fp = mrfitty.__file__
     mrfitty_dir_path, _ = os.path.split(mrfitty_init_fp)
     src_dir_path, _ =os.path.split(mrfitty_dir_path)
 
-    data_file_path_pattern = os.path.join(src_dir_path, 'example', 'arsenic', 'unknown', '*.e')
+    data_file_path_pattern = os.path.join(arsenic_example_path, 'unknown', '*.e')
 
     unknown_spectrum_list = [
         Spectrum.read_file(file_path)
@@ -62,3 +67,8 @@ def arsenic_unknowns():
     ]
 
     return unknown_spectrum_list
+
+
+@pytest.fixture
+def fit_db():
+    return None
