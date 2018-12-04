@@ -1,6 +1,6 @@
 # MrFitty
 
-![TavisCI](https://travis-ci.org/jklynch/mr-fitty.svg?branch=develop)
+![TavisCI](https://travis-ci.com/jklynch/mr-fitty.svg?branch=develop)
 
 MrFitty is an open-source Python package for fitting XANES data to a set of reference spectra using linear least
 squares and best subset selection as described in *An Introduction to Statistical Learning with Applications in R* by
