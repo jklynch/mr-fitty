@@ -42,7 +42,10 @@ $$PE = \frac{1}{N-n} \sum_{j=1}^{N-n}(A_j-\bb{A}_j)^2$$
 
 where $\bb{A}$ is a model fit against $n<N$ points from the unknown spectrum and $\bb{A}_j$ are the model's predictions
 on the $N-n$ points that were not used in the fit, hence the name 'prediction error'. PE is known to be a more robust
-statistic than MSE but by itself 
+statistic than MSE, but by itself PE does not resolve the problem. Furthermore the PE statistic depends on the choice
+of held-out points, so how to choose those points? The answer is to repeat the PE calculation $T$ times, choosing the
+held-out points randomly each time. Finally, from the $T$ PE statistics calculate a 95% bootstrap confidence interval
+of the median.
 
 ## Requirements
 
