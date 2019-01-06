@@ -29,7 +29,7 @@ A common measure of a fit's quality is the 'mean squared error' (MSE) defined by
 where the <img src="/tex/4ebf880807deff5796460f39aea46f80.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=22.465723500000017pt/> are the unknown spectrum and <img src="/tex/f0bf9ccd62edffbd6f0358887464f8a6.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=31.141535699999984pt/> are the fitted spectrum.
 
 Assume the MSE for fitting X to {A} is 0.002 and for fitting X to {B} is 0.871. In this case the fit to {A} seems 
-good while the fit to {B} seems poor and if we were only testing 1-component fits the the best fit would clearly be A.
+good while the fit to {B} seems poor and if we were only testing 1-component fits the the best fit would clearly be to {A}.
 A problem arises in evaluating the goodness of the fit of X to {A,B} because the MSE for the 2-component fit will be
 0.002 or less, despite the poor fit of X to {B}. The linear least squares method accomplishes this by assigning a high
 weight to A and a very low weight to B.
@@ -38,7 +38,7 @@ There are methods to deal with this problem. MrFitty uses 'best subset selection
 comparing MSE between fits, 'best subset selection' relies on a similar statistic often called 'prediction error' (PE)
 defined by
 
-<p align="center"><img src="/tex/0f672778d561cfb26af2933a3c118b39.svg?invert_in_darkmode&sanitize=true" align=middle width=207.46517219999998pt height=50.04352485pt/></p>
+<p align="center"><img src="/tex/ee2b139bfa2bf89f127931e94d2b8c01.svg?invert_in_darkmode&sanitize=true" align=middle width=207.46517219999998pt height=50.04352485pt/></p>
 
 where <img src="/tex/9b86bef3683d0e3920e53dcbc0665dfb.svg?invert_in_darkmode&sanitize=true" align=middle width=12.32879834999999pt height=22.465723500000017pt/> is a model fit against <img src="/tex/15605c10841a9ee639ca78a40d052b1d.svg?invert_in_darkmode&sanitize=true" align=middle width=46.78449764999999pt height=22.465723500000017pt/> points from the unknown spectrum and <img src="/tex/c6dff3aaef5b3051a76ac121c015ceb7.svg?invert_in_darkmode&sanitize=true" align=middle width=18.433308299999993pt height=22.465723500000017pt/> are the model's predictions
 on the <img src="/tex/37da842cc09d6afb19f036c0727aef27.svg?invert_in_darkmode&sanitize=true" align=middle width=44.95803674999999pt height=22.465723500000017pt/> points that were not used in the fit, hence the name 'prediction error'. PE is known to be a more robust
