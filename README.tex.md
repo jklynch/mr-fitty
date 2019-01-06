@@ -29,7 +29,7 @@ $$MSE = \frac{1}{N} \sum_{i=1}^{N}(A_i-\hat{A}_i)^2$$
 where the $A_i$ are the unknown spectrum and $\hat{A}_i$ are the fitted spectrum.
 
 Assume the MSE for fitting X to {A} is 0.002 and for fitting X to {B} is 0.871. In this case the fit to {A} seems 
-good while the fit to {B} seems poor and if we were only testing 1-component fits the the best fit would clearly be A.
+good while the fit to {B} seems poor and if we were only testing 1-component fits the the best fit would clearly be to {A}.
 A problem arises in evaluating the goodness of the fit of X to {A,B} because the MSE for the 2-component fit will be
 0.002 or less, despite the poor fit of X to {B}. The linear least squares method accomplishes this by assigning a high
 weight to A and a very low weight to B.
@@ -38,7 +38,7 @@ There are methods to deal with this problem. MrFitty uses 'best subset selection
 comparing MSE between fits, 'best subset selection' relies on a similar statistic often called 'prediction error' (PE)
 defined by
 
-$$PE = \frac{1}{N-n} \sum_{j=1}^{N-n}(A_j-\bb{A}_j)^2$$
+$$PE = \frac{1}{N-n} \sum_{j=1}^{N-n}(A_j-\bbold{A}_j)^2$$
 
 where $\bb{A}$ is a model fit against $n<N$ points from the unknown spectrum and $\bb{A}_j$ are the model's predictions
 on the $N-n$ points that were not used in the fit, hence the name 'prediction error'. PE is known to be a more robust
