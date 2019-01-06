@@ -249,9 +249,13 @@ class AllCombinationFitTask:
                 yield reference_spectra_combination
 
     def fit_references_to_unknown(self, interpolated_reference_spectra, reference_spectra_subset):
-        interpolated_reference_spectra_subset_df, unknown_spectrum_df = \
+        #interpolated_reference_spectra_subset_df, unknown_spectrum_df = \
+        interpolated_data = \
             interpolated_reference_spectra.get_reference_subset_and_unknown_df(
                 reference_list=reference_spectra_subset, energy_range_builder=self.energy_range_builder)
+
+        interpolated_reference_spectra_subset_df = interpolated_data['reference_subset_df']
+        unknown_spectrum_df = interpolated_data['unknown_subset_df']
 
         lm = self.ls()
         lm.fit(interpolated_reference_spectra_subset_df.values, unknown_spectrum_df.norm.values)
@@ -264,7 +268,8 @@ class AllCombinationFitTask:
             spectrum_fit = SpectrumFit(
                 interpolant_incident_energy=interpolated_reference_spectra_subset_df.index,
                 reference_spectra_A_df=interpolated_reference_spectra_subset_df,
-                unknown_spectrum_b=unknown_spectrum_df,
+                #unknown_spectrum_b=unknown_spectrum_df,
+                unknown_spectrum=interpolated_data['unknown_subset_spectrum'],
                 reference_spectra_seq=reference_spectra_subset,
                 reference_spectra_coef_x=reference_spectra_coef_x
             )
@@ -530,7 +535,7 @@ class AllCombinationFitTask:
         p = 95.0
         alpha = 1.0 - p / 100.0
         cutoff_distance = np.percentile(expected_distance_list, q=p)
-        print('cutoff distance is {}'.format(cutoff_distance))
+        ##print('cutoff distance is {}'.format(cutoff_distance))
 
         # plt.figure()
         # plt.hist(expected_distance_list)

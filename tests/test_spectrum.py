@@ -109,10 +109,10 @@ class TestSpectrum:
         self.assert_spectrum_correct(a_spectrum)
 
     def assert_spectrum_correct(self, a_spectrum):
-        assert a_spectrum.data_df.shape == (3, 2)
+        assert a_spectrum.data_df.shape == (3, 1)
         assert len(a_spectrum.header_fields) == 0
-        np.testing.assert_approx_equal(a_spectrum.data_df.energy.iloc[0], 1000.0)
-        np.testing.assert_approx_equal(a_spectrum.data_df.energy.iloc[-1], 1002.0)
+        np.testing.assert_approx_equal(a_spectrum.data_df.index[0], 1000.0)
+        np.testing.assert_approx_equal(a_spectrum.data_df.index[-1], 1002.0)
         np.testing.assert_approx_equal(a_spectrum.data_df.norm.iloc[0], 0.123)
         np.testing.assert_approx_equal(a_spectrum.data_df.norm.iloc[-1], 0.345)
 
@@ -167,4 +167,4 @@ def test_parse_header():
 
     assert a_spectrum.header_fields['Valence group'] == 'Fe3_silicate'
     assert a_spectrum.header_fields['Time&date'] == '9:06 PM 03/14/2007'
-    assert a_spectrum.data_df.shape == (2, 2)
+    assert a_spectrum.data_df.shape == (2, 1)

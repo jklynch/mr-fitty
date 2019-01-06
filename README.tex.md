@@ -1,6 +1,6 @@
 # MrFitty
 
-![TavisCI](https://travis-ci.com/jklynch/mr-fitty.svg?branch=develop)
+![TravisCI](https://travis-ci.com/jklynch/mr-fitty.svg?branch=develop)
 
 MrFitty is an open-source Python package for fitting XANES data to a set of reference spectra using linear least
 squares and best subset selection as described in *An Introduction to Statistical Learning with Applications in R* by
@@ -17,7 +17,10 @@ Dr. Matthew Marcus at the Berkeley Synchrotron available [here](https://sites.go
 XANES spectrum fitting is a basic application of linear least squares: given the spectrum of an unknown sample and a library
 of reference specta find the combination of references that best fit the unknown. Fitting each individual group of references
 to the unknown is trivial, but selecting the 'best' combination of references is problematic because comparing fits with
-differing numbers of reference spectra is not always straightforward.
+different numbers of reference spectra is not always straightforward.
+
+A very simple example illustrates the difficulty. Consider the case of two reference spectra being fit to an unknown spectrum.
+Call unknown X and the references A and B. There are three combinations of references to be tested: {A}, {B}, and {A, B}.
 
 A common measure of a fit's quality is the 'mean squared error' (MSE) defined by
 
@@ -25,8 +28,21 @@ $$MSE = \frac{1}{N} \sum_{i=1}^{N}(A_i-\hat{A}_i)^2$$
 
 where the $A_i$ are the unknown spectrum and $\hat{A}_i$ are the fitted spectrum.
 
-The problem in using MSE to compare, for example, the fit using references (X, Y)
-to the fit using references (X, Y, Z) is that the 3-component fit will always have a better MSE than the 2-component fit.
+Assume the MSE for fitting X to {A} is 0.002 and for fitting X to {B} is 0.871. In this case the fit to {A} seems 
+good while the fit to {B} seems poor and if we were only testing 1-component fits the the best fit would clearly be A.
+A problem arises in evaluating the goodness of the fit of X to {A,B} because the MSE for the 2-component fit will be
+0.002 or less, despite the poor fit of X to {B}. The linear least squares method accomplishes this by assigning a high
+weight to A and a very low weight to B.
+
+There are methods to deal with this problem. MrFitty uses 'best subset selection' as described in [1]. Rather than
+comparing MSE between fits, 'best subset selection' relies on a similar statistic often called 'prediction error' (PE)
+defined by
+
+$$PE = \frac{1}{N-n} \sum_{j=1}^{N-n}(A_j-\bb{A}_j)^2$$
+
+where $\bb{A}$ is a model fit against $n<N$ points from the unknown spectrum and $\bb{A}_j$ are the model's predictions
+on the $N-n$ points that were not used in the fit, hence the name 'prediction error'. PE is known to be a more robust
+statistic than MSE but by itself 
 
 ## Requirements
 
@@ -179,3 +195,6 @@ Several output files will be produced:
      +  fitted normalized absorbance value
      +  residual of the fit
      +  input normalized absorbance
+
+## References
+[1] Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani, *An Introduction to Statistical Learning with Applications in R*

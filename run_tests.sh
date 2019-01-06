@@ -25,4 +25,5 @@
 
 # usage: $ run_tests.sh tests/
 
+rm test_arsenic_fit.log
 py.test $1 -s --cov=src/mrfitty

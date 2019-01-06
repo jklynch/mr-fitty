@@ -6,7 +6,7 @@ Changelog
 -----------------------------------------
 
 * move sample data from experiment_arsenic to src/example/arsenic
-* add C_p plots
+* add prediction error plots
 * create output directories if they do not exist
 * add date to plots
 * describe best subset selection in README.md

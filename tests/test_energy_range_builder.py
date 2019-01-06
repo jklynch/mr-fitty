@@ -58,8 +58,8 @@ def test_adaptive_energy_range_builder():
         reference_spectrum_seq=[reference_1, reference_2])
 
     assert fit_energies.shape == (2,)
-    assert fit_energies.iloc[0] == 11765.0
-    assert fit_energies.iloc[-1] == 11771.0
+    assert fit_energies[0] == 11765.0
+    assert fit_energies[-1] == 11771.0
     assert fit_energy_indices.tolist() == [False, True, True, False]
 
 
@@ -73,6 +73,6 @@ def test_fixed_energy_range_builder():
         reference_spectrum_seq=[reference_1, reference_2])
 
     assert fit_energies.shape == (2,)
-    assert fit_energies.iloc[0] == 11765.0
-    assert fit_energies.iloc[-1] == 11771.0
+    assert fit_energies[0] == 11765.0
+    assert fit_energies[-1] == 11771.0
     assert fit_energy_indices.tolist() == [False, True, True, False]

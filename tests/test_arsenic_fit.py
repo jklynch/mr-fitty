@@ -29,7 +29,7 @@ from sklearn.linear_model import LinearRegression
 from mrfitty.base import AdaptiveEnergyRangeBuilder, FixedEnergyRangeBuilder
 from mrfitty.combination_fit import AllCombinationFitTask
 
-logging.basicConfig(level=logging.DEBUG, filename='test_arsenic_fit.log')
+logging.basicConfig(level=logging.INFO, filename='test_arsenic_fit.log')
 log = logging.getLogger(name=__name__)
 
 
