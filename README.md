@@ -42,7 +42,10 @@ defined by
 
 where <img src="/tex/9b86bef3683d0e3920e53dcbc0665dfb.svg?invert_in_darkmode&sanitize=true" align=middle width=12.32879834999999pt height=22.465723500000017pt/> is a model fit against <img src="/tex/15605c10841a9ee639ca78a40d052b1d.svg?invert_in_darkmode&sanitize=true" align=middle width=46.78449764999999pt height=22.465723500000017pt/> points from the unknown spectrum and <img src="/tex/c6dff3aaef5b3051a76ac121c015ceb7.svg?invert_in_darkmode&sanitize=true" align=middle width=18.433308299999993pt height=22.465723500000017pt/> are the model's predictions
 on the <img src="/tex/37da842cc09d6afb19f036c0727aef27.svg?invert_in_darkmode&sanitize=true" align=middle width=44.95803674999999pt height=22.465723500000017pt/> points that were not used in the fit, hence the name 'prediction error'. PE is known to be a more robust
-statistic than MSE but by itself 
+statistic than MSE, but by itself PE does not resolve the problem. Furthermore the PE statistic depends on the choice
+of held-out points, so how to choose those points? The answer is to repeat the PE calculation <img src="/tex/2f118ee06d05f3c2d98361d9c30e38ce.svg?invert_in_darkmode&sanitize=true" align=middle width=11.889314249999991pt height=22.465723500000017pt/> times, choosing the
+held-out points randomly each time. Finally, from the <img src="/tex/2f118ee06d05f3c2d98361d9c30e38ce.svg?invert_in_darkmode&sanitize=true" align=middle width=11.889314249999991pt height=22.465723500000017pt/> PE statistics calculate a 95% bootstrap confidence interval
+of the median.
 
 ## Requirements
 
