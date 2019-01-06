@@ -1,6 +1,6 @@
 # MrFitty
 
-![TavisCI](https://travis-ci.com/jklynch/mr-fitty.svg?branch=develop)
+![TravisCI](https://travis-ci.com/jklynch/mr-fitty.svg?branch=develop)
 
 MrFitty is an open-source Python package for fitting XANES data to a set of reference spectra using linear least
 squares and best subset selection as described in *An Introduction to Statistical Learning with Applications in R* by
@@ -17,16 +17,32 @@ Dr. Matthew Marcus at the Berkeley Synchrotron available [here](https://sites.go
 XANES spectrum fitting is a basic application of linear least squares: given the spectrum of an unknown sample and a library
 of reference specta find the combination of references that best fit the unknown. Fitting each individual group of references
 to the unknown is trivial, but selecting the 'best' combination of references is problematic because comparing fits with
-differing numbers of reference spectra is not always straightforward.
+different numbers of reference spectra is not always straightforward.
+
+A very simple example illustrates the difficulty. Consider the case of two reference spectra being fit to an unknown spectrum.
+Call unknown X and the references A and B. There are three combinations of references to be tested: {A}, {B}, and {A, B}.
 
 A common measure of a fit's quality is the 'mean squared error' (MSE) defined by
 
-<p align="center"><img src="./tex/728aa7f63279a788d5c758d0dda7707d.svg?invert_in_darkmode&sanitize=true" align=middle width=184.22840534999997pt height=47.806078649999996pt/></p>
+<p align="center"><img src="/tex/728aa7f63279a788d5c758d0dda7707d.svg?invert_in_darkmode&sanitize=true" align=middle width=184.22840534999997pt height=47.806078649999996pt/></p>
 
-where the <img src="./tex/4ebf880807deff5796460f39aea46f80.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=22.465723500000017pt/> are the unknown spectrum and <img src="/tex/f0bf9ccd62edffbd6f0358887464f8a6.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=31.141535699999984pt/> are the fitted spectrum.
+where the <img src="/tex/4ebf880807deff5796460f39aea46f80.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=22.465723500000017pt/> are the unknown spectrum and <img src="/tex/f0bf9ccd62edffbd6f0358887464f8a6.svg?invert_in_darkmode&sanitize=true" align=middle width=16.97969789999999pt height=31.141535699999984pt/> are the fitted spectrum.
 
-The problem in using MSE to compare, for example, the fit using references (X, Y)
-to the fit using references (X, Y, Z) is that the 3-component fit will always have a better MSE than the 2-component fit.
+Assume the MSE for fitting X to {A} is 0.002 and for fitting X to {B} is 0.871. In this case the fit to {A} seems 
+good while the fit to {B} seems poor and if we were only testing 1-component fits the the best fit would clearly be A.
+A problem arises in evaluating the goodness of the fit of X to {A,B} because the MSE for the 2-component fit will be
+0.002 or less, despite the poor fit of X to {B}. The linear least squares method accomplishes this by assigning a high
+weight to A and a very low weight to B.
+
+There are methods to deal with this problem. MrFitty uses 'best subset selection' as described in [1]. Rather than
+comparing MSE between fits, 'best subset selection' relies on a similar statistic often called 'prediction error' (PE)
+defined by
+
+<p align="center"><img src="/tex/0f672778d561cfb26af2933a3c118b39.svg?invert_in_darkmode&sanitize=true" align=middle width=207.46517219999998pt height=50.04352485pt/></p>
+
+where <img src="/tex/9b86bef3683d0e3920e53dcbc0665dfb.svg?invert_in_darkmode&sanitize=true" align=middle width=12.32879834999999pt height=22.465723500000017pt/> is a model fit against <img src="/tex/15605c10841a9ee639ca78a40d052b1d.svg?invert_in_darkmode&sanitize=true" align=middle width=46.78449764999999pt height=22.465723500000017pt/> points from the unknown spectrum and <img src="/tex/c6dff3aaef5b3051a76ac121c015ceb7.svg?invert_in_darkmode&sanitize=true" align=middle width=18.433308299999993pt height=22.465723500000017pt/> are the model's predictions
+on the <img src="/tex/37da842cc09d6afb19f036c0727aef27.svg?invert_in_darkmode&sanitize=true" align=middle width=44.95803674999999pt height=22.465723500000017pt/> points that were not used in the fit, hence the name 'prediction error'. PE is known to be a more robust
+statistic than MSE but by itself 
 
 ## Requirements
 
@@ -179,3 +195,6 @@ Several output files will be produced:
      +  fitted normalized absorbance value
      +  residual of the fit
      +  input normalized absorbance
+
+## References
+[1] Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani, *An Introduction to Statistical Learning with Applications in R*
