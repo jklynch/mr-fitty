@@ -83,6 +83,7 @@ class AllCombinationFitTask:
         os.makedirs(plots_pdf_dp, exist_ok=True)
 
         for unknown_spectrum in sorted(self.unknown_spectrum_list, key=lambda s: s.file_name):
+
             log.debug('fitting %s', unknown_spectrum.file_name)
             t0 = time.time()
             best_fit, fit_table = self.fit(unknown_spectrum)
@@ -161,12 +162,11 @@ class AllCombinationFitTask:
                 for n in sorted(fit_table.keys()):
                     log.info('plotting %d-component fit for %s', n, unknown_spectrum.file_name)
                     n_component_fit_results = fit_table[n]
-                    # TODO: move this loop to best subset selection?
                     # here only plot the best fit for each component count
 
                     for i, fit in enumerate(n_component_fit_results):
                         if i < self.best_fits_plot_limit:
-                            title = 'Best {}-Component Fit ({})'.format(n, i)
+                            title = '{} Best {}-Component Fit'.format(ordinal_list[i], n)
 
                             f = self.plot_fit(
                                 spectrum=unknown_spectrum,
@@ -192,10 +192,6 @@ class AllCombinationFitTask:
 
                             plot_file.savefig(g)
                             plt.close(g)
-
-                            #h = self.plot_prediction_errors(spectrum=unknown_spectrum, fit=fit)
-                            #plot_file.savefig(h)
-                            #plt.close(h)
 
                         else:
                             break
@@ -369,13 +365,14 @@ class AllCombinationFitTask:
         return figure_list
 
     def get_fit_quality_score_text(self, any_given_fit):
-        return ' (NSS: {:8.5f})'.format(any_given_fit.nss)
+        return ['MSE: {:8.5f}'.format(any_given_fit.nss)]
 
     def plot_fit(self, spectrum, any_given_fit, title):
         log = logging.getLogger(name=self.__class__.__name__)
 
         f, ax = plt.subplots()
-        ax.set_title(spectrum.file_name + '\n' + title + '\n' + self.get_fit_quality_score_text(any_given_fit))
+        ##ax.set_title(spectrum.file_name + '\n' + title + '\n' + self.get_fit_quality_score_text(any_given_fit))
+        ax.set_title(spectrum.file_name + '\n' + title)
         log.info(any_given_fit.fit_spectrum_b.shape)
 
         reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
@@ -408,38 +405,69 @@ class AllCombinationFitTask:
                     any_given_fit.fit_spectrum_b,
                     label=reference_label,
                     color='w',
-                    alpha=0.0))
+                    alpha=0.0
+                )
+            )
 
         log.info(any_given_fit.residuals.shape)
         residuals_label = residuals_contribution_format_str.format('residuals', any_given_fit.residuals_contribution)
         residuals_line = ax.plot(
             any_given_fit.interpolant_incident_energy,
             any_given_fit.residuals,
-            label=residuals_label)
+            '.',
+            label=residuals_label,
+            alpha=0.5
+        )
 
         fit_line_label = 'fit'
         fit_line = ax.plot(
             any_given_fit.interpolant_incident_energy,
             any_given_fit.fit_spectrum_b,
-            label=fit_line_label)
+            label=fit_line_label
+        )
 
         spectrum_points = ax.plot(
             any_given_fit.interpolant_incident_energy,
             any_given_fit.unknown_spectrum_b,
             '.',
             label=spectrum.file_name,
-            alpha=0.5)
+            alpha=0.5
+        )
+
+        # add some fake lines to create some special legend entries
+        fit_quality_lines = []
+        fit_quality_labels = self.get_fit_quality_score_text(any_given_fit=any_given_fit)
+        for fit_quality_label in fit_quality_labels:
+            fit_quality_lines.extend(
+                ax.plot(
+                    [],
+                    [],
+                    label=fit_quality_label,
+                    color='w',
+                    alpha=0.0
+                )
+            )
 
         ax.set_xlabel('eV')
         ax.set_ylabel('normalized absorbance')
         # TODO: make these configurable
         legend_location = 'best'
         legend_font_size = 6
-        ax.legend(
-            [*reference_line_list, *spectrum_points, *residuals_line, *fit_line],
-            [*reference_label_list, spectrum.file_name, residuals_label, fit_line_label],
+        legend = ax.legend(
+            [*reference_line_list, *spectrum_points, *residuals_line, *fit_line, *fit_quality_lines],
+            [*reference_label_list, spectrum.file_name, residuals_label, fit_line_label, *fit_quality_labels],
             loc=legend_location,
             prop=dict(family='Monospace', size=legend_font_size))
+
+        # ax.text(
+        #     0.75,
+        #     0.35,
+        #     self.get_fit_quality_score_text(any_given_fit=any_given_fit),
+        #     transform=ax.transAxes,
+        #     fontsize=6,
+        #     verticalalignment='top',
+        #     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+        # )
 
         self.add_date_time_footer(ax)
 
@@ -451,7 +479,7 @@ class AllCombinationFitTask:
         log = logging.getLogger(name=self.__class__.__name__)
 
         f, ax = plt.subplots()
-        ax.set_title(spectrum.file_name + '\n' + title + '\n' + self.get_fit_quality_score_text(any_given_fit))
+        ax.set_title(spectrum.file_name + '\n' + title)
         log.info(any_given_fit.fit_spectrum_b.shape)
 
         reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
@@ -464,14 +492,18 @@ class AllCombinationFitTask:
         residuals_line = ax.plot(
             any_given_fit.interpolant_incident_energy,
             any_given_fit.residuals,
-            label=residuals_label)
+            '.',
+            label=residuals_label,
+            alpha=0.5
+        )
 
         spectrum_points = ax.plot(
             any_given_fit.interpolant_incident_energy,
             any_given_fit.unknown_spectrum_b,
             '.',
             label=spectrum.file_name,
-            alpha=0.5)
+            alpha=0.5
+        )
 
         # add fits in descending order of reference contribution
         reference_label_list = []
@@ -488,12 +520,26 @@ class AllCombinationFitTask:
 
         reference_line_list = ax.stackplot(ys.index, *[ys.iloc[:, i] for i in sort_ndx], labels=reference_label_list)
 
+        # add some fake lines to create some special legend entries
+        fit_quality_lines = []
+        fit_quality_labels = self.get_fit_quality_score_text(any_given_fit=any_given_fit)
+        for fit_quality_label in fit_quality_labels:
+            fit_quality_lines.extend(
+                ax.plot(
+                    [],
+                    [],
+                    label=fit_quality_label,
+                    color='w',
+                    alpha=0.0
+                )
+            )
+
         ax.set_xlabel('eV')
         ax.set_ylabel('normalized absorbance')
         ax.legend(
             # these arguments are documented but this does not seem to work
-            [*spectrum_points, *reference_line_list, *residuals_line],
-            [spectrum.file_name, *reference_label_list, residuals_label],
+            [*spectrum_points, *reference_line_list, *residuals_line, *fit_quality_lines],
+            [spectrum.file_name, *reference_label_list, residuals_label, *fit_quality_labels],
             prop=dict(family='Monospace', size=7))
 
         self.add_date_time_footer(ax)
