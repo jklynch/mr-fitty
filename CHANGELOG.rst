@@ -10,6 +10,8 @@ Changelog
 * create output directories if they do not exist
 * add date to plots
 * describe best subset selection in README.md
+* move fit quality statistics from figure title to legend
+* in plots change residuals lines to discrete points
 
 0.13.0 (2018-01-04)
 -----------------------------------------
