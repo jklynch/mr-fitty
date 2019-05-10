@@ -15,37 +15,32 @@ Dr. Matthew Marcus at the Berkeley Synchrotron available [here](https://sites.go
 ## Overview
 
 XANES spectrum fitting is a basic application of linear least squares: given the spectrum of an unknown sample and a library
-of reference specta find the combination of references that best fit the unknown. Fitting each individual group of references
-to the unknown is trivial, but selecting the 'best' combination of references is problematic because comparing fits with
+of reference spectra find the combination of references that best fits the unknown. Fitting each individual group of references
+to the unknown is simple, but selecting the 'best' combination of references is problematic because comparing fits with
 different numbers of reference spectra is not always straightforward.
 
-A very simple example illustrates the difficulty. Consider the case of two reference spectra being fit to an unknown spectrum.
-Call unknown X and the references A and B. There are three combinations of references to be tested: {A}, {B}, and {A, B}.
+A trivial example illustrates the difficulty. Consider the case of an unknown spectrum being fit to a library of two reference spectra.
+Call the unknown X and the references A and B. We are curious to see if the unknown is composed of reference A, reference B, or a combination of the two. Thus are three combinations of references to be tested: {A}, {B}, and {A, B}.
 
-A common measure of a fit's quality is the 'mean squared error' (MSE) defined by
+A common measure of a least squares fit's quality is the 'mean squared error' (MSE) defined by
 
 $$MSE = \frac{1}{N} \sum_{i=1}^{N}(A_i-\hat{A}_i)^2$$
 
-where the $A_i$ are the unknown spectrum and $\hat{A}_i$ are the fitted spectrum.
+where the $A_i$ are the unknown spectrum and the $\hat{A}_i$ are the fitted model's values at the unknown's incident energies.
 
-Assume the MSE for fitting X to {A} is 0.002 and for fitting X to {B} is 0.871. In this case the fit to {A} seems 
-good while the fit to {B} seems poor and if we were only testing 1-component fits the the best fit would clearly be to {A}.
-A problem arises in evaluating the goodness of the fit of X to {A,B} because the MSE for the 2-component fit will be
-0.002 or less, despite the poor fit of X to {B}. The linear least squares method accomplishes this by assigning a high
-weight to A and a very low weight to B.
+Assume the MSE for the fit of X to {A} is 0.02 and for the fit of X to {B} is 0.40. In this case the fit to {A} seems good while the fit to {B} seems poor, and if we were only testing 1-component fits the the best fit would clearly be to {A}. But it is possible the sample contains both references so we also fit X to {A,B} and find the MSE is 0.01. It seems that the 2-component fit is the best. But we must be aware that the least squares method is virtually guaranteed to find a better fit to {A,B} than to {A} (as measured by MSE). How can we decide if the fit to {A,B} is
 
-There are methods to deal with this problem. MrFitty uses 'best subset selection' as described in [1]. Rather than
-comparing MSE between fits, 'best subset selection' relies on a similar statistic often called 'prediction error' (PE)
-defined by
+significantly better than the fit to {A}?
+
+There are methods to deal with this problem. MrFitty uses 'best subset selection' as described in [1]. Rather than comparing MSE between fits, 'best subset selection' relies on a similar statistic often called 'prediction error' (PE) defined by
 
 $$PE = \frac{1}{N-n} \sum_{j=1}^{N-n}(A_j-\bbold{A}_j)^2$$
 
-where $\bb{A}$ is a model fit against $n<N$ points from the unknown spectrum and $\bb{A}_j$ are the model's predictions
-on the $N-n$ points that were not used in the fit, hence the name 'prediction error'. PE is known to be a more robust
-statistic than MSE, but by itself PE does not resolve the problem. Furthermore the PE statistic depends on the choice
-of held-out points, so how to choose those points? The answer is to repeat the PE calculation $T$ times, choosing the
-held-out points randomly each time. Finally, from the $T$ PE statistics calculate a 95% bootstrap confidence interval
-of the median.
+where $\bb{A}$ is a model fit against $n<N$ points from the unknown spectrum and $\bb{A}_j$ are the model's predictions on the $N-n$ points that were not used in the fit, hence the name 'prediction error'.
+
+PE is known to be a more robust statistic than MSE, but by itself PE does not resolve the problem. Furthermore the PE statistic depends on the choice of held-out points, so how will those points be selected? The answer is to repeat the PE calculation $T$ times, choosing the held-out points randomly each time. Finally, from the $T$ PE statistics calculate a 95% bootstrap confidence interval of the median.
+
+Returning to the simple example of fitting spectrum X to references A and B, assume the 95% confidence intervals of median PE are [] for the fit to {A}, [] for the fit to {B}, and [] for the fit to {A,B}.
 
 ## Requirements
 
