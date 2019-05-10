@@ -250,14 +250,6 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
             fill_value=np.nan,
             dtype=np.double
         )
-        #cv = sklearn.model_selection.ShuffleSplit(n_splits=n_splits, test_size=test_size)
-        #for i, (train_index, test_index) in enumerate(cv.split(fit.reference_spectra_A_df.values)):
-        #    lm = self.ls()
-        #    lm.fit(
-        #        fit.reference_spectra_A_df.values[train_index],
-        #        fit.unknown_spectrum_b.values[train_index]
-        #    )
-        #    predicted_b = lm.predict(fit.reference_spectra_A_df.values[test_index])
         for i, (predicted_b, train_index, test_index) \
                 in enumerate(self.fit_and_predict(fit, n_splits=n_splits, test_size=test_size)):
 
@@ -276,10 +268,6 @@ class BestSubsetSelectionFitTask(AllCombinationFitTask):
                 fit.unknown_spectrum_b.values[train_index]
             )
             predicted_b = lm.predict(fit.reference_spectra_A_df.values[test_index])
-            #residuals[test_index, i] = fit.unknown_spectrum_b.values[test_index] - predicted_b
-            #cp = np.sqrt(np.nansum(np.square(model_residuals[test_index, i])))
-            #normalized_cp = cp / len(test_index)
-            #normalized_C_p_list.append(normalized_cp)
             yield predicted_b, train_index, test_index
 
     def plot_top_fits(self, spectrum, fit_results):
