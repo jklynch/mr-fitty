@@ -62,7 +62,7 @@ setup(
         'sqlalchemy'
     ],
     extras_require={
-        'test': ['pytest', 'pyfakefs', 'pytest-catchlog', 'pytest-cov'],
+        'test': ['pytest', 'pyfakefs', 'pytest-cov'],
     },
     entry_points={
         'console_scripts': [
