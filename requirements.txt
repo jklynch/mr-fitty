@@ -1,0 +1,9 @@
+bokeh
+jupyter
+matplotlib
+numpy
+pandas
+scipy
+scikits.bootstrap
+scikit-learn
+sqlalchemy

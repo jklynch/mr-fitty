@@ -4,7 +4,6 @@ profiling.md
 *.lprof
 *.html
 *.pdf
-*.txt
 
 .ipynb_checkpoints
 
