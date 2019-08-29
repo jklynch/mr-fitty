@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2018 Joshua Lynch, Sarah Nicholas
+Copyright (c) 2015-2019 Joshua Lynch, Sarah Nicholas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -54,8 +54,8 @@ def test_adaptive_energy_range_builder():
     reference_2 = Spectrum.read_file(io.StringIO(reference_2_text))
 
     fit_energies, fit_energy_indices = AdaptiveEnergyRangeBuilder().build_range(
-        unknown_spectrum=unknown_1,
-        reference_spectrum_seq=[reference_1, reference_2])
+        unknown_spectrum=unknown_1, reference_spectrum_seq=[reference_1, reference_2]
+    )
 
     assert fit_energies.shape == (2,)
     assert fit_energies[0] == 11765.0
@@ -68,9 +68,11 @@ def test_fixed_energy_range_builder():
     reference_1 = Spectrum.read_file(io.StringIO(reference_1_text))
     reference_2 = Spectrum.read_file(io.StringIO(reference_2_text))
 
-    fit_energies, fit_energy_indices = FixedEnergyRangeBuilder(energy_start=11761.0, energy_stop=11771.0).build_range(
-        unknown_spectrum=unknown_1,
-        reference_spectrum_seq=[reference_1, reference_2])
+    fit_energies, fit_energy_indices = FixedEnergyRangeBuilder(
+        energy_start=11761.0, energy_stop=11771.0
+    ).build_range(
+        unknown_spectrum=unknown_1, reference_spectrum_seq=[reference_1, reference_2]
+    )
 
     assert fit_energies.shape == (2,)
     assert fit_energies[0] == 11765.0

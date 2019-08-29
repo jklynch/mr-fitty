@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2018 Joshua Lynch, Sarah Nicholas
+Copyright (c) 2015-2019 Joshua Lynch, Sarah Nicholas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -47,16 +47,16 @@ class PredictionError:
         self.normalized_cp_list = []
 
         cv = sklearn.model_selection.ShuffleSplit(
-            #reference_spectra_A_df.values.shape[0],
+            # reference_spectra_A_df.values.shape[0],
             test_size=self.test_size,
-            n_splits=self.n_iter
+            n_splits=self.n_iter,
         )
         for train_index, test_index in cv.split(X=reference_spectra_A_df.values):
-            #lm = sklearn.linear_model.LinearRegression()
+            # lm = sklearn.linear_model.LinearRegression()
             lm = linear_model.NonNegativeLinearRegression()
             lm.fit(
                 reference_spectra_A_df.values[train_index],
-                unknown_spectrum_b.values[train_index]
+                unknown_spectrum_b.values[train_index],
             )
             predicted_b = lm.predict(reference_spectra_A_df.values[test_index])
             residuals = unknown_spectrum_b.values[test_index] - predicted_b

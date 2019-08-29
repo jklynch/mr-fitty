@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2018 Joshua Lynch, Sarah Nicholas
+Copyright (c) 2015-2019 Joshua Lynch, Sarah Nicholas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,13 +32,13 @@ from mrfitty import base
 class TestSpectrum:
     def test_read_file_with_one_column(self, tmpdir):
         # generate a test file
-        a_file = tmpdir.join('test_read_file.e')
+        a_file = tmpdir.join("test_read_file.e")
         a_file.write(
-'''
+            """
 1000.0
 1001.0
 1002.0
-'''
+"""
         )
         a_file_path = str(a_file)
         with pytest.raises(Exception):
@@ -46,13 +46,13 @@ class TestSpectrum:
 
     def test_read_file_with_zero_comments(self, tmpdir):
         # generate a test file
-        a_file = tmpdir.join('test_read_file.e')
+        a_file = tmpdir.join("test_read_file.e")
         a_file.write(
-'''
+            """
 1000.0\t0.123
 1001.0\t0.234
 1002.0\t0.345
-'''
+"""
         )
         a_file_path = str(a_file)
         a_spectrum = base.Spectrum.read_file(a_file_path)
@@ -61,14 +61,14 @@ class TestSpectrum:
 
     def test_read_file_with_one_comment(self, tmpdir):
         # generate a test file
-        a_file = tmpdir.join('test_read_file.e')
+        a_file = tmpdir.join("test_read_file.e")
         a_file.write(
-'''
+            """
 # comments
 1000.0\t0.123
 1001.0\t0.234
 1002.0\t0.345
-'''
+"""
         )
         a_file_path = str(a_file)
         a_spectrum = base.Spectrum.read_file(a_file_path)
@@ -77,15 +77,15 @@ class TestSpectrum:
 
     def test_read_file_with_two_comments(self, tmpdir):
         # generate a test file
-        a_file = tmpdir.join('test_read_file.e')
+        a_file = tmpdir.join("test_read_file.e")
         a_file.write(
-'''
+            """
 # comments
 # more comments
 1000.0\t0.123
 1001.0\t0.234
 1002.0\t0.345
-'''
+"""
         )
         a_file_path = str(a_file)
         a_spectrum = base.Spectrum.read_file(a_file_path)
@@ -94,14 +94,14 @@ class TestSpectrum:
 
     def test_read_file_with_three_columns(self, tmpdir):
         # generate a test file
-        a_file = tmpdir.join('test_read_file.e')
+        a_file = tmpdir.join("test_read_file.e")
         a_file.write(
-'''
+            """
 # comments
 1000.0\t0.123\t0.012
 1001.0\t0.234\t0.023
 1002.0\t0.345\t0.034
-'''
+"""
         )
         a_file_path = str(a_file)
         a_spectrum = base.Spectrum.read_file(a_file_path)
@@ -118,7 +118,8 @@ class TestSpectrum:
 
 
 def test_parse_header():
-    header = io.StringIO("""
+    header = io.StringIO(
+        """
 # Valence group: Fe3_silicate
 # Athena data file -- Athena version 0.8.056
 # Saving Aegirine as normalized mu(E)
@@ -159,12 +160,13 @@ def test_parse_header():
 #  energy norm bkg_norm der_norm
   7010.6674       0.10203199E-02   0.10202176E-02  -0.17394430E-05
   7015.6673       0.10110155E-02   0.10109131E-02  -0.22488155E-04
-""")
+"""
+    )
 
     a_spectrum = base.Spectrum.read_file(header)
 
     print(a_spectrum.header_fields)
 
-    assert a_spectrum.header_fields['Valence group'] == 'Fe3_silicate'
-    assert a_spectrum.header_fields['Time&date'] == '9:06 PM 03/14/2007'
+    assert a_spectrum.header_fields["Valence group"] == "Fe3_silicate"
+    assert a_spectrum.header_fields["Time&date"] == "9:06 PM 03/14/2007"
     assert a_spectrum.data_df.shape == (2, 1)

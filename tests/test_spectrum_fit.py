@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2018 Joshua Lynch, Sarah Nicholas
+Copyright (c) 2015-2019 Joshua Lynch, Sarah Nicholas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -44,10 +44,10 @@ def generate_spectrum_fit(reference_count, reference_spectra, unknown_spectrum):
     fitter = AllCombinationFitTask(
         ls=LinearRegression,
         reference_spectrum_list=reference_spectra,
-        unknown_spectrum_list=(unknown_spectrum, ),
+        unknown_spectrum_list=(unknown_spectrum,),
         energy_range_builder=energy_range_builder,
         best_fits_plot_limit=0,
-        component_count_range=(reference_count, )
+        component_count_range=(reference_count,),
     )
 
     spectrum_fit, _ = fitter.fit(unknown_spectrum=unknown_spectrum)

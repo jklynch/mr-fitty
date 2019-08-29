@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2018 Joshua Lynch, Sarah Nicholas
+Copyright (c) 2015-2019 Joshua Lynch, Sarah Nicholas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,40 +31,37 @@ from mrfitty.base import ReferenceSpectrum, Spectrum
 from mrfitty.database import FitDatabase
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def arsenic_example_path():
     mrfitty_init_fp = mrfitty.__file__
     mrfitty_dir_path, _ = os.path.split(mrfitty_init_fp)
     src_dir_path, _ = os.path.split(mrfitty_dir_path)
 
-    return os.path.join(src_dir_path, 'example', 'arsenic')
+    return os.path.join(src_dir_path, "example", "arsenic")
 
 
 @pytest.fixture(scope="module")
 def arsenic_references(arsenic_example_path):
-    reference_file_path_pattern = os.path.join(arsenic_example_path, 'reference', '*.e')
+    reference_file_path_pattern = os.path.join(arsenic_example_path, "reference", "*.e")
 
     reference_spectrum_list = [
         ReferenceSpectrum.read_file(file_path)
-        for file_path
-        in glob(reference_file_path_pattern)
+        for file_path in glob(reference_file_path_pattern)
     ]
 
     return reference_spectrum_list
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def arsenic_unknowns(arsenic_example_path):
     mrfitty_init_fp = mrfitty.__file__
     mrfitty_dir_path, _ = os.path.split(mrfitty_init_fp)
-    src_dir_path, _ =os.path.split(mrfitty_dir_path)
+    src_dir_path, _ = os.path.split(mrfitty_dir_path)
 
-    data_file_path_pattern = os.path.join(arsenic_example_path, 'unknown', '*.e')
+    data_file_path_pattern = os.path.join(arsenic_example_path, "unknown", "*.e")
 
     unknown_spectrum_list = [
-        Spectrum.read_file(file_path)
-        for file_path
-        in glob(data_file_path_pattern)
+        Spectrum.read_file(file_path) for file_path in glob(data_file_path_pattern)
     ]
 
     return unknown_spectrum_list
@@ -72,6 +69,6 @@ def arsenic_unknowns(arsenic_example_path):
 
 @pytest.fixture
 def fit_db():
-    fit_db = FitDatabase(url='sqlite:///:memory:', echo=True)
+    fit_db = FitDatabase(url="sqlite:///:memory:", echo=True)
     fit_db.create_tables()
     return fit_db

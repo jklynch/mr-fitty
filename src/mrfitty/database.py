@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2018 Joshua Lynch, Sarah Nicholas
+Copyright (c) 2015-2019 Joshua Lynch, Sarah Nicholas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the 'Software'), to deal
@@ -35,7 +35,7 @@ FitBase = declarative_base()
 
 
 class DBFile(FitBase):
-    __tablename__ = 'file'
+    __tablename__ = "file"
 
     id = Column(Integer, primary_key=True)
     path = Column(String, unique=True)
@@ -43,65 +43,69 @@ class DBFile(FitBase):
 
 
 fit_reference_spectrum = Table(
-    'fit_reference_spectrum',
+    "fit_reference_spectrum",
     FitBase.metadata,
-    Column('fit_id', ForeignKey('fit.id'), primary_key=True),
-    Column('reference_spectrum_id', ForeignKey('reference_spectrum.id'), primary_key=True)
+    Column("fit_id", ForeignKey("fit.id"), primary_key=True),
+    Column(
+        "reference_spectrum_id", ForeignKey("reference_spectrum.id"), primary_key=True
+    ),
 )
 
 
 class DBReferenceSpectrum(FitBase):
-    __tablename__ = 'reference_spectrum'
+    __tablename__ = "reference_spectrum"
     __table_args__ = (
-        UniqueConstraint('spectrum_file_id', 'start_energy', 'end_energy', name='ref_1'),
+        UniqueConstraint(
+            "spectrum_file_id", "start_energy", "end_energy", name="ref_1"
+        ),
     )
 
     id = Column(Integer, primary_key=True)
     start_energy = Column(Float)
     end_energy = Column(Float)
 
-    spectrum_file_id = Column(Integer, ForeignKey('file.id'))
-    spectrum_file = relationship('DBFile')
+    spectrum_file_id = Column(Integer, ForeignKey("file.id"))
+    spectrum_file = relationship("DBFile")
 
     fits = relationship(
-        'DBFit',
-        secondary='fit_reference_spectrum',
-        back_populates='reference_spectra',
-        lazy='dynamic'
+        "DBFit",
+        secondary="fit_reference_spectrum",
+        back_populates="reference_spectra",
+        lazy="dynamic",
     )
 
 
 class DBUnknownSpectrum(FitBase):
-    __tablename__ = 'unknown_spectrum'
+    __tablename__ = "unknown_spectrum"
     __table_args__ = (
-        UniqueConstraint('spectrum_file_id', 'start_energy', 'end_energy', name='unk_1'),
+        UniqueConstraint(
+            "spectrum_file_id", "start_energy", "end_energy", name="unk_1"
+        ),
     )
 
     id = Column(Integer, primary_key=True)
     start_energy = Column(Float)
     end_energy = Column(Float)
 
-    spectrum_file_id = Column(Integer, ForeignKey('file.id'))
-    spectrum_file = relationship('DBFile')
+    spectrum_file_id = Column(Integer, ForeignKey("file.id"))
+    spectrum_file = relationship("DBFile")
 
-    fits = relationship('DBFit', back_populates='unknown_spectrum', lazy='dynamic')
+    fits = relationship("DBFit", back_populates="unknown_spectrum", lazy="dynamic")
 
 
 class DBFit(FitBase):
-    __tablename__ = 'fit'
+    __tablename__ = "fit"
 
     id = Column(Integer, primary_key=True)
     start_energy = Column(Float)
     end_energy = Column(Float)
     sse = Column(Float)
 
-    unknown_spectrum_id = Column(Integer, ForeignKey('unknown_spectrum.id'))
-    unknown_spectrum = relationship('DBUnknownSpectrum', back_populates='fits')
+    unknown_spectrum_id = Column(Integer, ForeignKey("unknown_spectrum.id"))
+    unknown_spectrum = relationship("DBUnknownSpectrum", back_populates="fits")
 
     reference_spectra = relationship(
-        'DBReferenceSpectrum',
-        secondary='fit_reference_spectrum',
-        back_populates='fits'
+        "DBReferenceSpectrum", secondary="fit_reference_spectrum", back_populates="fits"
     )
 
 
@@ -134,31 +138,34 @@ class FitDatabase:
     @staticmethod
     def get_file_digest(path):
         h = sha256()
-        with open(path, mode='rb') as b:
+        with open(path, mode="rb") as b:
             h.update(b.read())
         digest = h.hexdigest()
         return digest
 
     def insert_file(self, session, path):
-        session.add(
-            DBFile(
-                path=path,
-                digest=self.get_file_digest(path=path)
-            )
-        )
+        session.add(DBFile(path=path, digest=self.get_file_digest(path=path)))
 
     def insert_reference_spectrum(self, session, reference_spectrum):
-        dbfile = session.query(DBFile).filter(DBFile.path == reference_spectrum.file_path).one_or_none()
+        dbfile = (
+            session.query(DBFile)
+            .filter(DBFile.path == reference_spectrum.file_path)
+            .one_or_none()
+        )
         if dbfile is None:
             self.insert_file(session, path=reference_spectrum.file_path)
-            dbfile = session.query(DBFile).filter(DBFile.path == reference_spectrum.file_path).one()
+            dbfile = (
+                session.query(DBFile)
+                .filter(DBFile.path == reference_spectrum.file_path)
+                .one()
+            )
         else:
             pass
 
         dbspectrum = DBReferenceSpectrum(
             spectrum_file=dbfile,
             start_energy=reference_spectrum.data_df.index[0],
-            end_energy=reference_spectrum.data_df.index[-1]
+            end_energy=reference_spectrum.data_df.index[-1],
         )
 
         session.add(dbspectrum)
@@ -166,26 +173,33 @@ class FitDatabase:
 
     @staticmethod
     def query_reference_spectra(session, path):
-        return session.query(
-            DBReferenceSpectrum
-        ).join(
-            DBFile
-        ).filter(
-            DBFile.path == path
-        ).one()
+        return (
+            session.query(DBReferenceSpectrum)
+            .join(DBFile)
+            .filter(DBFile.path == path)
+            .one()
+        )
 
     def insert_unknown_spectrum(self, session, unknown_spectrum):
-        dbfile = session.query(DBFile).filter(DBFile.path == unknown_spectrum.file_path).one_or_none()
+        dbfile = (
+            session.query(DBFile)
+            .filter(DBFile.path == unknown_spectrum.file_path)
+            .one_or_none()
+        )
         if dbfile is None:
             self.insert_file(session, path=unknown_spectrum.file_path)
-            dbfile = session.query(DBFile).filter(DBFile.path == unknown_spectrum.file_path).one()
+            dbfile = (
+                session.query(DBFile)
+                .filter(DBFile.path == unknown_spectrum.file_path)
+                .one()
+            )
         else:
             pass
 
         dbspectrum = DBUnknownSpectrum(
             spectrum_file=dbfile,
             start_energy=unknown_spectrum.data_df.index[0],
-            end_energy=unknown_spectrum.data_df.index[-1]
+            end_energy=unknown_spectrum.data_df.index[-1],
         )
 
         session.add(dbspectrum)
@@ -207,13 +221,12 @@ class FitDatabase:
         -------
         One instance of DBUnknownSpectrum
         """
-        return session.query(
-            DBUnknownSpectrum
-        ).join(
-            DBFile
-        ).filter(
-            DBFile.path == path
-        ).one()
+        return (
+            session.query(DBUnknownSpectrum)
+            .join(DBFile)
+            .filter(DBFile.path == path)
+            .one()
+        )
 
     def insert_fit(self, session, fit):
         """
@@ -227,12 +240,11 @@ class FitDatabase:
         dbfit = DBFit(
             start_energy=fit.get_start_energy(),
             end_energy=fit.get_end_energy(),
-            sse=fit.nss
+            sse=fit.nss,
         )
 
         db_unknown_spectrum = self.query_unknown_spectra(
-            session=session,
-            path=fit.unknown_spectrum.file_path,
+            session=session, path=fit.unknown_spectrum.file_path
         )
         dbfit.unknown_spectrum = db_unknown_spectrum
 
@@ -244,17 +256,13 @@ class FitDatabase:
 
     def query_fits(self, session, unknown_spectrum):
         db_unknown_spectrum = self.query_unknown_spectra(
-            session=session,
-            path=unknown_spectrum.file_path
+            session=session, path=unknown_spectrum.file_path
         )
 
-        return session.query(
-            DBFit
-        ).filter(
-            DBFit.unknown_spectrum_id == db_unknown_spectrum.id
-        ).order_by(
-            DBFit.sse
-        ).limit(
-            10
-        ).all()
-
+        return (
+            session.query(DBFit)
+            .filter(DBFit.unknown_spectrum_id == db_unknown_spectrum.id)
+            .order_by(DBFit.sse)
+            .limit(10)
+            .all()
+        )

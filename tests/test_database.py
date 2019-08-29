@@ -1,7 +1,7 @@
 """
 The MIT License (MIT)
 
-Copyright (c) 2015-2018 Joshua Lynch, Sarah Nicholas
+Copyright (c) 2015-2019 Joshua Lynch, Sarah Nicholas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -51,8 +51,7 @@ def test_insert_reference_spectra(fit_db, arsenic_references):
 
     with fit_db.get_session_ctx_mgr() as session:
         sp = fit_db.query_reference_spectra(
-            session=session,
-            path=arsenic_references[0].file_path
+            session=session, path=arsenic_references[0].file_path
         )
 
     # insert DBFile implicitly
@@ -61,8 +60,7 @@ def test_insert_reference_spectra(fit_db, arsenic_references):
 
     with fit_db.get_session_ctx_mgr() as session:
         sp = fit_db.query_reference_spectra(
-            session=session,
-            path=arsenic_references[1].file_path
+            session=session, path=arsenic_references[1].file_path
         )
 
 
@@ -74,8 +72,7 @@ def test_insert_unknown_spectra(fit_db, arsenic_unknowns):
 
     with fit_db.get_session_ctx_mgr() as session:
         sp = fit_db.query_unknown_spectra(
-            session=session,
-            path=arsenic_unknowns[0].file_path
+            session=session, path=arsenic_unknowns[0].file_path
         )
 
     # insert DBFile implicitly
@@ -84,8 +81,7 @@ def test_insert_unknown_spectra(fit_db, arsenic_unknowns):
 
     with fit_db.get_session_ctx_mgr() as session:
         sp = fit_db.query_unknown_spectra(
-            session=session,
-            path=arsenic_unknowns[1].file_path
+            session=session, path=arsenic_unknowns[1].file_path
         )
 
 
@@ -99,17 +95,17 @@ def test_insert_query_fit(fit_db, arsenic_references, arsenic_unknowns):
     fit_1 = test_spectrum_fit.generate_spectrum_fit(
         reference_count=1,
         reference_spectra=arsenic_references,
-        unknown_spectrum=arsenic_unknowns[0]
+        unknown_spectrum=arsenic_unknowns[0],
     )
     fit_2 = test_spectrum_fit.generate_spectrum_fit(
         reference_count=2,
         reference_spectra=arsenic_references,
-        unknown_spectrum=arsenic_unknowns[0]
+        unknown_spectrum=arsenic_unknowns[0],
     )
     fit_3 = test_spectrum_fit.generate_spectrum_fit(
         reference_count=3,
         reference_spectra=arsenic_references,
-        unknown_spectrum=arsenic_unknowns[0]
+        unknown_spectrum=arsenic_unknowns[0],
     )
 
     with fit_db.get_session_ctx_mgr() as session:
@@ -131,8 +127,7 @@ def test_insert_query_fit(fit_db, arsenic_references, arsenic_unknowns):
 
     with fit_db.get_session_ctx_mgr() as session:
         dbfits = fit_db.query_fits(
-            session=session,
-            unknown_spectrum=arsenic_unknowns[0]
+            session=session, unknown_spectrum=arsenic_unknowns[0]
         )
         assert len(dbfits) == 3
 
