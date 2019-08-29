@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function
 import io
 import re
 from glob import glob
+from os import path
 from os.path import basename
 from os.path import dirname
 from os.path import join
@@ -16,57 +17,53 @@ from setuptools import setup
 
 def read(*names, **kwargs):
     return io.open(
-        join(dirname(__file__), *names),
-        encoding=kwargs.get('encoding', 'utf8')
+        join(dirname(__file__), *names), encoding=kwargs.get("encoding", "utf8")
     ).read()
 
 
+here = path.abspath(path.dirname(__file__))
+
+with open(path.join(here, "requirements.txt")) as requirements_file:
+    # Parse requirements.txt, ignoring any commented-out lines.
+    requirements = [
+        line
+        for line in requirements_file.read().splitlines()
+        if not line.startswith("#")
+    ]
+
 setup(
-    name='mrfitty',
-    version='0.14.0',
-    license='MIT',
-    description='A package for linear least squares fitting XANES data.',
-    long_description='%s\n%s' % (read('README.rst'), re.sub(':[a-z]+:`~?(.*?)`', r'``\1``', read('CHANGELOG.rst'))),
-    author='Joshua Lynch',
-    author_email='joshua.kevin.lynch@gmail.com',
-    url='https://github.com/jklynch/mr-fitty',
-    packages=find_packages('src'),
-    package_dir={'': 'src'},
-    py_modules=[splitext(basename(path))[0] for path in glob('src/*.py')],
+    name="mrfitty",
+    version="0.14.0",
+    license="MIT",
+    description="A package for linear least squares fitting XANES data.",
+    long_description="%s\n%s"
+    % (
+        read("README.rst"),
+        re.sub(":[a-z]+:`~?(.*?)`", r"``\1``", read("CHANGELOG.rst")),
+    ),
+    author="Joshua Lynch",
+    author_email="joshua.kevin.lynch@gmail.com",
+    url="https://github.com/jklynch/mr-fitty",
+    packages=find_packages("src"),
+    package_dir={"": "src"},
+    py_modules=[splitext(basename(path))[0] for path in glob("src/*.py")],
     include_package_data=True,
     zip_safe=False,
     classifiers=[
-        # complete classifier list: http://pypi.python.org/pypi?%3Aaction=list_classifiers
-        'Development Status :: 3 - Alpha',
-        'Environment :: Console',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: MIT License',
-        'Operating System :: Unix',
-        'Operating System :: POSIX',
-        'Operating System :: Microsoft :: Windows',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3.6',
+        "Development Status :: 2 - Betas",
+        "Environment :: Console",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: Unix",
+        "Operating System :: POSIX",
+        "Operating System :: Microsoft :: Windows",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3.6",
     ],
     keywords=[
         # eg: 'keyword1', 'keyword2', 'keyword3',
     ],
-    install_requires=[
-        'bokeh',
-        'jupyter',
-        'matplotlib',
-        'numpy',
-        'pandas',
-        'scipy',
-        'scikits.bootstrap',
-        'scikit-learn',
-        'sqlalchemy'
-    ],
-    extras_require={
-        'test': ['pytest', 'pyfakefs', 'pytest-cov'],
-    },
-    entry_points={
-        'console_scripts': [
-            'mrfitty = mrfitty.__main__:main',
-        ]
-    },
+    install_requires=requirements,
+    extras_require={"test": ["pytest", "pyfakefs", "pytest-cov"]},
+    entry_points={"console_scripts": ["mrfitty = mrfitty.__main__:main"]},
 )
