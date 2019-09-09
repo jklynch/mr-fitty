@@ -16,31 +16,28 @@ Dr. Matthew Marcus at the Berkeley Synchrotron available [here](https://sites.go
 
 XANES spectrum fitting is a basic application of linear least squares: given the spectrum of an unknown sample and a library
 of reference spectra find the combination of references that best fits the unknown. Fitting each individual group of references
-to the unknown is simple, but selecting the 'best' combination of references is problematic because comparing fits with
-different numbers of reference spectra is not always straightforward.
+to the unknown is simple, but selecting the 'best' combination of references from
+the set of all fits is not simple.
 
-A trivial example illustrates the difficulty. Consider the case of an unknown spectrum being fit to a library of two reference spectra.
-Call the unknown X and the references A and B. We are curious to see if the unknown is composed of reference A, reference B, or a combination of the two. Thus are three combinations of references to be tested: {A}, {B}, and {A, B}.
+A straightforward comparison of models using the sum of squared residuals (SSR) or the equivalent mean-square error
+(MSE) seems to be a natural choice. But these choices overlook a purely numerical advantage held by the SSR of an
+n-component model over any model with fewer than n components. This advantage is the result of using the same data to
+both *fit* the model and *evaluate* the model. Classical statistics offers methods to make improved comparisons of SSR
+and measures like it [2]. My objection to these methods is that they are complicated and difficult to interpret in
+terms of the data itself.
 
-A common measure of a least squares fit's quality is the 'mean squared error' (MSE) defined by
+The machine learning community, among others, has focused on a different approach to the model comparison problem that
+is computationally expensive, by comparison, but is more easily interpreted. A straightforward comparison of different
+models can be made if datasets are partitioned into two parts, one for fitting a model and the other for evaluating the
+model. Then the model fitting process does not interact with the model evaluation process. This is the basis for
+*cross-validation* and similar methods including the method implemented by MrFitty.
 
-$$MSE = \frac{1}{N} \sum_{i=1}^{N}(A_i-\hat{A}_i)^2$$
+Dividing a dataset into two parts is clearly insufficient for a robust “goodness of fit” measure, and it has been common to see 5- and 10-fold cross-validation in machine learning literature, meaning datasets were divided into 5 or 10 partitions and each partition evaluated against a model fit to the remaining data. MrFitty uses a large number of random partitions of the data to generate a robust “median prediction error” as well as a robust confidence interval of the median prediction error. Having a confidence interval allows a well-defined criterion for saying either:
 
-where the $A_i$ are the unknown spectrum and the $\hat{A}_i$ are the fitted model's values at the unknown's incident energies.
+  * fit A is better than fit B, or
+  * fit A is no better than fit B
 
-Assume the MSE for the fit of X to {A} is 0.02 and for the fit of X to {B} is 0.40. In this case the fit to {A} seems good while the fit to {B} seems poor, and if we were only testing 1-component fits the the best fit would clearly be to {A}. But it is possible the sample contains both references so we also fit X to {A,B} and find the MSE is 0.01. It seems that the 2-component fit is the best. But we must be aware that the least squares method is virtually guaranteed to find a better fit to {A,B} than to {A} (as measured by MSE). How can we decide if the fit to {A,B} is
-
-significantly better than the fit to {A}?
-
-There are methods to deal with this problem. MrFitty uses 'best subset selection' as described in [1]. Rather than comparing MSE between fits, 'best subset selection' relies on a similar statistic often called 'prediction error' (PE) defined by
-
-$$PE = \frac{1}{N-n} \sum_{j=1}^{N-n}(A_j-\bbold{A}_j)^2$$
-
-where $\bb{A}$ is a model fit against $n<N$ points from the unknown spectrum and $\bb{A}_j$ are the model's predictions on the $N-n$ points that were not used in the fit, hence the name 'prediction error'.
-
-PE is known to be a more robust statistic than MSE, but by itself PE does not resolve the problem. Furthermore the PE statistic depends on the choice of held-out points, so how will those points be selected? The answer is to repeat the PE calculation $T$ times, choosing the held-out points randomly each time. Finally, from the $T$ PE statistics calculate a 95% bootstrap confidence interval of the median.
-
-Returning to the simple example of fitting spectrum X to references A and B, assume the 95% confidence intervals of median PE are [] for the fit to {A}, [] for the fit to {B}, and [] for the fit to {A,B}.
+by asking whether or not the confidence intervals of median prediction error overlap. This criterion is directly interpretable in terms of the data since weaker models and weaker data can be expected to give larger confidence intervals than stronger models and stronger data.
 
 ## Requirements
 
@@ -62,16 +59,15 @@ If the standard Python 3.6+ distribution is available then MrFitty can be instal
 ### Method 2 (recommended)
 Alternatively, MrFitty can be installed in a virtual environment using the standard Python 3.6+ distribution with the following commands:
 
-    $ python3 -m venv mrf --without-pip
+    $ python3 -m venv mrf
     $ source mrf/bin/activate
-    (mrf) $ wget bootstrap.pypa.io/get-pip.py -O - | python3
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
 ### Method 3 (recommended)
 If the Anaconda distribution has been installed then MrFitty can be installed in a virtual environment with these commands:
 
     $ conda create python=3.6 --name mrf
-    $ source activate mrf
+    $ activate mrf
     (mrf) $ conda install --file conda-requirements.txt
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
@@ -186,6 +182,13 @@ input to mr-fitty
 Several output files will be produced:
 
   + a single PDF containing plots of each fitted spectrum
+  
+![best 1-component fits](images/best-3-component-fits.png)
+  
+![best 3-component fit](images/best-3-component-fit.png)
+
+![best 3-component fit reference clusters](images/best-3-component-fit-reference-clusters.png)
+
   + a single table in text format with the best fit information for each fitted spectrum
   + one file per fitted spectrum with four columns of data:
 
@@ -196,3 +199,5 @@ Several output files will be produced:
 
 ## References
 [1] Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani, *An Introduction to Statistical Learning with Applications in R*
+
+[2] Calvin, Scott, *XAFS for Everyone*, 2013, CRC Press
