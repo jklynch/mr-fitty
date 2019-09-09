@@ -1,15 +1,19 @@
+[fit]
+minimum_component_count = 1
+maximum_component_count = 3
+fit_method = nnlsq
+component_count_method = best_subset_selection
+
 [references]
-prm = reference/As_database_for_llsq_25_refs.prm
+references/*.e
 
 [data]
 data/OTT3_55_spot0.e
 
 [output]
-plots_pdf_fp = test_arsenic_fit_plots.pdf
-table_fp = test_arsenic_fit_table.txt
+best_fit_files_dir = output
+plots_pdf_dir = output
+table_fp = output/fit_table.txt
 
-[parameters]
-#fit_energy_start: 11834.5
-#fit_energy_stop: 12096.0
-fit_method: lsq
-
+[plots]
+best_fits_plot_limit = 3
