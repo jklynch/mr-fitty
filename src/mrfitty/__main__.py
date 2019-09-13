@@ -93,26 +93,16 @@ def fit(args):
     else:
         log.warning("No file path specified for table output")
 
-        # plots_pdf_file_path = os.path.expanduser(config.get('output', 'plots_pdf_fp', fallback=None))
-        # if plots_pdf_file_path:
-        #    log.info('writing plots to PDF {}'.format(plots_pdf_file_path))
-        #    fitter.draw_plots_matplotlib(plots_pdf_file_path)
-        #    plots_html_file_path = os.path.splitext(plots_pdf_file_path)[0] + '.html'
-        #    log.info('writing plots to HTML {}'.format(plots_html_file_path))
-        #    fitter.draw_plots_bokeh(plots_html_file_path)
-        # else:
-        #    log.warning('No file path specified for plot output')
-
-        best_fit_files_dir_path = os.path.expanduser(
-            config.get("output", "best_fit_files_dir", fallback=None)
-        )
-        if best_fit_files_dir_path:
-            if not os.path.expanduser(best_fit_files_dir_path):
-                log.info("creating directory %s", best_fit_files_dir_path)
-                os.makedirs(best_fit_files_dir_path)
-            fitter.write_best_fit_arrays(best_fit_files_dir_path)
-        else:
-            log.warning("No directory specified for best fit files")
+    best_fit_files_dir_path = os.path.expanduser(
+        config.get("output", "best_fit_files_dir", fallback=None)
+    )
+    if best_fit_files_dir_path:
+        if not os.path.expanduser(best_fit_files_dir_path):
+            log.info("creating directory %s", best_fit_files_dir_path)
+            os.makedirs(best_fit_files_dir_path)
+        fitter.write_best_fit_arrays(best_fit_files_dir_path)
+    else:
+        log.warning("No directory specified for best fit files")
 
 
 if __name__ == "__main__":
