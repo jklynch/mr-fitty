@@ -195,7 +195,7 @@ class AllCombinationFitTask:
                 linkage_distance_variable_by_sample=reference_spectra_linkage,
                 reference_df=interpolated_reference_set_df,
                 cutoff_distance=cutoff_distance,
-                title="Best Fit",
+                title="Best Fit\n{}".format(unknown_spectrum.file_name),
                 **clustering_parameters
             )
 
@@ -247,7 +247,7 @@ class AllCombinationFitTask:
                             linkage_distance_variable_by_sample=reference_spectra_linkage,
                             reference_df=interpolated_reference_set_df,
                             cutoff_distance=cutoff_distance,
-                            title=title,
+                            title=title + "\n" + unknown_spectrum.file_name,
                             **clustering_parameters
                         )
 
@@ -256,9 +256,7 @@ class AllCombinationFitTask:
                         )
 
                         leaf_colors = plt.cm.get_cmap("Accent", 2)
-                        for i, leaf_label in enumerate(
-                            plt.gca().get_ymajorticklabels()
-                        ):
+                        for leaf_label in plt.gca().get_ymajorticklabels():
                             if leaf_label.get_text() in reference_spectra_names:
                                 leaf_label.set_color(leaf_colors(1))
                             else:
@@ -576,7 +574,7 @@ class AllCombinationFitTask:
 
         f, ax = plt.subplots()
         ##ax.set_title(spectrum.file_name + '\n' + title + '\n' + self.get_fit_quality_score_text(any_given_fit))
-        ax.set_title(spectrum.file_name + "\n" + title)
+        ax.set_title(title + "\n" + spectrum.file_name)
         ##log.info(any_given_fit.fit_spectrum_b.shape)
 
         reference_contributions_percent_sr = (
@@ -712,7 +710,7 @@ class AllCombinationFitTask:
         log = logging.getLogger(name=self.__class__.__name__)
 
         f, ax = plt.subplots()
-        ax.set_title(spectrum.file_name + "\n" + title)
+        ax.set_title(title + "\n" + spectrum.file_name)
         ##log.info(any_given_fit.fit_spectrum_b.shape)
 
         reference_contributions_percent_sr = (
@@ -882,8 +880,8 @@ class AllCombinationFitTask:
 
         icoords = tuple([i for i in itertools.chain(dendrogram["icoord"])])
         ax.vlines(cutoff_distance, ymin=np.min(icoords), ymax=np.max(icoords))
-        ax.set_title("{}\n{} linkage".format(title, linkage_method))
-        ax.set_xlabel("{} distance".format(pdist_metric))
+        ax.set_title("{}\n".format(title))
+        ax.set_xlabel("{} distance\n{} linkage".format(pdist_metric, linkage_method))
 
         self.add_date_time_footer(ax)
 
