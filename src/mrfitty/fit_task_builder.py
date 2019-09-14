@@ -35,7 +35,7 @@ from mrfitty.base import (
     ReferenceSpectrum,
     Spectrum,
 )
-from mrfitty.best_subset_selection import BestSubsetSelectionFitTask
+from mrfitty.prediction_error_fit import PredictionErrorFitTask
 from mrfitty.combination_fit import AllCombinationFitTask
 from mrfitty.linear_model import NonNegativeLinearRegression
 
@@ -242,7 +242,7 @@ def get_fit_parameters_from_config_file(config, prm_max_cmp, prm_min_cmp):
         if config_component_count_method == "combination_fit":
             fit_task_class = AllCombinationFitTask
         elif config_component_count_method == "best_subset_selection":
-            fit_task_class = BestSubsetSelectionFitTask
+            fit_task_class = PredictionErrorFitTask
         else:
             raise ConfigurationFileError(
                 'unrecognized component_count_method "{}" in section [fit]'.format(

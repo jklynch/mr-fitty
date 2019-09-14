@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from mrfitty.best_subset_selection import BestSubsetSelectionFitTask
+from mrfitty.prediction_error_fit import PredictionErrorFitTask
 
 
 def test_get_best_ci_component_count__1():
@@ -33,7 +33,7 @@ def test_get_best_ci_component_count__1():
 
     test_cp_ci_lo_hi = {1: (0.1, 0.2), 2: (0.1, 0.2), 3: (0.1, 0.2)}
 
-    best_component_count, _, _ = BestSubsetSelectionFitTask.get_best_ci_component_count(
+    best_component_count, _, _ = PredictionErrorFitTask.get_best_ci_component_count(
         test_median_cp, test_cp_ci_lo_hi
     )
     assert best_component_count == 1
@@ -47,7 +47,7 @@ def test_get_best_ci_component_count__2():
 
     test_cp_ci_lo_hi = {1: (0.5, 0.6), 2: (0.3, 0.4), 3: (0.2, 0.3)}
 
-    best_component_count, _, _ = BestSubsetSelectionFitTask.get_best_ci_component_count(
+    best_component_count, _, _ = PredictionErrorFitTask.get_best_ci_component_count(
         test_median_cp, test_cp_ci_lo_hi
     )
     assert best_component_count == 2
@@ -61,7 +61,7 @@ def test_get_best_ci_component_count__3():
 
     test_cp_ci_lo_hi = {1: (0.5, 0.6), 2: (0.3, 0.4), 3: (0.1, 0.2)}
 
-    best_component_count, _, _ = BestSubsetSelectionFitTask.get_best_ci_component_count(
+    best_component_count, _, _ = PredictionErrorFitTask.get_best_ci_component_count(
         test_median_cp, test_cp_ci_lo_hi
     )
     assert best_component_count == 3
@@ -70,7 +70,7 @@ def test_get_best_ci_component_count__3():
 def test_calculate_prediction_error_list(arsenic_references, arsenic_unknowns):
     """
     """
-    a = BestSubsetSelectionFitTask(
+    a = PredictionErrorFitTask(
         reference_spectrum_list=arsenic_references[:3],
         unknown_spectrum_list=[arsenic_unknowns[0]],
     )
