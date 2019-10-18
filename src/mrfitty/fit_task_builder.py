@@ -179,7 +179,7 @@ def get_fit_parameters_from_config_file(config, prm_max_cmp, prm_min_cmp):
     #   maximum_component_count
     #   minimum_component_count
     #   fit_method: lsq or nnlsq
-    #   component_count_method: combination_fit or best_subset_selection
+    #   component_count_method: combination_fit or prediction_error
     #
     log = logging.getLogger(name=__name__)
 
@@ -241,7 +241,7 @@ def get_fit_parameters_from_config_file(config, prm_max_cmp, prm_min_cmp):
         )
         if config_component_count_method == "combination_fit":
             fit_task_class = AllCombinationFitTask
-        elif config_component_count_method == "best_subset_selection":
+        elif config_component_count_method == "prediction_error":
             fit_task_class = PredictionErrorFitTask
         else:
             raise ConfigurationFileError(
