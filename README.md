@@ -26,18 +26,24 @@ both *fit* the model and *evaluate* the model. Classical statistics offers metho
 and measures like it [2]. My objection to these methods is that they are complicated and difficult to interpret in
 terms of the data itself.
 
-The machine learning community, among others, has focused on a different approach to the model comparison problem that
-is computationally expensive, by comparison, but is more easily interpreted. A straightforward comparison of different
-models can be made if datasets are partitioned into two parts, one for fitting a model and the other for evaluating the
-model. Then the model fitting process does not interact with the model evaluation process. This is the basis for
-*cross-validation* and similar methods including the method implemented by MrFitty.
+*Prediction error* is a different approach to the model comparison problem that is computationally expensive, by
+comparison, but is more easily interpreted. A straightforward comparison of different models can be made if datasets
+are partitioned into two parts, one for fitting a model and the other for evaluating the model. Then the model fitting
+process does not interact with the model evaluation process. This is the basis for *cross-validation* and similar
+methods including the method implemented by MrFitty.
 
-Dividing a dataset into two parts is clearly insufficient for a robust “goodness of fit” measure, and it has been common to see 5- and 10-fold cross-validation in machine learning literature, meaning datasets were divided into 5 or 10 partitions and each partition evaluated against a model fit to the remaining data. MrFitty uses a large number of random partitions of the data to generate a robust “median prediction error” as well as a robust confidence interval of the median prediction error. Having a confidence interval allows a well-defined criterion for saying either:
+Dividing a dataset into two parts is clearly insufficient for a robust “goodness of fit” measure, and it has been
+common to see 5- and 10-fold cross-validation in machine learning literature, meaning datasets were divided into 5 or
+10 partitions and each partition evaluated against a model fit to the remaining data. MrFitty uses a large number of
+random partitions of the data to generate a robust “median prediction error” as well as a robust confidence interval of
+the median prediction error. Having a confidence interval allows a well-defined criterion for saying either:
 
   * fit A is better than fit B, or
   * fit A is no better than fit B
 
-by asking whether or not the confidence intervals of median prediction error overlap. This criterion is directly interpretable in terms of the data since weaker models and weaker data can be expected to give larger confidence intervals than stronger models and stronger data.
+by asking whether or not the confidence intervals of median prediction error overlap. This criterion is directly
+interpretable in terms of the data since weaker models and weaker data can be expected to give larger confidence
+intervals than stronger models and stronger data.
 
 ## Requirements
 
@@ -183,7 +189,7 @@ Several output files will be produced:
 
   + a single PDF containing plots of each fitted spectrum
   
-![best 1-component fits](images/best-3-component-fits.png)
+![best 3-component fits](images/best-3-component-fits.png)
   
 ![best 3-component fit](images/best-3-component-fit.png)
 
