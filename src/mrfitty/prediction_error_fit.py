@@ -23,7 +23,6 @@ SOFTWARE.
 """
 from collections import defaultdict
 import logging
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -33,6 +32,11 @@ import sklearn.model_selection
 from mrfitty.base import AdaptiveEnergyRangeBuilder
 from mrfitty.combination_fit import AllCombinationFitTask
 from mrfitty.linear_model import NonNegativeLinearRegression
+from mrfitty.plot import (
+    prediction_error_box_plots,
+    prediction_error_confidence_interval_plot,
+    best_fit_for_component_count_box_plots,
+)
 
 
 class PredictionErrorFitTask(AllCombinationFitTask):
@@ -108,21 +112,27 @@ class PredictionErrorFitTask(AllCombinationFitTask):
             )
 
             for fit_j in sorted_fits_for_i_components[:20]:
-                t0 = time.time()
-                prediction_errors, _ = self.calculate_prediction_error_list(fit_j)
-                t1 = time.time()
-                median_C_p = np.median(prediction_errors)
-                ci_lo, ci_hi = scikits.bootstrap.ci(
+                prediction_errors, _ = self.calculate_prediction_error_list(
+                    fit_j, n_splits=1000
+                )
+
+                fit_j.mean_C_p = np.mean(prediction_errors)
+                mean_ci_lo, mean_ci_hi = scikits.bootstrap.ci(
+                    data=prediction_errors, statfunction=np.mean
+                )
+                fit_j.mean_C_p_ci_lo = mean_ci_lo
+                fit_j.mean_C_p_ci_hi = mean_ci_hi
+
+                fit_j.median_C_p = np.median(prediction_errors)
+                median_ci_lo, median_ci_hi = scikits.bootstrap.ci(
                     data=prediction_errors, statfunction=np.median
                 )
-                fit_j.median_C_p = median_C_p
-                fit_j.median_C_p_ci_lo = ci_lo
-                fit_j.median_C_p_ci_hi = ci_hi
+                fit_j.median_C_p_ci_lo = median_ci_lo
+                fit_j.median_C_p_ci_hi = median_ci_hi
 
                 fit_j.prediction_errors = prediction_errors
 
                 all_counts_spectrum_fit_pe_table[component_count_i].append(fit_j)
-                # log.info('%5.2fs to calculate prediction error list', t1 - t0)
 
             all_counts_spectrum_fit_pe_table[component_count_i] = sorted(
                 all_counts_spectrum_fit_pe_table[component_count_i],
@@ -141,10 +151,10 @@ class PredictionErrorFitTask(AllCombinationFitTask):
             #         <-- k -->                             j.lo <= k.hi <= j.hi
             #              <-- j -->
             #
-            #             <--  k  -->
+            #             <--  k  -->                       j.lo > k.lo and j.hi < k.hi
             #              <-- j -->
             #
-            #               <- k ->
+            #               <- k ->                         j.lo <= k.lo and j.hi > k.hi
             #              <-- j -->
             #
             #                    <-- k -->                  j.lo <= k.lo <= j.hi
@@ -332,7 +342,7 @@ class PredictionErrorFitTask(AllCombinationFitTask):
             yield predicted_b, train_index, test_index
 
     def plot_top_fits(self, spectrum, fit_results):
-        log = logging.getLogger(name=self.__class__.__name__ + ":" + spectrum.file_name)
+        # log = logging.getLogger(name=self.__class__.__name__ + ":" + spectrum.file_name)
 
         figure_list = []
 
@@ -340,7 +350,6 @@ class PredictionErrorFitTask(AllCombinationFitTask):
         for i, component_count in enumerate(
             fit_results.component_count_fit_table.keys()
         ):
-            f, ax = plt.subplots()
 
             pe_fits = [
                 fit
@@ -350,80 +359,31 @@ class PredictionErrorFitTask(AllCombinationFitTask):
 
             sorted_fits = sorted(pe_fits, key=lambda fit: fit.median_C_p)[:10]
             top_fit_per_component_count[component_count] = sorted_fits[0]
-            ax.boxplot(
-                x=[fit_i.prediction_errors for fit_i in sorted_fits],
-                usermedians=[fit_i.median_C_p for fit_i in sorted_fits],
-                conf_intervals=[
-                    [fit_i.median_C_p_ci_lo, fit_i.median_C_p_ci_hi]
-                    for fit_i in sorted_fits
-                ],
-                notch=True,
-            )
-            ax.scatter(
-                x=range(1, len(sorted_fits) + 1),
-                y=[fit_i.nss for fit_i in sorted_fits],
-                marker="x",
-            )
 
-            ax.set_title(
-                "Best {}-component Fits".format(component_count)
-                + "\n"
-                + spectrum.file_name
+            f, ax = plt.subplots()
+            prediction_error_box_plots(
+                ax=ax,
+                title=f"Best {component_count}-component Fits\n{spectrum.file_name}",
+                sorted_fits=sorted_fits,
             )
-            ax.set_xlabel("top 10 fits")
-            ax.set_ylabel("Prediction Error")
-
-            self.add_date_time_footer(ax)
-
             f.tight_layout()
             figure_list.append(f)
 
             g, ax = plt.subplots()
-            ax.errorbar(
-                y=[spectrum_fit.median_C_p for spectrum_fit in sorted_fits],
-                x=range(len(sorted_fits)),
-                yerr=[
-                    [s.median_C_p - s.median_C_p_ci_lo for s in sorted_fits],
-                    [s.median_C_p_ci_hi - s.median_C_p for s in sorted_fits],
-                ],
-                fmt="o",
+            prediction_error_confidence_interval_plot(
+                ax=ax,
+                title=f"Best {component_count}-component Fits\n{spectrum.file_name}",
+                sorted_fits=sorted_fits,
             )
-            ax.set_title(
-                "Best {}-component Fits".format(component_count)
-                + "\n"
-                + spectrum.file_name
-            )
-            ax.set_xlabel("top 10 fits")
-            ax.set_ylabel("Prediction Error")
-            ax.grid()
-
-            self.add_date_time_footer(ax)
-
             g.tight_layout()
             figure_list.append(g)
 
         f, ax = plt.subplots()
-        ax.boxplot(
-            x=[
-                fit_i.prediction_errors
-                for i, fit_i in sorted(top_fit_per_component_count.items())
-            ],
-            usermedians=[
-                fit_i.median_C_p
-                for i, fit_i in sorted(top_fit_per_component_count.items())
-            ],
-            conf_intervals=[
-                [fit_i.median_C_p_ci_lo, fit_i.median_C_p_ci_hi]
-                for i, fit_i in sorted(top_fit_per_component_count.items())
-            ],
-            notch=True,
+        best_fit_for_component_count_box_plots(
+            ax=ax,
+            title=f"Best Fits\n{spectrum.file_name}",
+            top_fit_per_component_count=top_fit_per_component_count,
         )
-        ax.set_title("Best Fits" + "\n" + spectrum.file_name)
-        ax.set_xlabel("component count")
-        ax.set_ylabel("Prediction Error")
-
-        self.add_date_time_footer(ax)
-
         f.tight_layout()
         figure_list.append(f)
 
