@@ -28,6 +28,8 @@ import logging
 from operator import attrgetter
 import os.path
 import time
+import traceback
+import warnings
 
 import matplotlib
 matplotlib.use("pdf", warn=False, force=True)
@@ -94,31 +96,56 @@ class AllCombinationFitTask:
         self.best_fits_plot_limit = best_fits_plot_limit
         self.component_count_range = component_count_range
 
-        self.fit_table = collections.OrderedDict()
+        self.fit_table = None
 
     def fit_all(self, plots_pdf_dp):
+        """
+        using self.fit_table here seems to be causing this intermittent error:
+            concurrent.futures.process._RemoteTraceback:
+            Traceback (most recent call last):
+              File "/home/jlynch/miniconda3/envs/mrf/lib/python3.7/multiprocessing/queues.py", line 236, in _feed
+                obj = _ForkingPickler.dumps(obj)
+              File "/home/jlynch/miniconda3/envs/mrf/lib/python3.7/multiprocessing/reduction.py", line 51, in dumps
+                cls(buf, protocol).dump(obj)
+            RuntimeError: OrderedDict mutated during iteration
+
+        Parameters
+        ----------
+        plots_pdf_dp
+
+        Returns
+        -------
+
+        """
         log = logging.getLogger(name="fit_all")
 
         os.makedirs(plots_pdf_dp, exist_ok=True)
 
+        futures = dict()
+        failed_fits = list()
+        _fit_table = collections.OrderedDict()
+
         with ProcessPoolExecutor(max_workers=4) as executor:
-            future_to_unknown_spectrum = dict()
-            for unknown_spectrum in sorted(
-                self.unknown_spectrum_list, key=lambda s: s.file_name
-            ):
+            for unknown_spectrum in sorted(self.unknown_spectrum_list, key=lambda s: s.file_name):
+                future = executor.submit(self.fit_and_plot_exc, unknown_spectrum, plots_pdf_dp)
+                futures[future] = unknown_spectrum
 
-                unknown_spectrum_future = executor.submit(
-                    self.fit_and_plot, unknown_spectrum, plots_pdf_dp
-                )
-                future_to_unknown_spectrum[unknown_spectrum_future] = unknown_spectrum
-
-            for unknown_spectrum_future in as_completed(future_to_unknown_spectrum):
-                unknown_spectrum = future_to_unknown_spectrum[unknown_spectrum_future]
+            for future in as_completed(futures):
+                unknown_spectrum = futures[future]
                 log.info("completed %s fit", unknown_spectrum.file_name)
+                try:
+                    fit_results = future.result()
+                    _fit_table[unknown_spectrum] = fit_results
+                except BaseException as e:
+                    log.error("trouble in paradise")
+                    traceback.print_exc()
+                    failed_fits.append(unknown_spectrum)
 
-                fit_results = unknown_spectrum_future.result()
-                self.fit_table[unknown_spectrum] = fit_results
+        if len(failed_fits) > 0:
+            print("failed fits:")
+            print("\n".join(failed_fits))
 
+        self.fit_table = _fit_table
         return self.fit_table
 
     def fit_and_plot(self, unknown_spectrum, plots_pdf_dp):
