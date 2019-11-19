@@ -118,7 +118,6 @@ class AllCombinationFitTask:
 
         """
         log = logging.getLogger(name="fit_all")
-
         os.makedirs(plots_pdf_dp, exist_ok=True)
 
         futures = dict()
@@ -148,10 +147,17 @@ class AllCombinationFitTask:
         self.fit_table = _fit_table
         return self.fit_table
 
+    def fit_and_plot_exc(self, unknown_spectrum, plots_pdf_dp):
+        log = logging.getLogger(name=f"fit_and_plot_exc:{unknown_spectrum.file_name}")
+        try:
+            return self.fit_and_plot(unknown_spectrum=unknown_spectrum, plots_pdf_dp=plots_pdf_dp)
+        except BaseException as e:
+            log.error("trouble in fit_and_plot_exc")
+            traceback.print_exc()
+            raise
+
     def fit_and_plot(self, unknown_spectrum, plots_pdf_dp):
-        log = logging.getLogger(
-            name="fit_and_plot:{}".format(unknown_spectrum.file_name)
-        )
+        log = logging.getLogger(name=f"fit_and_plot:{unknown_spectrum.file_name}")
 
         log.debug("fitting %s", unknown_spectrum.file_name)
         t0 = time.time()
@@ -168,7 +174,8 @@ class AllCombinationFitTask:
             os.path.basename(unknown_spectrum.file_name)
         )
         plots_pdf_fp = os.path.join(plots_pdf_dp, file_base_name + "_fit.pdf")
-        with PdfPages(plots_pdf_fp) as plot_file:
+        with PdfPages(plots_pdf_fp) as plot_file, warnings.catch_warnings():
+            warnings.simplefilter("ignore")
             log.info("writing plots file {}".format(plots_pdf_dp))
             # create plot
             log.info("plotting fit for %s", unknown_spectrum.file_name)
@@ -226,19 +233,9 @@ class AllCombinationFitTask:
                 reference_df=interpolated_reference_set_df,
                 cutoff_distance=cutoff_distance,
                 title="Best Fit\n{}".format(unknown_spectrum.file_name),
+                reference_spectra_names=[],
                 **clustering_parameters
             )
-
-            reference_spectra_names = tuple(
-                [r.file_name for r in fit_results.best_fit.reference_spectra_seq]
-            )
-
-            leaf_colors = plt.cm.get_cmap("Accent", 2)
-            for i, leaf_label in enumerate(plt.gca().get_ymajorticklabels()):
-                if leaf_label.get_text() in reference_spectra_names:
-                    leaf_label.set_color(leaf_colors(1))
-                else:
-                    leaf_label.set_color(leaf_colors(0))
 
             plot_file.savefig(h)
             plt.close(h)
@@ -277,32 +274,25 @@ class AllCombinationFitTask:
                             ),
                         )
                         plot_file.savefig(f)
+                        plt.close(f)
 
-                        g = plot_prediction_errors(
-                            spectrum=unknown_spectrum,
-                            fit=fit,
-                            title=title,
-                        )
-                        plot_file.savefig(g)
+                        if hasattr(fit, "prediction_errors"):
+                            g = plot_prediction_errors(
+                                spectrum=unknown_spectrum,
+                                fit=fit,
+                                title=title,
+                            )
+                            plot_file.savefig(g)
+                            plt.close(g)
 
                         h = plot_reference_tree(
                             linkage_distance_variable_by_sample=reference_spectra_linkage,
                             reference_df=interpolated_reference_set_df,
                             cutoff_distance=cutoff_distance,
                             title=title + "\n" + unknown_spectrum.file_name,
+                            reference_spectra_names=[r.file_name for r in fit.reference_spectra_seq],
                             **clustering_parameters
                         )
-
-                        reference_spectra_names = tuple(
-                            [r.file_name for r in fit.reference_spectra_seq]
-                        )
-
-                        leaf_colors = plt.cm.get_cmap("Accent", 2)
-                        for leaf_label in plt.gca().get_ymajorticklabels():
-                            if leaf_label.get_text() in reference_spectra_names:
-                                leaf_label.set_color(leaf_colors(1))
-                            else:
-                                leaf_label.set_color(leaf_colors(0))
 
                         plot_file.savefig(h)
                         plt.close(h)

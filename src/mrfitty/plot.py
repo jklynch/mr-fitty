@@ -260,6 +260,7 @@ def plot_reference_tree(
     reference_df,
     cutoff_distance,
     title,
+    reference_spectra_names,
     pdist_metric,
     linkage_method,
 ):
@@ -282,6 +283,13 @@ def plot_reference_tree(
     ax.vlines(cutoff_distance, ymin=np.min(icoords), ymax=np.max(icoords))
     ax.set_title("{}\n".format(title))
     ax.set_xlabel("{} distance\n{} linkage".format(pdist_metric, linkage_method))
+
+    leaf_colors = plt.cm.get_cmap("Accent", 2)
+    for leaf_label in plt.gca().get_ymajorticklabels():
+        if leaf_label.get_text() in reference_spectra_names:
+            leaf_label.set_color(leaf_colors(1))
+        else:
+            leaf_label.set_color(leaf_colors(0))
 
     add_date_time_footer(ax)
     plt.tight_layout()
