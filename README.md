@@ -67,6 +67,7 @@ Alternatively, MrFitty can be installed in a virtual environment using the stand
 
     $ python3 -m venv mrf
     $ source mrf/bin/activate
+    (mrf) $ pip install --upgrade pip 
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
 ### Method 3 (recommended)
