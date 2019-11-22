@@ -47,7 +47,7 @@ Method 3 (recommended)
 If the Anaconda distribution has been installed then MrFitty can be installed in a virtual environment with these commands: ::
 
     $ conda create python=3.6 --name mrf
-    $ source activate mrf
+    $ conda activate mrf
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
 In all cases the required packages will be automatically installed by pip.
