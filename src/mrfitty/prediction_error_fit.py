@@ -48,15 +48,17 @@ class PredictionErrorFitTask(AllCombinationFitTask):
         energy_range_builder=AdaptiveEnergyRangeBuilder(),
         component_count_range=range(1, 4),
         best_fits_plot_limit=3,
+        bootstrap_count=1000,
     ):
         super().__init__(
-            ls,
-            reference_spectrum_list,
-            unknown_spectrum_list,
-            energy_range_builder,
-            best_fits_plot_limit,
-            component_count_range,
+            ls=ls,
+            reference_spectrum_list=reference_spectrum_list,
+            unknown_spectrum_list=unknown_spectrum_list,
+            energy_range_builder=energy_range_builder,
+            best_fits_plot_limit=best_fits_plot_limit,
+            component_count_range=component_count_range,
         )
+        self.bootstrap_count = bootstrap_count
 
     def get_fit_quality_score_text(self, any_given_fit):
         return [
@@ -113,7 +115,7 @@ class PredictionErrorFitTask(AllCombinationFitTask):
 
             for fit_j in sorted_fits_for_i_components[:20]:
                 prediction_errors, _ = self.calculate_prediction_error_list(
-                    fit_j, n_splits=1000
+                    fit_j, n_splits=self.bootstrap_count
                 )
 
                 fit_j.mean_C_p = np.mean(prediction_errors)
@@ -293,13 +295,15 @@ class PredictionErrorFitTask(AllCombinationFitTask):
 
         return best_component_count, n_lo, n_hi
 
-    def calculate_prediction_error_list(self, fit, n_splits=1000, test_size=0.2):
+    def calculate_prediction_error_list(self, fit, n_splits, test_size=0.2):
         """
-        Given a fit calculate normalized prediction error on 1000 models with randomly withheld data.
+        Given a fit calculate normalized prediction error on n_splits models with randomly withheld data.
 
         Parameters
         ----------
         fit - instance of SpectrumFit
+        n_splits - number of times to calculate prediction error, 1000 is recommended
+        test_size - fraction of data to withhold from training, 0.2 is recommended
 
         Returns
         -------
