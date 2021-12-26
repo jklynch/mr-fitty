@@ -25,6 +25,7 @@ import configparser
 from glob import glob
 import logging
 import os
+import re
 
 from sklearn.linear_model import LinearRegression
 
@@ -180,6 +181,7 @@ def get_fit_parameters_from_config_file(config, prm_max_cmp, prm_min_cmp):
     #   minimum_component_count
     #   fit_method: lsq or nnlsq
     #   component_count_method: combination_fit or prediction_error
+    #   bootstrap_count: a positive integer, 1000 by default
     #
     log = logging.getLogger(name=__name__)
 
@@ -250,7 +252,17 @@ def get_fit_parameters_from_config_file(config, prm_max_cmp, prm_min_cmp):
                 )
             )
 
-    return max_cmp, min_cmp, fit_method_class, fit_task_class
+        config_fit_bootstrap_count = config.get("fit", "bootstrap_count", fallback="1000")
+        if re.match(r"\d+", config_fit_bootstrap_count) is not None:
+             bootstrap_count = int(config_fit_bootstrap_count)
+        else:
+            raise ConfigurationFileError(
+                '"bootstrap_count={}" in section [fit] must be an integer greater than 0'.format(
+                    config_fit_bootstrap_count
+                )
+            )
+
+    return max_cmp, min_cmp, fit_method_class, fit_task_class, bootstrap_count
 
 
 def get_plotting_parameters_from_config_file(config):
@@ -308,7 +320,7 @@ def build_fit_task(config):
 
     unknown_spectrum_list = build_unknown_spectrum_list_from_config_file(config)
 
-    max_cmp, min_cmp, fit_method_class, fit_task_class = get_fit_parameters_from_config_file(
+    max_cmp, min_cmp, fit_method_class, fit_task_class, bootstrap_count = get_fit_parameters_from_config_file(
         config, prm_max_cmp, prm_min_cmp
     )
 
@@ -329,6 +341,7 @@ def build_fit_task(config):
         energy_range_builder=energy_range,
         component_count_range=component_count_range,
         best_fits_plot_limit=best_fits_plot_limit,
+        bootstrap_count=bootstrap_count
     )
 
     return fit_task
