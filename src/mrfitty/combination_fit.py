@@ -233,7 +233,7 @@ class AllCombinationFitTask:
                 reference_df=interpolated_reference_set_df,
                 cutoff_distance=cutoff_distance,
                 title="Best Fit\n{}".format(unknown_spectrum.file_name),
-                reference_spectra_names=[],
+                reference_spectra_names=[r.file_name for r in fit_results.best_fit.reference_spectra_seq],
                 **clustering_parameters
             )
 
