@@ -21,10 +21,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-import logging
-
 import pytest
 
+from mrfitty.fit_task_builder import ConfigurationFileError
 import mrfitty.fit_task_builder as fit_task_builder
 
 
@@ -162,6 +161,49 @@ def test_get_fit_parameters_from_config_file():
 [fit]    
 max_component_count = 3
 min_component_count = 1
-
 """
     )
+
+    max_cmp, min_cmp, fit_method_class, fit_task_class, bootstrap_count = fit_task_builder.get_fit_parameters_from_config_file(
+        fit_config, prm_max_cmp=3, prm_min_cmp=1
+    )
+    assert max_cmp == 3
+    assert min_cmp == 1
+    assert bootstrap_count == 1000
+
+
+def test_get_good_fit_parameter_bootstrap_count_from_config_file():
+    fit_config = fit_task_builder.get_config_parser()
+    fit_config.read_string(
+        """\
+[fit]    
+max_component_count = 3
+min_component_count = 1
+bootstrap_count = 2000
+"""
+    )
+
+    max_cmp, min_cmp, fit_method_class, fit_task_class, bootstrap_count = fit_task_builder.get_fit_parameters_from_config_file(
+        fit_config, prm_max_cmp=3, prm_min_cmp=1
+    )
+    assert max_cmp == 3
+    assert min_cmp == 1
+    assert bootstrap_count == 2000
+
+
+def test_get_bad_fit_parameter_bootstrap_count_from_config_file():
+    fit_config = fit_task_builder.get_config_parser()
+    fit_config.read_string(
+        """\
+[fit]    
+max_component_count = 3
+min_component_count = 1
+bootstrap_count = haha
+"""
+    )
+
+    with pytest.raises(ConfigurationFileError):
+        max_cmp, min_cmp, fit_method_class, fit_task_class, bootstrap_count = fit_task_builder.get_fit_parameters_from_config_file(
+            fit_config, prm_max_cmp=3, prm_min_cmp=1
+        )
+
