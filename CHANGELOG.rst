@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.13.1 (2022-01-03)
+-----------------------------------------
+
+* update installation instructions
+* remove keyword argument `warn` from calls to `matplotlib.use()`
+
 0.13.0 (2018-01-04)
 -----------------------------------------
 
