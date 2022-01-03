@@ -26,7 +26,7 @@ setup(
     version='0.13.1',
     license='MIT',
     description='A package for linear least squares fitting XANES data.',
-    long_description='%s\n%s' % (read('README.rst'), re.sub(':[a-z]+:`~?(.*?)`', r'``\1``', read('CHANGELOG.rst'))),
+    long_description='A package for linear least squares fitting XANES data.',
     author='Joshua Lynch',
     author_email='joshua.kevin.lynch@gmail.com',
     url='https://github.com/jklynch/mr-fitty',
