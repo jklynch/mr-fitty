@@ -23,7 +23,7 @@ def read(*names, **kwargs):
 
 setup(
     name='mrfitty',
-    version='0.13.0',
+    version='0.13.1',
     license='MIT',
     description='A package for linear least squares fitting XANES data.',
     long_description='%s\n%s' % (read('README.rst'), re.sub(':[a-z]+:`~?(.*?)`', r'``\1``', read('CHANGELOG.rst'))),
