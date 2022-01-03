@@ -3,6 +3,7 @@
 
 ## 0.14.0
 
+* significant directory structure reorganization
 * move sample data from experiment_arsenic to src/example/arsenic
 * add prediction error plots
 * create output directories if they do not exist
