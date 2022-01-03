@@ -24,9 +24,9 @@ both *fit* the model and *evaluate* the model. Classical statistics offers metho
 and measures like it [2]. My objection to these methods is that they are difficult to interpret in terms of the data
 itself.
 
-*Prediction error* is a different approach to the model comparison problem that is computationally expensive, by
-comparison, but is more easily interpreted. A straightforward comparison of different models can be made if datasets
-are partitioned into two parts, one for fitting a model and the other for evaluating the model. Then the model fitting
+*Prediction error* is a different approach to the model comparison problem that is computationally expensive but more
+easily interpreted. A straightforward comparison of different models can be made if datasets
+are partitioned into two parts, one for model fitting and the other for model evaluation. Then the model fitting
 process does not interact with the model evaluation process. This is the basis for *cross-validation* and similar
 methods including the method implemented by MrFitty.
 
@@ -34,7 +34,7 @@ Dividing a dataset into two parts is clearly insufficient for a robust “goodne
 common to see 5- and 10-fold cross-validation in machine learning literature, meaning datasets were divided into 5 or
 10 partitions and each partition evaluated against a model fit to the remaining data. MrFitty uses a large number of
 random partitions of the data to generate a robust “median prediction error” as well as a robust confidence interval of
-the median prediction error. Having a confidence interval allows a well-defined criterion for saying either:
+the median prediction error. This confidence interval allows a well-defined criterion for saying either:
 
   * fit A is better than fit B, or
   * fit A is no better than fit B
