@@ -31,7 +31,7 @@ from mrfitty.plot import (
     add_date_time_footer,
     plot_fit,
     plot_reference_tree,
-    plot_prediction_errors,
+    # plot_prediction_errors,
     plot_stacked_fit,
 )
 
@@ -263,14 +263,14 @@ class AllCombinationFitTask:
                         plot_file.savefig(f)
                         plt.close(f)
 
-                        if hasattr(fit, "prediction_errors"):
-                            g = plot_prediction_errors(
-                                spectrum=unknown_spectrum,
-                                fit=fit,
-                                title=title,
-                            )
-                            plot_file.savefig(g)
-                            plt.close(g)
+                        # if hasattr(fit, "prediction_errors"):
+                        #     g = plot_prediction_errors(
+                        #         spectrum=unknown_spectrum,
+                        #         fit=fit,
+                        #         title=title,
+                        #     )
+                        #     plot_file.savefig(g)
+                        #     plt.close(g)
 
                         h = plot_reference_tree(
                             linkage_distance_variable_by_sample=reference_spectra_linkage,
