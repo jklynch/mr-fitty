@@ -1,4 +1,9 @@
 [flake8]
+ignore =
+    # E402 module level import not at top of file
+    E402,
+    #  W503 line break before binary operator
+    W503
 exclude =
     .git,
     __pycache__,

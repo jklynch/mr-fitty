@@ -1,46 +1,33 @@
-"""
-The MIT License (MIT)
-
-Copyright (c) 2015-2019 Joshua Lynch, Sarah Nicholas
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"""
-import io
-import re
-from glob import glob
 from os import path
-from os.path import basename
-from os.path import dirname
-from os.path import join
-from os.path import splitext
-
-from setuptools import find_packages
-from setuptools import setup
+from setuptools import setup, find_packages
+import sys
+import versioneer
 
 
-def read(*names, **kwargs):
-    return io.open(
-        join(dirname(__file__), *names), encoding=kwargs.get("encoding", "utf8")
-    ).read()
+# NOTE: This file must remain Python 2 compatible for the foreseeable future,
+# to ensure that we error out properly for people with outdated setuptools
+# and/or pip.
+min_version = (3, 8)
+if sys.version_info < min_version:
+    error = """
+mrfitty does not support Python {0}.{1}.
+Python {2}.{3} and above is required. Check your Python version like so:
 
+python3 --version
+
+This may be due to an out-of-date pip. Make sure you have pip >= 9.0.1.
+Upgrade pip like so:
+
+pip install --upgrade pip
+""".format(
+        *(sys.version_info[:2] + min_version)
+    )
+    sys.exit(error)
 
 here = path.abspath(path.dirname(__file__))
+
+with open(path.join(here, "README.md"), encoding="utf-8") as readme_file:
+    readme = readme_file.read()
 
 with open(path.join(here, "requirements.txt")) as requirements_file:
     # Parse requirements.txt, ignoring any commented-out lines.
@@ -50,39 +37,39 @@ with open(path.join(here, "requirements.txt")) as requirements_file:
         if not line.startswith("#")
     ]
 
+
 setup(
     name="mrfitty",
-    version="0.14.0",
-    license="MIT",
-    description="A package for linear least squares fitting XANES data.",
-    long_description="%s\n%s"
-    % (
-        read("README.rst"),
-        re.sub(":[a-z]+:`~?(.*?)`", r"``\1``", read("CHANGELOG.rst")),
-    ),
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
+    description="Linear least-squares fitting for XANES data.",
+    long_description=readme,
     author="Joshua Lynch",
     author_email="joshua.kevin.lynch@gmail.com",
     url="https://github.com/jklynch/mr-fitty",
-    packages=find_packages("src"),
-    package_dir={"": "src"},
-    py_modules=[splitext(basename(path))[0] for path in glob("src/*.py")],
+    python_requires=">={}".format(".".join(str(n) for n in min_version)),
+    packages=find_packages(exclude=["docs", "tests"]),
+    entry_points={
+        "console_scripts": [
+            "mrfitty = mrfitty.__main__:main",
+        ],
+    },
     include_package_data=True,
-    zip_safe=False,
+    package_data={
+        "mrfitty": [
+            # When adding files here, remember to update MANIFEST.in as well,
+            # or else they will not be included in the distribution on PyPI!
+            # 'path/to/data_file',
+        ]
+    },
+    install_requires=requirements,
+    license="MIT",
     classifiers=[
-        "Development Status :: 2 - Betas",
+        "Development Status :: 4 - Beta",
         "Environment :: Console",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
-        "Operating System :: Unix",
-        "Operating System :: POSIX",
-        "Operating System :: Microsoft :: Windows",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3.6",
+        "Natural Language :: English",
+        "Programming Language :: Python :: 3",
     ],
-    keywords=[
-        # eg: 'keyword1', 'keyword2', 'keyword3',
-    ],
-    install_requires=requirements,
-    extras_require={"test": ["pytest", "pyfakefs", "pytest-cov"]},
-    entry_points={"console_scripts": ["mrfitty = mrfitty.__main__:main"]},
 )

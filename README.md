@@ -1,7 +1,5 @@
 # MrFitty
 
-![TravisCI](https://travis-ci.com/jklynch/mr-fitty.svg?branch=develop)
-
 MrFitty is an open-source Python package for fitting XANES data to a set of reference spectra using linear least
 squares and best subset selection as described in *An Introduction to Statistical Learning with Applications in R* by
 Gareth James, Daniela Witten, Trevor Hastie and Robert Tibshirani. It runs on any system with a Python 3.6+ interpreter
@@ -23,8 +21,8 @@ A straightforward comparison of models using the sum of squared residuals (SSR) 
 (MSE) seems to be a natural choice. But these choices overlook a purely numerical advantage held by the SSR of an
 n-component model over any model with fewer than n components. This advantage is the result of using the same data to
 both *fit* the model and *evaluate* the model. Classical statistics offers methods to make improved comparisons of SSR
-and measures like it [2]. My objection to these methods is that they are complicated and difficult to interpret in
-terms of the data itself.
+and measures like it [2]. My objection to these methods is that they are difficult to interpret in terms of the data
+itself.
 
 *Prediction error* is a different approach to the model comparison problem that is computationally expensive, by
 comparison, but is more easily interpreted. A straightforward comparison of different models can be made if datasets
@@ -41,29 +39,29 @@ the median prediction error. Having a confidence interval allows a well-defined 
   * fit A is better than fit B, or
   * fit A is no better than fit B
 
-by asking whether or not the confidence intervals of median prediction error overlap. This criterion is directly
+by asking whether the confidence intervals of median prediction error overlap. This criterion is directly
 interpretable in terms of the data since weaker models and weaker data can be expected to give larger confidence
 intervals than stronger models and stronger data.
 
 ## Requirements
 
-MrFitty requires Python 3.6+. Required packages will be installed by pip.
+MrFitty requires Python 3.8+. Required packages will be installed by pip.
 
 ## Installation
 
 Users should consider installing MrFitty in a [Python virtual environment](https://docs.python.org/3.6/library/venv.html).
 This is not necessary but it simplifies package management by separating the system Python from the users' Python environments.
-On systems without Python 3.6+ the [Anaconda](https://anaconda.org) Python distribution is a good choice. It can be installed without
+On systems without Python 3.8+ the [Anaconda](https://anaconda.org) Python distribution is a good choice. It can be installed without
 administrative privileges and supports virtual environments. In addition the Anaconda distribution includes pre-built
 packages which are less trouble to install in some cases, especially on Windows systems.
 
 ### Method 1 (not recommended!)
-If the standard Python 3.6+ distribution is available then MrFitty can be installed with pip:
+If the standard Python 3.8+ distribution is available then MrFitty can be installed with pip:
 
     $ pip install git+https://github.com/jklynch/mr-fitty.git
 
 ### Method 2 (recommended)
-Alternatively, MrFitty can be installed in a virtual environment using the standard Python 3.6+ distribution with the following commands:
+Alternatively, MrFitty can be installed in a virtual environment using the standard Python 3.8+ distribution with the following commands:
 
     $ python3 -m venv mrf
     $ source mrf/bin/activate
@@ -73,7 +71,7 @@ Alternatively, MrFitty can be installed in a virtual environment using the stand
 ### Method 3 (recommended)
 If the Anaconda distribution has been installed then MrFitty can be installed in a virtual environment with these commands:
 
-    $ conda create python=3.6 --name mrf
+    $ conda create python=3.8 --name mrf
     $ conda activate mrf
     (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
 
