@@ -44,6 +44,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     description="Linear least-squares fitting for XANES data.",
     long_description=readme,
+    long_description_content_type='text/markdown',
     author="Joshua Lynch",
     author_email="joshua.kevin.lynch@gmail.com",
     url="https://github.com/jklynch/mr-fitty",
