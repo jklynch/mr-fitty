@@ -33,7 +33,7 @@ import bokeh.models.layouts
 import bokeh.plotting
 
 import matplotlib
-matplotlib.use('pdf', warn=False, force=True)
+matplotlib.use('pdf', force=True)
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import pandas as pd
