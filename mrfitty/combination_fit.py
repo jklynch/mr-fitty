@@ -595,7 +595,7 @@ class AllCombinationFitTask:
         log = logging.getLogger(name=self.__class__.__name__)
         for spectrum, fit_results in self.fit_table.items():
             file_base_name, file_name_ext = os.path.splitext(spectrum.file_name)
-            fit_file_path = os.path.join(best_fit_dir_path, file_base_name + "_fit.txt")
+            fit_file_path = os.path.abspath(os.path.join(best_fit_dir_path, file_base_name + "_fit.txt"))
             log.info("writing best fit to {}".format(fit_file_path))
 
             fit_df = pd.DataFrame(
