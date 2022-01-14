@@ -1,4 +1,3 @@
-bokeh
 jupyter
 matplotlib
 numpy
