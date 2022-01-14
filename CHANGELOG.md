@@ -1,7 +1,7 @@
 
 # Changelog
 
-## 0.14.0
+## 0.14.0 (2022-01-13)
 
 * significant directory structure reorganization
 * add prediction error plots
@@ -10,6 +10,11 @@
 * describe best subset selection in README.md
 * move fit quality statistics from figure title to legend
 * in plots change residuals lines to discrete points
+
+## 0.13.1 (2022-01-03)
+
+* update installation instructions
+* remove keyword argument `warn` from calls to `matplotlib.use()`
 
 ## 0.13.0 (2018-01-04)
 
