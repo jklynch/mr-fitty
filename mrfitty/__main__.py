@@ -53,7 +53,7 @@ def fit(args):
             config.get("output", "plots_pdf_dir", fallback=None)
         )
         if not os.path.exists(plots_pdf_file_dir):
-            log.info('output directory "%s" will be created', plots_pdf_file_dir)
+            log.info('output directory "%s" will be created', os.path.abspath(plots_pdf_file_dir))
             os.makedirs(plots_pdf_file_dir)
         fitter.fit_all(plots_pdf_dp=plots_pdf_file_dir)
     except ConfigurationFileError as e:
