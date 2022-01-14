@@ -45,15 +45,14 @@ intervals than stronger models and stronger data.
 
 ## Requirements
 
-MrFitty requires Python 3.8+. Required packages will be installed by pip.
+MrFitty requires Python 3.8+.
 
 ## Installation
 
 Users should consider installing MrFitty in a [Python virtual environment](https://docs.python.org/3.6/library/venv.html).
 This is not necessary but it simplifies package management by separating the system Python from the users' Python environments.
-On systems without Python 3.8+ the [Anaconda](https://anaconda.org) Python distribution is a good choice. It can be installed without
-administrative privileges and supports virtual environments. In addition the Anaconda distribution includes pre-built
-packages which are less trouble to install in some cases, especially on Windows systems.
+On systems without Python 3.8+ the [Anaconda](https://anaconda.org) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
+Python distribution is a good choice. Either one can be installed without administrative privileges and supports virtual environments.
 
 ### Method 1 (not recommended!)
 If the standard Python 3.8+ distribution is available then MrFitty can be installed with pip:
@@ -66,14 +65,14 @@ Alternatively, MrFitty can be installed in a virtual environment using the stand
     $ python3 -m venv mrf
     $ source mrf/bin/activate
     (mrf) $ pip install --upgrade pip 
-    (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
+    (mrf) $ pip install mrfitty
 
 ### Method 3 (recommended)
-If the Anaconda distribution has been installed then MrFitty can be installed in a virtual environment with these commands:
+If the Anaconda or Miniconda distribution has been installed then MrFitty can be installed in a virtual environment with these commands:
 
     $ conda create python=3.8 --name mrf
     $ conda activate mrf
-    (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
+    (mrf) $ pip install mrfitty
 
 In all cases the required packages will be automatically installed by pip.
 
@@ -81,7 +80,7 @@ In all cases the required packages will be automatically installed by pip.
 Update MrFitty with pip as follows:
 
     (mrf) $ pip uninstall mrfitty
-    (mrf) $ pip install git+https://github.com/jklynch/mr-fitty.git
+    (mrf) $ pip install mrfitty
 
 ## Usage
 MrFitty runs from the command line.  The --help option will display usage instructions:
