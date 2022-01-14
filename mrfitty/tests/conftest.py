@@ -11,7 +11,8 @@ from mrfitty.database import FitDatabase
 @pytest.fixture(scope="module")
 def arsenic_example_path():
     mrfitty_init_fp = mrfitty.__file__
-    mrfitty_dir_path, _ = os.path.split(mrfitty_init_fp)
+    mrfitty_package_dir_path, _ = os.path.split(mrfitty_init_fp)
+    mrfitty_dir_path, _ = os.path.split(mrfitty_package_dir_path)
 
     return os.path.join(mrfitty_dir_path, "example", "arsenic")
 
