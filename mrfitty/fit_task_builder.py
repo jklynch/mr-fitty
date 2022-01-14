@@ -258,7 +258,7 @@ def get_plotting_parameters_from_config_file(config):
 
 
 def build_fit_task(config):
-    # log = logging.getLogger(name=__name__)
+    log = logging.getLogger(name=__name__)
 
     # read section [references]
     # support a PRM file such as
@@ -315,10 +315,10 @@ def build_fit_task(config):
 
     if 0 < min_cmp <= max_cmp:
         component_count_range = range(min_cmp, max_cmp + 1)
-        logging.info("component count range: {}".format(component_count_range))
+        log.debug("component count range: {}".format(component_count_range))
     else:
         raise ConfigurationFileError(
-            "minimum and maximum component counts are not valid"
+            f"minimum and maximum component counts are not valid:\n\tminimum: {min_cmp}\n\tmaximum: {max_cmp}"
         )
 
     fit_task = fit_task_class(
