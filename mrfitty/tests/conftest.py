@@ -5,7 +5,6 @@ import pytest
 
 import mrfitty
 from mrfitty.base import ReferenceSpectrum, Spectrum
-from mrfitty.database import FitDatabase
 
 
 @pytest.fixture(scope="module")
@@ -40,8 +39,3 @@ def arsenic_unknowns(arsenic_example_path):
     return unknown_spectrum_list
 
 
-@pytest.fixture
-def fit_db():
-    fit_db = FitDatabase(url="sqlite:///:memory:", echo=True)
-    fit_db.create_tables()
-    return fit_db
