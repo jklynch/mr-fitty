@@ -65,6 +65,7 @@ class AllCombinationFitTask:
         energy_range_builder,
         best_fits_plot_limit,
         component_count_range=range(4),
+        **kwargs
     ):
         self.ls = ls
         self.reference_spectrum_list = reference_spectrum_list
@@ -538,7 +539,7 @@ class AllCombinationFitTask:
     @staticmethod
     def permute_row_elements(df):
         for i in range(df.shape[0]):
-            df.values[i, :] = shuffle(df.values[i, :])
+            df.iloc[i, :] = shuffle(df.values[i, :])
         return df
 
     def cluster_reference_spectra(
