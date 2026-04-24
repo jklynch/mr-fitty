@@ -28,11 +28,13 @@ def test_arsenic_1(caplog, arsenic_references, arsenic_unknowns):
     """
     caplog.set_level(logging_level)
 
+    unknown = next(s for s in arsenic_unknowns if s.file_name == "OTT3_55_spot0.e")
+
     task = AllCombinationFitTask(
         ls=LinearRegression,
         energy_range_builder=AdaptiveEnergyRangeBuilder(),
         reference_spectrum_list=arsenic_references,
-        unknown_spectrum_list=[arsenic_unknowns[0]],
+        unknown_spectrum_list=[unknown],
         best_fits_plot_limit=1,
         component_count_range=range(1, 3 + 1),
     )
@@ -40,7 +42,7 @@ def test_arsenic_1(caplog, arsenic_references, arsenic_unknowns):
     with tempfile.TemporaryDirectory() as plots_pdf_dp:
         task.fit_all(plots_pdf_dp=plots_pdf_dp)
 
-        unknown_spectrum_fit = task.fit_table[arsenic_unknowns[0]]
+        unknown_spectrum_fit = task.fit_table[unknown]
 
         assert (
             unknown_spectrum_fit.best_fit.interpolant_incident_energy.shape
@@ -55,7 +57,7 @@ def test_arsenic_1(caplog, arsenic_references, arsenic_unknowns):
             == unknown_spectrum_fit.best_fit.residuals.shape
         )
 
-        assert 3 == len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
+        assert len(unknown_spectrum_fit.best_fit.reference_spectra_seq) == 3
 
 
 def test_arsenic_2(caplog, arsenic_references, arsenic_unknowns):
@@ -69,13 +71,15 @@ def test_arsenic_2(caplog, arsenic_references, arsenic_unknowns):
     """
     caplog.set_level(logging_level)
 
+    unknown = next(s for s in arsenic_unknowns if s.file_name == "OTT3_55_spot0.e")
+
     task = AllCombinationFitTask(
         ls=LinearRegression,
         energy_range_builder=FixedEnergyRangeBuilder(
             energy_start=11850.0, energy_stop=12090.0
         ),
         reference_spectrum_list=arsenic_references,
-        unknown_spectrum_list=[arsenic_unknowns[0]],
+        unknown_spectrum_list=[unknown],
         best_fits_plot_limit=1,
         component_count_range=range(1, 3 + 1),
     )
@@ -83,7 +87,7 @@ def test_arsenic_2(caplog, arsenic_references, arsenic_unknowns):
     with tempfile.TemporaryDirectory() as plots_pdf_dp:
         task.fit_all(plots_pdf_dp=plots_pdf_dp)
 
-        unknown_spectrum_fit = task.fit_table[arsenic_unknowns[0]]
+        unknown_spectrum_fit = task.fit_table[unknown]
 
         best_fit_ref_count = len(unknown_spectrum_fit.best_fit.reference_spectra_seq)
-        assert 2 <= best_fit_ref_count <= 3
+        assert best_fit_ref_count == 3
