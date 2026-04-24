@@ -70,11 +70,11 @@ class PredictionErrorFitTask(AllCombinationFitTask):
             "choosing best component count from %s", all_counts_spectrum_fit_table
         )
         component_count_to_median_cp = {
-            component_count: np.Inf
+            component_count: np.inf
             for component_count in all_counts_spectrum_fit_table.keys()
         }
         component_count_to_median_cp_ci_lo_hi = {
-            component_count: (np.Inf, np.Inf)
+            component_count: (np.inf, np.inf)
             for component_count in all_counts_spectrum_fit_table.keys()
         }
 
