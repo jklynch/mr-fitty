@@ -37,5 +37,3 @@ def arsenic_unknowns(arsenic_example_path):
     ]
 
     return unknown_spectrum_list
-
-

@@ -38,10 +38,12 @@ def test_columns_preserved():
 
 def test_row_values_are_permutation_of_input():
     """Each output row is a rearrangement of the corresponding input row."""
-    df = _make_df([
-        [1.0, 2.0, 3.0, 4.0],
-        [10.0, 20.0, 30.0, 40.0],
-    ])
+    df = _make_df(
+        [
+            [1.0, 2.0, 3.0, 4.0],
+            [10.0, 20.0, 30.0, 40.0],
+        ]
+    )
     result = AllCombinationFitTask.permute_row_elements(df.copy())
     for i in range(df.shape[0]):
         assert sorted(result.iloc[i, :]) == sorted(df.iloc[i, :])
@@ -77,7 +79,9 @@ def test_rows_shuffled_independently():
         if list(result.iloc[0, :]) != list(result.iloc[1, :]):
             seen_different = True
             break
-    assert seen_different, "rows always received the same permutation — shuffles are not independent"
+    assert (
+        seen_different
+    ), "rows always received the same permutation — shuffles are not independent"
 
 
 # --- shuffle is actually random ---

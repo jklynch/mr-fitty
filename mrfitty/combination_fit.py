@@ -65,7 +65,7 @@ class AllCombinationFitTask:
         energy_range_builder,
         best_fits_plot_limit,
         component_count_range=range(4),
-        **kwargs
+        **kwargs,
     ):
         self.ls = ls
         self.reference_spectrum_list = reference_spectrum_list
@@ -434,6 +434,7 @@ class AllCombinationFitTask:
             raise FitFailed(msg)
         else:
             reference_spectra_coef_x = lm.coef_
+            reference_spectra_coef_std_err = getattr(lm, "std_err_", None)
 
             spectrum_fit = SpectrumFit(
                 interpolant_incident_energy=interpolated_reference_spectra_subset_df.index,
@@ -441,6 +442,7 @@ class AllCombinationFitTask:
                 unknown_spectrum=interpolated_data["unknown_subset_spectrum"],
                 reference_spectra_seq=reference_spectra_subset,
                 reference_spectra_coef_x=reference_spectra_coef_x,
+                reference_spectra_coef_std_err=reference_spectra_coef_std_err,
             )
             return spectrum_fit
 
@@ -485,26 +487,42 @@ class AllCombinationFitTask:
         table_file_dir_path, _ = os.path.split(table_file_path)
         os.makedirs(table_file_dir_path, exist_ok=True)
 
+        first_best_fit = next(iter(self.fit_table.values())).best_fit
+        has_std_err = first_best_fit.reference_spectra_coef_std_err is not None
+
         with open(table_file_path, "wt") as table_file:
-            table_file.write(
-                "spectrum\tNSS\tresidual percent\treference 1\tpercent 1\treference 2\tpercent 2\treference 3\tpercent 3\n"  # noqa
-            )
+            if has_std_err:
+                table_file.write(
+                    "spectrum\tNSS\tresidual percent\t"
+                    "reference 1\tpercent 1\tstd err 1\t"
+                    "reference 2\tpercent 2\tstd err 2\t"
+                    "reference 3\tpercent 3\tstd err 3\n"
+                )
+            else:
+                table_file.write(
+                    "spectrum\tNSS\tresidual percent\t"
+                    "reference 1\tpercent 1\t"
+                    "reference 2\tpercent 2\t"
+                    "reference 3\tpercent 3\n"
+                )
             for spectrum, fit_results in self.fit_table.items():
+                best_fit = fit_results.best_fit
                 table_file.write(spectrum.file_name)
                 table_file.write("\t")
-                table_file.write("{:8.5f}\t".format(fit_results.best_fit.nss))
-                table_file.write(
-                    "{:5.3f}".format(fit_results.best_fit.residuals_contribution)
-                )
+                table_file.write("{:8.5f}\t".format(best_fit.nss))
+                table_file.write("{:5.3f}".format(best_fit.residuals_contribution))
+                std_err_pct_sr = best_fit.get_reference_std_err_percent_sr()
                 for (
                     ref_name,
                     ref_pct,
-                ) in fit_results.best_fit.reference_contribution_percent_sr.sort_values(
+                ) in best_fit.reference_contribution_percent_sr.sort_values(
                     ascending=False
                 ).items():
                     table_file.write("\t")
                     table_file.write(ref_name)
                     table_file.write("\t{:5.3f}".format(ref_pct))
+                    if std_err_pct_sr is not None:
+                        table_file.write("\t{:5.3f}".format(std_err_pct_sr[ref_name]))
                 table_file.write("\n")
 
     def plot_top_fits(self, spectrum, fit_results):
@@ -596,7 +614,9 @@ class AllCombinationFitTask:
         log = logging.getLogger(name=self.__class__.__name__)
         for spectrum, fit_results in self.fit_table.items():
             file_base_name, file_name_ext = os.path.splitext(spectrum.file_name)
-            fit_file_path = os.path.abspath(os.path.join(best_fit_dir_path, file_base_name + "_fit.txt"))
+            fit_file_path = os.path.abspath(
+                os.path.join(best_fit_dir_path, file_base_name + "_fit.txt")
+            )
             log.info("writing best fit to {}".format(fit_file_path))
 
             fit_df = pd.DataFrame(
