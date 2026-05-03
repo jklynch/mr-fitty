@@ -20,16 +20,16 @@ def plot_fit(spectrum, any_given_fit, title, fit_quality_labels):
     reference_only_contributions_percent_sr = (
         any_given_fit.get_reference_only_contributions_sr()
     )
+    std_err_percent_sr = any_given_fit.get_reference_std_err_percent_sr()
     longest_name_len = max(
         [len(name) for name in reference_contributions_percent_sr.index]
         + [len(spectrum.file_name)]
     )
+    pad = longest_name_len + 4
     # the format string should look like '{:N}{:5.2f} ({:5.2f})' where N is the length
     #   of the longest reference name
-    reference_contribution_format_str = (
-        "{:" + str(longest_name_len + 4) + "}{:5.2f} ({:5.2f})"
-    )
-    residuals_contribution_format_str = "{:" + str(longest_name_len + 4) + "}{:5.2f}"
+    reference_contribution_format_str = "{:" + str(pad) + "}{:5.2f} ({:5.2f})"
+    residuals_contribution_format_str = "{:" + str(pad) + "}{:5.2f}"
 
     # add fits in descending order of reference contribution
     reference_line_list = []
@@ -46,9 +46,13 @@ def plot_fit(spectrum, any_given_fit, title, fit_quality_labels):
         log.debug(
             "reference-only contribution %s %5.2f", ref_only_name, ref_only_contrib
         )
-        reference_label = reference_contribution_format_str.format(
-            ref_name, ref_contrib, ref_only_contrib
-        )
+        if std_err_percent_sr is not None:
+            ref_err = std_err_percent_sr[ref_name]
+            reference_label = f"{ref_name:{pad}}{ref_contrib:5.2f}±{ref_err:5.2f} ({ref_only_contrib:5.2f})"
+        else:
+            reference_label = reference_contribution_format_str.format(
+                ref_name, ref_contrib, ref_only_contrib
+            )
         reference_label_list.append(reference_label)
 
         # plot once for each reference just to build the legend
@@ -146,12 +150,14 @@ def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels):
     # log.info(any_given_fit.fit_spectrum_b.shape)
 
     reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
+    std_err_percent_sr = any_given_fit.get_reference_std_err_percent_sr()
     longest_name_len = max(
         [len(name) for name in reference_contributions_percent_sr.index]
         + [len(spectrum.file_name)]
     )
+    pad = longest_name_len + 4
     # the format string should look like '{:N}{:5.2f}' where N is the length of the longest reference name
-    contribution_format_str = "{:" + str(longest_name_len + 4) + "}{:5.2f}"
+    contribution_format_str = "{:" + str(pad) + "}{:5.2f}"
 
     # log.info(any_given_fit.residuals.shape)
     residuals_label = contribution_format_str.format(
@@ -183,7 +189,12 @@ def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels):
     reference_contributions_percent_sr.sort_values(ascending=False)
     for name, value in reference_contributions_percent_sr.items():
         log.debug("reference component {} {}".format(name, value))
-        reference_label = contribution_format_str.format(name, value)
+        if std_err_percent_sr is not None:
+            reference_label = (
+                f"{name:{pad}}{value:5.2f}±{std_err_percent_sr[name]:5.2f}"
+            )
+        else:
+            reference_label = contribution_format_str.format(name, value)
         reference_label_list.append(reference_label)
 
     reference_line_list = ax.stackplot(

@@ -195,9 +195,9 @@ class PredictionErrorFitTask(AllCombinationFitTask):
                 component_count_i
             ][0]
 
-            component_count_to_median_cp[
-                component_count_i
-            ] = best_fit_for_component_count.median_C_p
+            component_count_to_median_cp[component_count_i] = (
+                best_fit_for_component_count.median_C_p
+            )
             component_count_to_median_cp_ci_lo_hi[component_count_i] = (
                 best_fit_for_component_count.median_C_p_ci_lo,
                 best_fit_for_component_count.median_C_p_ci_hi,

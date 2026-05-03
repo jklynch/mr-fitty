@@ -41,15 +41,13 @@ def test__get_required_config_value():
 
 def test_build_reference_spectrum_list_from_prm_section(fs):
     reference_config = get_config_parser()
-    reference_config.read_string(
-        """\
+    reference_config.read_string("""\
 [prm]
 NBCompoMax = 4
 NBCompoMin = 1
 arsenate_aqueous_avg_als_cal.e
 arsenate_sorbed_anth_avg_als_cal.e
-"""
-    )
+""")
 
     fs.create_file(
         file_path="arsenate_aqueous_avg_als_cal.e", contents=_spectrum_file_content
@@ -71,15 +69,13 @@ arsenate_sorbed_anth_avg_als_cal.e
 
 def test_build_reference_spectrum_list_from_prm_section__bad_component_counts(fs):
     reference_config = get_config_parser()
-    reference_config.read_string(
-        """\
+    reference_config.read_string("""\
 [prm]
 NBCompoMax = 1
 NBCompoMin = 4
 arsenate_aqueous_avg_als_cal.e
 arsenate_sorbed_anth_avg_als_cal.e
-"""
-    )
+""")
 
     fs.create_file(
         file_path="arsenate_aqueous_avg_als_cal.e", contents=_spectrum_file_content
@@ -94,12 +90,10 @@ arsenate_sorbed_anth_avg_als_cal.e
 
 def test_build_reference_spectrum_list_from_config_file(fs):
     reference_config = get_config_parser()
-    reference_config.read_string(
-        """\
+    reference_config.read_string("""\
 [references]
 references/*.e
-"""
-    )
+""")
 
     fs.create_dir(directory_path="references")
     fs.create_file(
@@ -118,12 +112,10 @@ references/*.e
 
 def test_build_unknown_spectrum_list_from_config_file(fs):
     data_config = get_config_parser()
-    data_config.read_string(
-        """\
+    data_config.read_string("""\
 [data]
 data/*.e
-"""
-    )
+""")
 
     fs.create_dir(directory_path="data")
     fs.create_file(file_path="data/data_0.e", contents=_spectrum_file_content)
@@ -136,13 +128,11 @@ data/*.e
 
 def test_get_fit_parameters_from_config_file():
     fit_config = get_config_parser()
-    fit_config.read_string(
-        """\
+    fit_config.read_string("""\
 [fit]
 max_component_count = 3
 min_component_count = 1
-"""
-    )
+""")
 
     (
         max_cmp,
@@ -158,14 +148,12 @@ min_component_count = 1
 
 def test_get_good_fit_parameter_bootstrap_count_from_config_file():
     fit_config = get_config_parser()
-    fit_config.read_string(
-        """\
+    fit_config.read_string("""\
 [fit]
 max_component_count = 3
 min_component_count = 1
 bootstrap_count = 2000
-"""
-    )
+""")
 
     (
         max_cmp,
@@ -181,14 +169,12 @@ bootstrap_count = 2000
 
 def test_get_bad_fit_parameter_bootstrap_count_from_config_file():
     fit_config = get_config_parser()
-    fit_config.read_string(
-        """\
+    fit_config.read_string("""\
 [fit]
 max_component_count = 3
 min_component_count = 1
 bootstrap_count = haha
-"""
-    )
+""")
 
     with pytest.raises(ConfigurationFileError):
         (
@@ -204,27 +190,41 @@ bootstrap_count = haha
 
 def test_fit_method_lsq():
     fit_config = get_config_parser()
-    fit_config.read_string("[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = lsq\n")
-    _, _, fit_method_class, _, _ = get_fit_parameters_from_config_file(fit_config, prm_max_cmp=3, prm_min_cmp=1)
+    fit_config.read_string(
+        "[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = lsq\n"
+    )
+    _, _, fit_method_class, _, _ = get_fit_parameters_from_config_file(
+        fit_config, prm_max_cmp=3, prm_min_cmp=1
+    )
     assert fit_method_class is LinearRegression
 
 
 def test_fit_method_nnlsq():
     fit_config = get_config_parser()
-    fit_config.read_string("[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = nnlsq\n")
-    _, _, fit_method_class, _, _ = get_fit_parameters_from_config_file(fit_config, prm_max_cmp=3, prm_min_cmp=1)
+    fit_config.read_string(
+        "[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = nnlsq\n"
+    )
+    _, _, fit_method_class, _, _ = get_fit_parameters_from_config_file(
+        fit_config, prm_max_cmp=3, prm_min_cmp=1
+    )
     assert fit_method_class is NonNegativeLinearRegression
 
 
 def test_fit_method_ols():
     fit_config = get_config_parser()
-    fit_config.read_string("[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = ols\n")
-    _, _, fit_method_class, _, _ = get_fit_parameters_from_config_file(fit_config, prm_max_cmp=3, prm_min_cmp=1)
+    fit_config.read_string(
+        "[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = ols\n"
+    )
+    _, _, fit_method_class, _, _ = get_fit_parameters_from_config_file(
+        fit_config, prm_max_cmp=3, prm_min_cmp=1
+    )
     assert fit_method_class is OlsWithStats
 
 
 def test_fit_method_unknown_raises():
     fit_config = get_config_parser()
-    fit_config.read_string("[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = bad\n")
+    fit_config.read_string(
+        "[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = bad\n"
+    )
     with pytest.raises(ConfigurationFileError):
         get_fit_parameters_from_config_file(fit_config, prm_max_cmp=3, prm_min_cmp=1)

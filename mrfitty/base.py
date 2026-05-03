@@ -458,6 +458,7 @@ class SpectrumFit:
         unknown_spectrum,
         reference_spectra_seq,
         reference_spectra_coef_x,
+        reference_spectra_coef_std_err=None,
     ):
         # log = logging.getLogger(name=self.__class__.__name__)
         self.interpolant_incident_energy = interpolant_incident_energy
@@ -470,6 +471,7 @@ class SpectrumFit:
         # self.unknown_spectrum_b = unknown_spectrum_b.norm
         self.unknown_spectrum_b = unknown_spectrum.data_df.norm
         self.reference_spectra_coef_x = reference_spectra_coef_x
+        self.reference_spectra_coef_std_err = reference_spectra_coef_std_err
         self.fit_spectrum_b = reference_spectra_A_df.dot(reference_spectra_coef_x)
         self.residuals = self.fit_spectrum_b - self.unknown_spectrum_b
         # log.debug('self.unknown_spectrum_b :\n%s', self.unknown_spectrum_b)
@@ -528,6 +530,16 @@ class SpectrumFit:
         ) * self.residuals_auc
         log.debug("residuals_contribution: %s", self.residuals_contribution)
         return self.reference_contribution_percent_sr
+
+    def get_reference_std_err_percent_sr(self):
+        if self.reference_spectra_coef_std_err is None:
+            return None
+        std_err_pct = (
+            self.reference_spectra_coef_std_err
+            * np.sum(np.abs(self.reference_spectra_A_df), axis=0)
+            * (100.0 / self.unknown_spectrum_auc)
+        )
+        return pd.Series(data=std_err_pct, index=self.reference_spectra_A_df.columns)
 
     def get_reference_only_contributions_sr(self):
         # calculate reference-only contributions as well
@@ -701,9 +713,9 @@ class PRM:
             log.warning("{} appears more than once in prm".format(reference_file_path))
         else:
             self.reference_file_path_list.append(reference_file_path)
-            self.reference_file_path_to_mineral_category[
-                reference_file_path
-            ] = mineral_category
+            self.reference_file_path_to_mineral_category[reference_file_path] = (
+                mineral_category
+            )
 
     def get_reference_count(self):
         return len(self.reference_file_path_list)
