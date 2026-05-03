@@ -15,7 +15,7 @@ from mrfitty.base import (
 )
 from mrfitty.prediction_error_fit import PredictionErrorFitTask
 from mrfitty.combination_fit import AllCombinationFitTask
-from mrfitty.linear_model import NonNegativeLinearRegression
+from mrfitty.linear_model import NonNegativeLinearRegression, OlsWithStats
 
 
 class ConfigurationFileError(ValueError):
@@ -207,10 +207,13 @@ def get_fit_parameters_from_config_file(config, prm_max_cmp, prm_min_cmp):
             fit_method_class = LinearRegression
         elif config_fit_method == "nnlsq":
             fit_method_class = NonNegativeLinearRegression
+        elif config_fit_method == "ols":
+            fit_method_class = OlsWithStats
         else:
             raise ConfigurationFileError(
                 'Unrecognized fit_method "{}" in section [fit]. '
-                "Use lsq for least-squares or nnlsq for non-negative least squares.".format(
+                "Use lsq for least-squares, nnlsq for non-negative least squares, "
+                "or ols for ordinary least-squares with fit statistics.".format(
                     config_fit_method
                 )
             )
