@@ -1,5 +1,7 @@
 import pytest
 
+from sklearn.linear_model import LinearRegression
+
 from mrfitty.fit_task_builder import (
     build_reference_spectrum_list_from_config_file,
     build_reference_spectrum_list_from_config_prm_section,
@@ -9,6 +11,7 @@ from mrfitty.fit_task_builder import (
     get_fit_parameters_from_config_file,
     _get_required_config_value,
 )
+from mrfitty.linear_model import NonNegativeLinearRegression, OlsWithStats
 
 _spectrum_file_content = """\
   11825.550       0.62757215E-02   0.62429776E-02  -0.58947170E-03
@@ -197,3 +200,31 @@ bootstrap_count = haha
         ) = get_fit_parameters_from_config_file(
             fit_config, prm_max_cmp=3, prm_min_cmp=1
         )
+
+
+def test_fit_method_lsq():
+    fit_config = get_config_parser()
+    fit_config.read_string("[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = lsq\n")
+    _, _, fit_method_class, _, _ = get_fit_parameters_from_config_file(fit_config, prm_max_cmp=3, prm_min_cmp=1)
+    assert fit_method_class is LinearRegression
+
+
+def test_fit_method_nnlsq():
+    fit_config = get_config_parser()
+    fit_config.read_string("[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = nnlsq\n")
+    _, _, fit_method_class, _, _ = get_fit_parameters_from_config_file(fit_config, prm_max_cmp=3, prm_min_cmp=1)
+    assert fit_method_class is NonNegativeLinearRegression
+
+
+def test_fit_method_ols():
+    fit_config = get_config_parser()
+    fit_config.read_string("[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = ols\n")
+    _, _, fit_method_class, _, _ = get_fit_parameters_from_config_file(fit_config, prm_max_cmp=3, prm_min_cmp=1)
+    assert fit_method_class is OlsWithStats
+
+
+def test_fit_method_unknown_raises():
+    fit_config = get_config_parser()
+    fit_config.read_string("[fit]\nmax_component_count = 3\nmin_component_count = 1\nfit_method = bad\n")
+    with pytest.raises(ConfigurationFileError):
+        get_fit_parameters_from_config_file(fit_config, prm_max_cmp=3, prm_min_cmp=1)
