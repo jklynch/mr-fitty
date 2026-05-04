@@ -48,28 +48,6 @@ def _fit_spectrum(ls, reference_spectra, unknown):
     return spectrum_fit
 
 
-def generate_spectrum_fit(reference_count, reference_spectra, unknown_spectrum):
-    """
-    Parameters
-    ----------
-    reference_count: (int) count of reference spectra used in SpectrumFit
-
-    Returns
-    -------
-    SpectrumFit instance
-    """
-    fitter = AllCombinationFitTask(
-        ls=LinearRegression,
-        reference_spectrum_list=reference_spectra,
-        unknown_spectrum_list=(unknown_spectrum,),
-        energy_range_builder=AdaptiveEnergyRangeBuilder(),
-        best_fits_plot_limit=0,
-        component_count_range=(reference_count,),
-    )
-    spectrum_fit, _ = fitter.fit(unknown_spectrum=unknown_spectrum)
-    return spectrum_fit
-
-
 def test_get_reference_std_err_percent_sr_returns_none_when_no_std_err():
     reference_spectra, unknown = _make_synthetic_spectra()
     sf = _fit_spectrum(NonNegativeLinearRegression, reference_spectra, unknown)
