@@ -178,6 +178,9 @@ class AllCombinationFitTask:
                 fit_quality_labels=self.get_fit_quality_score_text(
                     any_given_fit=fit_results.best_fit
                 ),
+                reference_to_reference_label=self.build_reference_to_reference_label(
+                    spectrum=unknown_spectrum, any_given_fit=fit_results.best_fit
+                ),
             )
             plot_file.savefig(f)
             plt.close(f)
@@ -188,6 +191,10 @@ class AllCombinationFitTask:
                 title="Best Fit",
                 fit_quality_labels=self.get_fit_quality_score_text(
                     any_given_fit=fit_results.best_fit
+                ),
+                reference_to_reference_label=self.build_reference_to_reference_label(
+                    spectrum=unknown_spectrum, any_given_fit=fit_results.best_fit,
+                    include_ref_only_contribution=False,
                 ),
             )
             plot_file.savefig(f)
@@ -259,6 +266,9 @@ class AllCombinationFitTask:
                             title=title,
                             fit_quality_labels=self.get_fit_quality_score_text(
                                 any_given_fit=fit
+                            ),
+                            reference_to_reference_label=self.build_reference_to_reference_label(
+                                spectrum=unknown_spectrum, any_given_fit=fit
                             ),
                         )
                         plot_file.savefig(f)
@@ -553,6 +563,75 @@ class AllCombinationFitTask:
 
     def get_fit_quality_score_text(self, any_given_fit):
         return ["MSE: {:8.5f}".format(any_given_fit.nss)]
+
+    def build_reference_to_reference_label(self, spectrum, any_given_fit, include_ref_only_contribution=True):
+        """Build a mapping from reference name to formatted legend label string.
+
+        Labels are ordered by descending reference contribution and include the
+        percent contribution and OLS standard error (when available).  When
+        ``include_ref_only_contribution`` is ``True``, the reference-only contribution
+        is appended in parentheses.
+
+        Parameters
+        ----------
+        spectrum : Spectrum
+            The unknown spectrum; its file_name length is included when computing
+            the column-padding width so labels and residuals align.
+        any_given_fit : SpectrumFit
+            Fit result providing get_reference_contributions_sr(),
+            get_reference_std_err_percent_sr(), and (when
+            ``include_ref_only_contribution`` is ``True``)
+            get_reference_only_contributions_sr().
+        include_ref_only_contribution : bool, optional
+            When ``True`` (default), append the reference-only contribution in
+            parentheses, e.g. ``"ref_a.e    60.00 (55.00)"``.  Pass ``False`` for
+            stacked-area plots where the simpler format is preferred.
+
+        Returns
+        -------
+        dict of {str: str}
+            Reference name → formatted label string, in descending contribution order.
+        """
+        reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
+        std_err_percent_sr = any_given_fit.get_reference_std_err_percent_sr()
+
+        longest_name_len = max(
+            [len(name) for name in reference_contributions_percent_sr.index]
+            + [len(spectrum.file_name)]
+        )
+        pad = longest_name_len + 4
+
+        reference_contributions_percent_sr.sort_values(ascending=False, inplace=True)
+
+        if include_ref_only_contribution:
+            reference_only_contributions_percent_sr = (
+                any_given_fit.get_reference_only_contributions_sr()
+            )
+            reference_only_contributions_percent_sr.sort_values(ascending=False, inplace=True)
+            # format string: '{:N}{:5.2f} ({:5.2f})' where N is the longest reference name length
+            fmt = "{:" + str(pad) + "}{:5.2f} ({:5.2f})"
+        else:
+            # format string: '{:N}{:5.2f}' where N is the longest reference name length
+            fmt = "{:" + str(pad) + "}{:5.2f}"
+
+        reference_to_reference_label = {}
+        for ref_name, ref_contrib in reference_contributions_percent_sr.items():
+            if std_err_percent_sr is not None:
+                ref_err = std_err_percent_sr[ref_name]
+                if include_ref_only_contribution:
+                    ref_only_contrib = reference_only_contributions_percent_sr[ref_name]
+                    label = f"{ref_name:{pad}}{ref_contrib:5.2f}±{ref_err:5.2f} ({ref_only_contrib:5.2f})"
+                else:
+                    label = f"{ref_name:{pad}}{ref_contrib:5.2f}±{ref_err:5.2f}"
+            else:
+                if include_ref_only_contribution:
+                    ref_only_contrib = reference_only_contributions_percent_sr[ref_name]
+                    label = fmt.format(ref_name, ref_contrib, ref_only_contrib)
+                else:
+                    label = fmt.format(ref_name, ref_contrib)
+            reference_to_reference_label[ref_name] = label
+
+        return reference_to_reference_label
 
     @staticmethod
     def permute_row_elements(df):

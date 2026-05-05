@@ -8,13 +8,11 @@ import numpy as np
 import scipy.cluster.hierarchy as hc
 
 
-def plot_fit(spectrum, any_given_fit, title, fit_quality_labels):
+def plot_fit(spectrum, any_given_fit, title, fit_quality_labels, reference_to_reference_label):
     """Plot a spectrum fit with reference contributions, residuals, and fit quality labels.
 
     Creates a single-axes figure showing the unknown spectrum, the combined fit line,
     per-reference weighted contributions (listed in descending order), and residuals.
-    Reference labels include the percent contribution and, when available, OLS standard
-    errors alongside the reference-only contribution in parentheses.
 
     Parameters
     ----------
@@ -22,12 +20,15 @@ def plot_fit(spectrum, any_given_fit, title, fit_quality_labels):
         The unknown spectrum being fitted; used for its file_name label.
     any_given_fit : SpectrumFit
         Fit result object providing interpolant_incident_energy, fit_spectrum_b,
-        unknown_spectrum_b, residuals, residuals_contribution, and reference
-        contribution / standard-error series.
+        unknown_spectrum_b, and residuals / residuals_contribution.
     title : str
         Primary title line shown above the spectrum file name.
     fit_quality_labels : list of str
         Additional annotation strings appended to the legend (e.g. NSS score text).
+    reference_to_reference_label : dict of {str: str}
+        Mapping from reference name to formatted legend label string, in the order
+        they should appear in the legend.  Built by the calling FitTask via
+        ``build_reference_to_reference_label``.
 
     Returns
     -------
@@ -39,47 +40,15 @@ def plot_fit(spectrum, any_given_fit, title, fit_quality_labels):
     f, ax = plt.subplots()
     # ax.set_title(spectrum.file_name + '\n' + title + '\n' + self.get_fit_quality_score_text(any_given_fit))
     ax.set_title(title + "\n" + spectrum.file_name)
-    # log.info(any_given_fit.fit_spectrum_b.shape)
 
-    reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
-    reference_only_contributions_percent_sr = (
-        any_given_fit.get_reference_only_contributions_sr()
-    )
-    std_err_percent_sr = any_given_fit.get_reference_std_err_percent_sr()
-    longest_name_len = max(
-        [len(name) for name in reference_contributions_percent_sr.index]
-        + [len(spectrum.file_name)]
-    )
-    pad = longest_name_len + 4
-    # the format string should look like '{:N}{:5.2f} ({:5.2f})' where N is the length
-    #   of the longest reference name
-    reference_contribution_format_str = "{:" + str(pad) + "}{:5.2f} ({:5.2f})"
+    pad = max(max(len(k) for k in reference_to_reference_label), len(spectrum.file_name)) + 4
     residuals_contribution_format_str = "{:" + str(pad) + "}{:5.2f}"
 
     # add fits in descending order of reference contribution
     reference_line_list = []
-    reference_label_list = []
-    reference_contributions_percent_sr.sort_values(ascending=False, inplace=True)
-    reference_only_contributions_percent_sr.sort_values(ascending=False, inplace=True)
     log.debug("plotting reference components")
-    log.debug(reference_contributions_percent_sr.head())
-    for (ref_name, ref_contrib), (ref_only_name, ref_only_contrib) in zip(
-        reference_contributions_percent_sr.items(),
-        reference_only_contributions_percent_sr.items(),
-    ):
-        log.debug("reference contribution %s %5.2f", ref_name, ref_contrib)
-        log.debug(
-            "reference-only contribution %s %5.2f", ref_only_name, ref_only_contrib
-        )
-        if std_err_percent_sr is not None:
-            ref_err = std_err_percent_sr[ref_name]
-            reference_label = f"{ref_name:{pad}}{ref_contrib:5.2f}±{ref_err:5.2f} ({ref_only_contrib:5.2f})"
-        else:
-            reference_label = reference_contribution_format_str.format(
-                ref_name, ref_contrib, ref_only_contrib
-            )
-        reference_label_list.append(reference_label)
-
+    for ref_name, reference_label in reference_to_reference_label.items():
+        log.debug("plotting reference component %s", ref_name)
         # plot once for each reference just to build the legend
         # ax.plot returns a list
         reference_line_list.extend(
@@ -140,7 +109,7 @@ def plot_fit(spectrum, any_given_fit, title, fit_quality_labels):
             *fit_quality_lines,
         ],
         [
-            *reference_label_list,
+            *reference_to_reference_label.values(),
             spectrum.file_name,
             residuals_label,
             fit_line_label,
@@ -167,7 +136,7 @@ def plot_fit(spectrum, any_given_fit, title, fit_quality_labels):
     return f
 
 
-def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels):
+def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels, reference_to_reference_label):
     """Plot reference contributions as a stacked area chart with the unknown spectrum overlaid.
 
     Each reference component is scaled by its fitted coefficient and stacked on top of
@@ -181,12 +150,16 @@ def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels):
         The unknown spectrum being fitted; used for its file_name label.
     any_given_fit : SpectrumFit
         Fit result object providing interpolant_incident_energy, unknown_spectrum_b,
-        residuals, residuals_contribution, reference_spectra_coef_x,
-        reference_spectra_A_df, and reference contribution / standard-error series.
+        residuals, residuals_contribution, reference_spectra_coef_x, and
+        reference_spectra_A_df.
     title : str
         Primary title line shown above the spectrum file name.
     fit_quality_labels : list of str
         Additional annotation strings appended to the legend (e.g. NSS score text).
+    reference_to_reference_label : dict of {str: str}
+        Mapping from reference name to formatted legend label string, in the order
+        they should appear in the legend.  Built by the calling FitTask via
+        ``build_stacked_reference_to_reference_label``.
 
     Returns
     -------
@@ -197,19 +170,10 @@ def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels):
 
     f, ax = plt.subplots()
     ax.set_title(title + "\n" + spectrum.file_name)
-    # log.info(any_given_fit.fit_spectrum_b.shape)
 
-    reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
-    std_err_percent_sr = any_given_fit.get_reference_std_err_percent_sr()
-    longest_name_len = max(
-        [len(name) for name in reference_contributions_percent_sr.index]
-        + [len(spectrum.file_name)]
-    )
-    pad = longest_name_len + 4
-    # the format string should look like '{:N}{:5.2f}' where N is the length of the longest reference name
+    pad = max(max(len(k) for k in reference_to_reference_label), len(spectrum.file_name)) + 4
     contribution_format_str = "{:" + str(pad) + "}{:5.2f}"
 
-    # log.info(any_given_fit.residuals.shape)
     residuals_label = contribution_format_str.format(
         "residuals", any_given_fit.residuals_contribution
     )
@@ -229,26 +193,11 @@ def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels):
         alpha=0.5,
     )
 
-    # add fits in descending order of reference contribution
-    reference_label_list = []
-    reference_contributions_percent_sr.sort_values(ascending=False, inplace=True)
     sort_ndx = reversed(any_given_fit.reference_spectra_coef_x.argsort())
     ys = any_given_fit.reference_spectra_coef_x * any_given_fit.reference_spectra_A_df
     log.debug("plotting reference components")
-    log.debug(reference_contributions_percent_sr.head())
-    reference_contributions_percent_sr.sort_values(ascending=False)
-    for name, value in reference_contributions_percent_sr.items():
-        log.debug("reference component {} {}".format(name, value))
-        if std_err_percent_sr is not None:
-            reference_label = (
-                f"{name:{pad}}{value:5.2f}±{std_err_percent_sr[name]:5.2f}"
-            )
-        else:
-            reference_label = contribution_format_str.format(name, value)
-        reference_label_list.append(reference_label)
-
     reference_line_list = ax.stackplot(
-        ys.index, *[ys.iloc[:, i] for i in sort_ndx], labels=reference_label_list
+        ys.index, *[ys.iloc[:, i] for i in sort_ndx], labels=list(reference_to_reference_label.values())
     )
 
     # add some fake lines to create some special legend entries
@@ -265,7 +214,7 @@ def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels):
         [*spectrum_points, *reference_line_list, *residuals_line, *fit_quality_lines],
         [
             spectrum.file_name,
-            *reference_label_list,
+            *reference_to_reference_label.values(),
             residuals_label,
             *fit_quality_labels,
         ],
