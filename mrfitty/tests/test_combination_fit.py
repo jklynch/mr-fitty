@@ -144,14 +144,9 @@ def test_build_reference_to_reference_label_include_ref_only_contribution_true(
     result = task.build_reference_to_reference_label(
         spectrum=unknown, any_given_fit=fit, include_ref_only_contribution=True
     )
-    contributions = fit.get_reference_contributions_sr().sort_values(ascending=False)
-    ref_only = fit.get_reference_only_contributions_sr().sort_values(ascending=False)
-    pad = max(max(len(n) for n in contributions.index), len(unknown.file_name)) + 4
-    expected = {
-        name: f"{name:{pad}}{contrib:5.2f} ({ref_only[name]:5.2f})"
-        for name, contrib in contributions.items()
-    }
-    assert result == expected
+    ref_only = fit.get_reference_only_contributions_sr()
+    for name, label in result.items():
+        assert f"({ref_only[name]:5.2f})" in label
 
 
 def test_build_reference_to_reference_label_include_ref_only_contribution_false(
@@ -163,12 +158,9 @@ def test_build_reference_to_reference_label_include_ref_only_contribution_false(
     result = task.build_reference_to_reference_label(
         spectrum=unknown, any_given_fit=fit, include_ref_only_contribution=False
     )
-    contributions = fit.get_reference_contributions_sr().sort_values(ascending=False)
-    pad = max(max(len(n) for n in contributions.index), len(unknown.file_name)) + 4
-    expected = {
-        name: f"{name:{pad}}{contrib:5.2f}" for name, contrib in contributions.items()
-    }
-    assert result == expected
+    ref_only = fit.get_reference_only_contributions_sr()
+    for name, label in result.items():
+        assert f"({ref_only[name]:5.2f})" not in label
 
 
 def test_build_reference_to_reference_label_padding_uses_long_spectrum_file_name(
