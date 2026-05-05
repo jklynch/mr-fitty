@@ -20,7 +20,9 @@ def _fit_spectrum(ls, reference_spectra, unknown):
     return spectrum_fit
 
 
-def test_get_reference_std_err_percent_sr_returns_none_when_no_std_err(synthetic_spectra):
+def test_get_reference_std_err_percent_sr_returns_none_when_no_std_err(
+    synthetic_spectra,
+):
     reference_spectra, unknown = synthetic_spectra
     sf = _fit_spectrum(NonNegativeLinearRegression, reference_spectra, unknown)
     assert sf is not None

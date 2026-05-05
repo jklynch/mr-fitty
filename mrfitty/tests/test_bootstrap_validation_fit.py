@@ -44,7 +44,9 @@ def test_plot_top_fits_returns_figures(arsenic_references, arsenic_unknowns):
         best_fit=best_fit,
         component_count_fit_table=fit_table,
     )
-    figure_list = task.plot_top_fits(spectrum=arsenic_unknowns[0], fit_results=fit_results)
+    figure_list = task.plot_top_fits(
+        spectrum=arsenic_unknowns[0], fit_results=fit_results
+    )
     assert len(figure_list) > 0
 
 

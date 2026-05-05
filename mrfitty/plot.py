@@ -8,7 +8,9 @@ import numpy as np
 import scipy.cluster.hierarchy as hc
 
 
-def plot_fit(spectrum, any_given_fit, title, fit_quality_labels, reference_to_reference_label):
+def plot_fit(
+    spectrum, any_given_fit, title, fit_quality_labels, reference_to_reference_label
+):
     """Plot a spectrum fit with reference contributions, residuals, and fit quality labels.
 
     Creates a single-axes figure showing the unknown spectrum, the combined fit line,
@@ -41,7 +43,10 @@ def plot_fit(spectrum, any_given_fit, title, fit_quality_labels, reference_to_re
     # ax.set_title(spectrum.file_name + '\n' + title + '\n' + self.get_fit_quality_score_text(any_given_fit))
     ax.set_title(title + "\n" + spectrum.file_name)
 
-    pad = max(max(len(k) for k in reference_to_reference_label), len(spectrum.file_name)) + 4
+    pad = (
+        max(max(len(k) for k in reference_to_reference_label), len(spectrum.file_name))
+        + 4
+    )
     residuals_contribution_format_str = "{:" + str(pad) + "}{:5.2f}"
 
     # add fits in descending order of reference contribution
@@ -136,7 +141,9 @@ def plot_fit(spectrum, any_given_fit, title, fit_quality_labels, reference_to_re
     return f
 
 
-def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels, reference_to_reference_label):
+def plot_stacked_fit(
+    spectrum, any_given_fit, title, fit_quality_labels, reference_to_reference_label
+):
     """Plot reference contributions as a stacked area chart with the unknown spectrum overlaid.
 
     Each reference component is scaled by its fitted coefficient and stacked on top of
@@ -171,7 +178,10 @@ def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels, referen
     f, ax = plt.subplots()
     ax.set_title(title + "\n" + spectrum.file_name)
 
-    pad = max(max(len(k) for k in reference_to_reference_label), len(spectrum.file_name)) + 4
+    pad = (
+        max(max(len(k) for k in reference_to_reference_label), len(spectrum.file_name))
+        + 4
+    )
     contribution_format_str = "{:" + str(pad) + "}{:5.2f}"
 
     residuals_label = contribution_format_str.format(
@@ -197,7 +207,9 @@ def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels, referen
     ys = any_given_fit.reference_spectra_coef_x * any_given_fit.reference_spectra_A_df
     log.debug("plotting reference components")
     reference_line_list = ax.stackplot(
-        ys.index, *[ys.iloc[:, i] for i in sort_ndx], labels=list(reference_to_reference_label.values())
+        ys.index,
+        *[ys.iloc[:, i] for i in sort_ndx],
+        labels=list(reference_to_reference_label.values()),
     )
 
     # add some fake lines to create some special legend entries
@@ -636,7 +648,9 @@ def bootstrap_validation_confidence_interval_plot(ax, title, sorted_fits):
     add_date_time_footer(ax)
 
 
-def best_bootstrap_fit_for_component_count_box_plots(ax, title, top_fit_per_component_count):
+def best_bootstrap_fit_for_component_count_box_plots(
+    ax, title, top_fit_per_component_count
+):
     """Draw notched boxplots of bootstrap SSR for the best fit at each component count.
 
     One box is drawn per component count, ordered by component count on the x-axis.

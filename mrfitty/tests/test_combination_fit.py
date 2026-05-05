@@ -85,38 +85,62 @@ def _make_task_and_fit(ls, synthetic_spectra):
 
 
 def test_build_reference_to_reference_label_keys_are_reference_names(synthetic_spectra):
-    task, fit, unknown = _make_task_and_fit(NonNegativeLinearRegression, synthetic_spectra)
-    result = task.build_reference_to_reference_label(spectrum=unknown, any_given_fit=fit)
+    task, fit, unknown = _make_task_and_fit(
+        NonNegativeLinearRegression, synthetic_spectra
+    )
+    result = task.build_reference_to_reference_label(
+        spectrum=unknown, any_given_fit=fit
+    )
     assert set(result.keys()) == {"ref_a.e", "ref_b.e"}
 
 
-def test_build_reference_to_reference_label_keys_ordered_by_descending_contribution(synthetic_spectra):
-    task, fit, unknown = _make_task_and_fit(NonNegativeLinearRegression, synthetic_spectra)
-    result = task.build_reference_to_reference_label(spectrum=unknown, any_given_fit=fit)
+def test_build_reference_to_reference_label_keys_ordered_by_descending_contribution(
+    synthetic_spectra,
+):
+    task, fit, unknown = _make_task_and_fit(
+        NonNegativeLinearRegression, synthetic_spectra
+    )
+    result = task.build_reference_to_reference_label(
+        spectrum=unknown, any_given_fit=fit
+    )
     keys = list(result.keys())
     assert keys[0] == "ref_a.e"
     assert keys[1] == "ref_b.e"
 
 
-def test_build_reference_to_reference_label_label_format_without_std_err(synthetic_spectra):
-    task, fit, unknown = _make_task_and_fit(NonNegativeLinearRegression, synthetic_spectra)
-    result = task.build_reference_to_reference_label(spectrum=unknown, any_given_fit=fit)
+def test_build_reference_to_reference_label_label_format_without_std_err(
+    synthetic_spectra,
+):
+    task, fit, unknown = _make_task_and_fit(
+        NonNegativeLinearRegression, synthetic_spectra
+    )
+    result = task.build_reference_to_reference_label(
+        spectrum=unknown, any_given_fit=fit
+    )
     for ref_name, label in result.items():
         assert ref_name in label
         assert "±" not in label
         assert " (" in label
 
 
-def test_build_reference_to_reference_label_label_format_with_std_err(synthetic_spectra):
+def test_build_reference_to_reference_label_label_format_with_std_err(
+    synthetic_spectra,
+):
     task, fit, unknown = _make_task_and_fit(OlsWithStats, synthetic_spectra)
-    result = task.build_reference_to_reference_label(spectrum=unknown, any_given_fit=fit)
+    result = task.build_reference_to_reference_label(
+        spectrum=unknown, any_given_fit=fit
+    )
     for ref_name, label in result.items():
         assert ref_name in label
         assert "±" in label
 
 
-def test_build_reference_to_reference_label_include_ref_only_contribution_true(synthetic_spectra):
-    task, fit, unknown = _make_task_and_fit(NonNegativeLinearRegression, synthetic_spectra)
+def test_build_reference_to_reference_label_include_ref_only_contribution_true(
+    synthetic_spectra,
+):
+    task, fit, unknown = _make_task_and_fit(
+        NonNegativeLinearRegression, synthetic_spectra
+    )
     result = task.build_reference_to_reference_label(
         spectrum=unknown, any_given_fit=fit, include_ref_only_contribution=True
     )
@@ -130,21 +154,26 @@ def test_build_reference_to_reference_label_include_ref_only_contribution_true(s
     assert result == expected
 
 
-def test_build_reference_to_reference_label_include_ref_only_contribution_false(synthetic_spectra):
-    task, fit, unknown = _make_task_and_fit(NonNegativeLinearRegression, synthetic_spectra)
+def test_build_reference_to_reference_label_include_ref_only_contribution_false(
+    synthetic_spectra,
+):
+    task, fit, unknown = _make_task_and_fit(
+        NonNegativeLinearRegression, synthetic_spectra
+    )
     result = task.build_reference_to_reference_label(
         spectrum=unknown, any_given_fit=fit, include_ref_only_contribution=False
     )
     contributions = fit.get_reference_contributions_sr().sort_values(ascending=False)
     pad = max(max(len(n) for n in contributions.index), len(unknown.file_name)) + 4
     expected = {
-        name: f"{name:{pad}}{contrib:5.2f}"
-        for name, contrib in contributions.items()
+        name: f"{name:{pad}}{contrib:5.2f}" for name, contrib in contributions.items()
     }
     assert result == expected
 
 
-def test_build_reference_to_reference_label_padding_uses_long_spectrum_file_name(synthetic_spectra):
+def test_build_reference_to_reference_label_padding_uses_long_spectrum_file_name(
+    synthetic_spectra,
+):
     reference_spectra, _ = synthetic_spectra
     long_name = "a" * 40 + ".e"
     energies = np.linspace(11800, 11900, 50)
@@ -161,7 +190,9 @@ def test_build_reference_to_reference_label_padding_uses_long_spectrum_file_name
         component_count_range=(2,),
     )
     fit, _ = task.fit(unknown_spectrum=unknown)
-    result = task.build_reference_to_reference_label(spectrum=unknown, any_given_fit=fit)
+    result = task.build_reference_to_reference_label(
+        spectrum=unknown, any_given_fit=fit
+    )
     expected_pad = len(long_name) + 4
     for ref_name, label in result.items():
         assert label.startswith(ref_name.ljust(expected_pad))

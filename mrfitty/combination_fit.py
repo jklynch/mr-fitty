@@ -193,7 +193,8 @@ class AllCombinationFitTask:
                     any_given_fit=fit_results.best_fit
                 ),
                 reference_to_reference_label=self.build_reference_to_reference_label(
-                    spectrum=unknown_spectrum, any_given_fit=fit_results.best_fit,
+                    spectrum=unknown_spectrum,
+                    any_given_fit=fit_results.best_fit,
                     include_ref_only_contribution=False,
                 ),
             )
@@ -564,7 +565,9 @@ class AllCombinationFitTask:
     def get_fit_quality_score_text(self, any_given_fit):
         return ["MSE: {:8.5f}".format(any_given_fit.nss)]
 
-    def build_reference_to_reference_label(self, spectrum, any_given_fit, include_ref_only_contribution=True):
+    def build_reference_to_reference_label(
+        self, spectrum, any_given_fit, include_ref_only_contribution=True
+    ):
         """Build a mapping from reference name to formatted legend label string.
 
         Labels are ordered by descending reference contribution and include the
@@ -592,7 +595,9 @@ class AllCombinationFitTask:
         dict of {str: str}
             Reference name → formatted label string, in descending contribution order.
         """
-        reference_contributions_percent_sr = any_given_fit.get_reference_contributions_sr()
+        reference_contributions_percent_sr = (
+            any_given_fit.get_reference_contributions_sr()
+        )
         std_err_percent_sr = any_given_fit.get_reference_std_err_percent_sr()
 
         longest_name_len = max(
@@ -607,7 +612,9 @@ class AllCombinationFitTask:
             reference_only_contributions_percent_sr = (
                 any_given_fit.get_reference_only_contributions_sr()
             )
-            reference_only_contributions_percent_sr.sort_values(ascending=False, inplace=True)
+            reference_only_contributions_percent_sr.sort_values(
+                ascending=False, inplace=True
+            )
             # format string: '{:N}{:5.2f} ({:5.2f})' where N is the longest reference name length
             fmt = "{:" + str(pad) + "}{:5.2f} ({:5.2f})"
         else:

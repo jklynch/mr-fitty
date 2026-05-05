@@ -153,7 +153,11 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
 
             all_counts_spectrum_fit_bv_table[component_count_i] = sorted(
                 all_counts_spectrum_fit_bv_table[component_count_i],
-                key=lambda fit: (fit.median_ssr, fit.median_ssr_ci_lo, fit.median_ssr_ci_hi),
+                key=lambda fit: (
+                    fit.median_ssr,
+                    fit.median_ssr_ci_lo,
+                    fit.median_ssr_ci_hi,
+                ),
             )
 
             best_for_count = all_counts_spectrum_fit_bv_table[component_count_i][0]

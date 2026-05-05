@@ -15,8 +15,12 @@ def synthetic_spectra():
     ref_a_norm = np.sin(energies / 100)
     ref_b_norm = np.cos(energies / 100)
 
-    ref_a_df = pd.DataFrame({"norm": ref_a_norm}, index=pd.Index(energies, name="energy"))
-    ref_b_df = pd.DataFrame({"norm": ref_b_norm}, index=pd.Index(energies, name="energy"))
+    ref_a_df = pd.DataFrame(
+        {"norm": ref_a_norm}, index=pd.Index(energies, name="energy")
+    )
+    ref_b_df = pd.DataFrame(
+        {"norm": ref_b_norm}, index=pd.Index(energies, name="energy")
+    )
     ref_a = ReferenceSpectrum("ref_a.e", ref_a_df, {})
     ref_b = ReferenceSpectrum("ref_b.e", ref_b_df, {})
 
@@ -26,7 +30,9 @@ def synthetic_spectra():
         + coef[1] * ref_b_norm
         + np.random.default_rng(0).normal(0, 0.001, 50)
     )
-    unknown_df = pd.DataFrame({"norm": unknown_norm}, index=pd.Index(energies, name="energy"))
+    unknown_df = pd.DataFrame(
+        {"norm": unknown_norm}, index=pd.Index(energies, name="energy")
+    )
     unknown = Spectrum("unknown.e", unknown_df, {})
 
     return [ref_a, ref_b], unknown
