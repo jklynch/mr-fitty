@@ -14,6 +14,7 @@ from mrfitty.base import (
     Spectrum,
 )
 from mrfitty.prediction_error_fit import PredictionErrorFitTask
+from mrfitty.bootstrap_validation_fit import BootstrapValidationFitTask
 from mrfitty.combination_fit import AllCombinationFitTask
 from mrfitty.linear_model import NonNegativeLinearRegression, OlsWithStats
 
@@ -225,9 +226,12 @@ def get_fit_parameters_from_config_file(config, prm_max_cmp, prm_min_cmp):
             fit_task_class = AllCombinationFitTask
         elif config_component_count_method == "prediction_error":
             fit_task_class = PredictionErrorFitTask
+        elif config_component_count_method == "bootstrap_validation":
+            fit_task_class = BootstrapValidationFitTask
         else:
             raise ConfigurationFileError(
-                'unrecognized component_count_method "{}" in section [fit]'.format(
+                'unrecognized component_count_method "{}" in section [fit]. '
+                "Use combination_fit, prediction_error, or bootstrap_validation.".format(
                     config_component_count_method
                 )
             )

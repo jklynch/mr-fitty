@@ -402,3 +402,61 @@ def best_fit_for_component_count_box_plots(ax, title, top_fit_per_component_coun
     ax.set_ylabel("Prediction Error")
 
     add_date_time_footer(ax)
+
+
+def bootstrap_validation_box_plots(ax, title, sorted_fits):
+    ax.boxplot(
+        x=[fit_i.bootstrap_df["ssr"] for fit_i in sorted_fits],
+        usermedians=[fit_i.median_ssr for fit_i in sorted_fits],
+        conf_intervals=[
+            [fit_i.median_ssr_ci_lo, fit_i.median_ssr_ci_hi] for fit_i in sorted_fits
+        ],
+        notch=True,
+    )
+    ax.scatter(
+        x=range(1, len(sorted_fits) + 1),
+        y=[fit_i.nss for fit_i in sorted_fits],
+        marker="x",
+    )
+    ax.set_title(title)
+    ax.set_xlabel(f"top {len(sorted_fits)} fits")
+    ax.set_ylabel("Bootstrap Validation SSR")
+    add_date_time_footer(ax)
+
+
+def bootstrap_validation_confidence_interval_plot(ax, title, sorted_fits):
+    ax.errorbar(
+        y=[fit.median_ssr for fit in sorted_fits],
+        x=range(len(sorted_fits)),
+        yerr=[
+            [s.median_ssr - s.median_ssr_ci_lo for s in sorted_fits],
+            [s.median_ssr_ci_hi - s.median_ssr for s in sorted_fits],
+        ],
+        fmt="o",
+    )
+    ax.set_title(title)
+    ax.set_xlabel(f"top {len(sorted_fits)} fits")
+    ax.set_ylabel("Bootstrap Validation SSR Confidence Intervals")
+    ax.grid()
+    add_date_time_footer(ax)
+
+
+def best_bootstrap_fit_for_component_count_box_plots(ax, title, top_fit_per_component_count):
+    ax.boxplot(
+        x=[
+            fit_i.bootstrap_df["ssr"]
+            for i, fit_i in sorted(top_fit_per_component_count.items())
+        ],
+        usermedians=[
+            fit_i.median_ssr for i, fit_i in sorted(top_fit_per_component_count.items())
+        ],
+        conf_intervals=[
+            [fit_i.median_ssr_ci_lo, fit_i.median_ssr_ci_hi]
+            for i, fit_i in sorted(top_fit_per_component_count.items())
+        ],
+        notch=True,
+    )
+    ax.set_title(title)
+    ax.set_xlabel("component count")
+    ax.set_ylabel("Bootstrap Validation SSR")
+    add_date_time_footer(ax)
