@@ -9,6 +9,31 @@ import scipy.cluster.hierarchy as hc
 
 
 def plot_fit(spectrum, any_given_fit, title, fit_quality_labels):
+    """Plot a spectrum fit with reference contributions, residuals, and fit quality labels.
+
+    Creates a single-axes figure showing the unknown spectrum, the combined fit line,
+    per-reference weighted contributions (listed in descending order), and residuals.
+    Reference labels include the percent contribution and, when available, OLS standard
+    errors alongside the reference-only contribution in parentheses.
+
+    Parameters
+    ----------
+    spectrum : Spectrum
+        The unknown spectrum being fitted; used for its file_name label.
+    any_given_fit : SpectrumFit
+        Fit result object providing interpolant_incident_energy, fit_spectrum_b,
+        unknown_spectrum_b, residuals, residuals_contribution, and reference
+        contribution / standard-error series.
+    title : str
+        Primary title line shown above the spectrum file name.
+    fit_quality_labels : list of str
+        Additional annotation strings appended to the legend (e.g. NSS score text).
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The completed figure ready for saving or display.
+    """
     log = logging.getLogger(name=__name__ + ":" + spectrum.file_name)
 
     f, ax = plt.subplots()
@@ -143,6 +168,31 @@ def plot_fit(spectrum, any_given_fit, title, fit_quality_labels):
 
 
 def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels):
+    """Plot reference contributions as a stacked area chart with the unknown spectrum overlaid.
+
+    Each reference component is scaled by its fitted coefficient and stacked on top of
+    the previous ones, giving a visual breakdown of how each reference builds up toward
+    the total fit.  The unknown spectrum and residuals are drawn as scatter points on
+    top.
+
+    Parameters
+    ----------
+    spectrum : Spectrum
+        The unknown spectrum being fitted; used for its file_name label.
+    any_given_fit : SpectrumFit
+        Fit result object providing interpolant_incident_energy, unknown_spectrum_b,
+        residuals, residuals_contribution, reference_spectra_coef_x,
+        reference_spectra_A_df, and reference contribution / standard-error series.
+    title : str
+        Primary title line shown above the spectrum file name.
+    fit_quality_labels : list of str
+        Additional annotation strings appended to the legend (e.g. NSS score text).
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The completed figure ready for saving or display.
+    """
     log = logging.getLogger(name=__name__)
 
     f, ax = plt.subplots()
@@ -230,6 +280,18 @@ def plot_stacked_fit(spectrum, any_given_fit, title, fit_quality_labels):
 
 
 def add_date_time_footer(ax):
+    """Annotate the figure with the current ISO-format timestamp in the lower-left corner.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Any axes belonging to the target figure; the annotation is placed in figure
+        fraction coordinates so the specific axes does not matter.
+
+    Returns
+    -------
+    None
+    """
     ax.annotate(
         datetime.datetime.now().isoformat(),
         xy=(0.025, 0.025),
@@ -249,6 +311,36 @@ def plot_reference_tree(
     pdist_metric,
     linkage_method,
 ):
+    """Plot a hierarchical clustering dendrogram of the reference spectra.
+
+    Draws a horizontal dendrogram with a vertical line at the cutoff distance.
+    Leaf labels that belong to the active reference set are coloured differently
+    from the remaining reference spectra to make selection visible at a glance.
+
+    Parameters
+    ----------
+    linkage_distance_variable_by_sample : ndarray
+        Linkage matrix as returned by ``scipy.cluster.hierarchy.linkage``.
+    reference_df : pandas.DataFrame
+        DataFrame whose columns are reference spectrum names; used to label
+        the dendrogram leaves.
+    cutoff_distance : float
+        Distance threshold drawn as a vertical line on the dendrogram.
+    title : str
+        Title text placed above the plot.
+    reference_spectra_names : iterable of str
+        Names of the reference spectra included in the current fit; their leaf
+        labels are highlighted with a distinct colour.
+    pdist_metric : str
+        Pairwise-distance metric name (e.g. ``"euclidean"``); shown on the x-axis.
+    linkage_method : str
+        Linkage method name (e.g. ``"ward"``); shown on the x-axis.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The completed figure ready for saving or display.
+    """
     # log = logging.getLogger(__name__)
 
     f, ax = plt.subplots()
@@ -283,6 +375,28 @@ def plot_reference_tree(
 
 
 def plot_prediction_errors(spectrum, fit, title):
+    """Plot boxplots and histograms of prediction errors at three bootstrap sample sizes.
+
+    Produces a single figure with six sub-axes arranged in pairs (boxplot + histogram)
+    for the first 10, 100, and 1 000 bootstrap prediction-error samples.  The histogram
+    y-axis limits are shared so distributions are directly comparable.
+
+    Parameters
+    ----------
+    spectrum : Spectrum
+        The unknown spectrum (currently unused inside the function, reserved for the
+        figure title in future revisions).
+    fit : SpectrumFit
+        Fit result providing a ``prediction_errors`` sequence of bootstrap prediction
+        error values.
+    title : str
+        Text placed in the figure suptitle above "Prediction Errors".
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The completed figure ready for saving or display.
+    """
     f = plt.figure(figsize=(10, 6))
     gs = gridspec.GridSpec(nrows=1, ncols=6)
     gs.update(wspace=1.0)
@@ -318,6 +432,23 @@ def plot_prediction_errors(spectrum, fit, title):
 
 
 def classical_confidence_interval_of_mean(C_p_list):
+    """Compute a 95 % confidence interval for the mean using the z-distribution.
+
+    Uses the formula ``mean ± 1.96 * (std / sqrt(n))``, which assumes the
+    sample is large enough for the central-limit theorem to apply.
+
+    Parameters
+    ----------
+    C_p_list : array-like of float
+        Sample of prediction-error (C_p) values.
+
+    Returns
+    -------
+    lo : float
+        Lower bound of the 95 % confidence interval.
+    hi : float
+        Upper bound of the 95 % confidence interval.
+    """
     z_star = 1.96
     Z = z_star * (np.std(C_p_list) / np.sqrt(len(C_p_list)))
     mean_C_p = np.mean(C_p_list)
@@ -327,6 +458,28 @@ def classical_confidence_interval_of_mean(C_p_list):
 
 
 def box_and_histogram(C_p_list, ax_box, ax_hist, hist_ylim=None):
+    """Draw a notched boxplot and a horizontal histogram for a list of prediction errors.
+
+    Parameters
+    ----------
+    C_p_list : array-like of float
+        Sample of prediction-error (C_p) values to visualise.
+    ax_box : matplotlib.axes.Axes
+        Axes on which the notched boxplot is drawn.
+    ax_hist : matplotlib.axes.Axes
+        Axes on which the horizontal histogram is drawn; its x-axis label shows
+        the sample size ``N``.
+    hist_ylim : tuple of (float, float) or None, optional
+        If provided, both axes are constrained to this y-axis range so that
+        multiple ``box_and_histogram`` panels are directly comparable.
+
+    Returns
+    -------
+    ax_box : matplotlib.axes.Axes
+        The boxplot axes after drawing.
+    ax_hist : matplotlib.axes.Axes
+        The histogram axes after drawing.
+    """
     if hist_ylim is None:
         pass
     else:
@@ -343,6 +496,26 @@ def box_and_histogram(C_p_list, ax_box, ax_hist, hist_ylim=None):
 
 
 def prediction_error_box_plots(ax, title, sorted_fits):
+    """Draw notched boxplots of prediction-error distributions for the top fits.
+
+    Each box corresponds to one fit in ``sorted_fits``, ordered left to right.
+    User-supplied medians and confidence intervals from the fit objects override
+    the computed medians.  NSS values are overlaid as ``x`` scatter markers.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axes on which the boxplots are drawn.
+    title : str
+        Title placed above the axes.
+    sorted_fits : list of SpectrumFit
+        Fit result objects providing ``prediction_errors``, ``median_C_p``,
+        ``median_C_p_ci_lo``, ``median_C_p_ci_hi``, and ``nss``.
+
+    Returns
+    -------
+    None
+    """
     ax.boxplot(
         x=[fit_i.prediction_errors for fit_i in sorted_fits],
         usermedians=[fit_i.median_C_p for fit_i in sorted_fits],
@@ -365,6 +538,22 @@ def prediction_error_box_plots(ax, title, sorted_fits):
 
 
 def prediction_error_confidence_interval_plot(ax, title, sorted_fits):
+    """Plot median prediction-error confidence intervals for the top fits as error bars.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axes on which the error-bar plot is drawn.
+    title : str
+        Title placed above the axes.
+    sorted_fits : list of SpectrumFit
+        Fit result objects providing ``median_C_p``, ``median_C_p_ci_lo``, and
+        ``median_C_p_ci_hi``.
+
+    Returns
+    -------
+    None
+    """
     ax.errorbar(
         y=[spectrum_fit.median_C_p for spectrum_fit in sorted_fits],
         x=range(len(sorted_fits)),
@@ -383,6 +572,27 @@ def prediction_error_confidence_interval_plot(ax, title, sorted_fits):
 
 
 def best_fit_for_component_count_box_plots(ax, title, top_fit_per_component_count):
+    """Draw notched boxplots of prediction errors for the best fit at each component count.
+
+    One box is drawn per component count, ordered by component count on the x-axis.
+    User-supplied medians and confidence intervals from the fit objects override the
+    computed medians.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axes on which the boxplots are drawn.
+    title : str
+        Title placed above the axes.
+    top_fit_per_component_count : dict of {int: SpectrumFit}
+        Mapping from component count to the best fit result for that count.  Each
+        fit provides ``prediction_errors``, ``median_C_p``, ``median_C_p_ci_lo``,
+        and ``median_C_p_ci_hi``.
+
+    Returns
+    -------
+    None
+    """
     ax.boxplot(
         x=[
             fit_i.prediction_errors
@@ -405,6 +615,26 @@ def best_fit_for_component_count_box_plots(ax, title, top_fit_per_component_coun
 
 
 def bootstrap_validation_box_plots(ax, title, sorted_fits):
+    """Draw notched boxplots of bootstrap SSR distributions for the top fits.
+
+    Each box corresponds to one fit in ``sorted_fits``, ordered left to right.
+    User-supplied medians and confidence intervals from the fit objects override
+    the computed medians.  NSS values are overlaid as ``x`` scatter markers.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axes on which the boxplots are drawn.
+    title : str
+        Title placed above the axes.
+    sorted_fits : list of BootstrapValidationFit
+        Fit result objects providing ``bootstrap_df`` (with an ``"ssr"`` column),
+        ``median_ssr``, ``median_ssr_ci_lo``, ``median_ssr_ci_hi``, and ``nss``.
+
+    Returns
+    -------
+    None
+    """
     ax.boxplot(
         x=[fit_i.bootstrap_df["ssr"] for fit_i in sorted_fits],
         usermedians=[fit_i.median_ssr for fit_i in sorted_fits],
@@ -425,6 +655,22 @@ def bootstrap_validation_box_plots(ax, title, sorted_fits):
 
 
 def bootstrap_validation_confidence_interval_plot(ax, title, sorted_fits):
+    """Plot median bootstrap SSR confidence intervals for the top fits as error bars.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axes on which the error-bar plot is drawn.
+    title : str
+        Title placed above the axes.
+    sorted_fits : list of BootstrapValidationFit
+        Fit result objects providing ``median_ssr``, ``median_ssr_ci_lo``, and
+        ``median_ssr_ci_hi``.
+
+    Returns
+    -------
+    None
+    """
     ax.errorbar(
         y=[fit.median_ssr for fit in sorted_fits],
         x=range(len(sorted_fits)),
@@ -442,6 +688,27 @@ def bootstrap_validation_confidence_interval_plot(ax, title, sorted_fits):
 
 
 def best_bootstrap_fit_for_component_count_box_plots(ax, title, top_fit_per_component_count):
+    """Draw notched boxplots of bootstrap SSR for the best fit at each component count.
+
+    One box is drawn per component count, ordered by component count on the x-axis.
+    User-supplied medians and confidence intervals from the fit objects override the
+    computed medians.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axes on which the boxplots are drawn.
+    title : str
+        Title placed above the axes.
+    top_fit_per_component_count : dict of {int: BootstrapValidationFit}
+        Mapping from component count to the best fit result for that count.  Each
+        fit provides ``bootstrap_df`` (with an ``"ssr"`` column), ``median_ssr``,
+        ``median_ssr_ci_lo``, and ``median_ssr_ci_hi``.
+
+    Returns
+    -------
+    None
+    """
     ax.boxplot(
         x=[
             fit_i.bootstrap_df["ssr"]
