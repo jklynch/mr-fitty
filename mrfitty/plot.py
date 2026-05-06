@@ -580,7 +580,7 @@ def bootstrap_validation_box_plots(ax, title, sorted_fits):
 
     Each box corresponds to one fit in ``sorted_fits``, ordered left to right.
     User-supplied medians and confidence intervals from the fit objects override
-    the computed medians.  NSS values are overlaid as ``x`` scatter markers.
+    the computed medians.
 
     Parameters
     ----------
@@ -590,7 +590,7 @@ def bootstrap_validation_box_plots(ax, title, sorted_fits):
         Title placed above the axes.
     sorted_fits : list of BootstrapValidationFit
         Fit result objects providing ``bootstrap_df`` (with an ``"ssr"`` column),
-        ``median_ssr``, ``median_ssr_ci_lo``, ``median_ssr_ci_hi``, and ``nss``.
+        ``median_ssr``, ``median_ssr_ci_lo``, and ``median_ssr_ci_hi``.
 
     Returns
     -------
@@ -604,11 +604,7 @@ def bootstrap_validation_box_plots(ax, title, sorted_fits):
         ],
         notch=True,
     )
-    ax.scatter(
-        x=range(1, len(sorted_fits) + 1),
-        y=[fit_i.nss for fit_i in sorted_fits],
-        marker="x",
-    )
+
     ax.set_title(title)
     ax.set_xlabel(f"top {len(sorted_fits)} fits")
     ax.set_ylabel("Bootstrap Validation SSR")
