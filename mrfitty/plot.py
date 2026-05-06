@@ -615,39 +615,6 @@ def bootstrap_validation_box_plots(ax, title, sorted_fits):
     add_date_time_footer(ax)
 
 
-def bootstrap_validation_confidence_interval_plot(ax, title, sorted_fits):
-    """Plot median bootstrap SSR confidence intervals for the top fits as error bars.
-
-    Parameters
-    ----------
-    ax : matplotlib.axes.Axes
-        Axes on which the error-bar plot is drawn.
-    title : str
-        Title placed above the axes.
-    sorted_fits : list of BootstrapValidationFit
-        Fit result objects providing ``median_ssr``, ``median_ssr_ci_lo``, and
-        ``median_ssr_ci_hi``.
-
-    Returns
-    -------
-    None
-    """
-    ax.errorbar(
-        y=[fit.median_ssr for fit in sorted_fits],
-        x=range(len(sorted_fits)),
-        yerr=[
-            [s.median_ssr - s.median_ssr_ci_lo for s in sorted_fits],
-            [s.median_ssr_ci_hi - s.median_ssr for s in sorted_fits],
-        ],
-        fmt="o",
-    )
-    ax.set_title(title)
-    ax.set_xlabel(f"top {len(sorted_fits)} fits")
-    ax.set_ylabel("Bootstrap Validation SSR Confidence Intervals")
-    ax.grid()
-    add_date_time_footer(ax)
-
-
 def best_bootstrap_fit_for_component_count_box_plots(
     ax, title, top_fit_per_component_count
 ):

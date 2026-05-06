@@ -207,15 +207,6 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
             f.tight_layout()
             figure_list.append(f)
 
-            g, ax = plt.subplots()
-            bootstrap_validation_confidence_interval_plot(
-                ax=ax,
-                title=f"Best {component_count}-component Fits\n{spectrum.file_name}",
-                sorted_fits=sorted_fits,
-            )
-            g.tight_layout()
-            figure_list.append(g)
-
         if top_fit_per_component_count:
             f, ax = plt.subplots()
             best_bootstrap_fit_for_component_count_box_plots(
