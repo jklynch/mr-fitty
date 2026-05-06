@@ -615,11 +615,8 @@ class AllCombinationFitTask:
             reference_only_contributions_percent_sr.sort_values(
                 ascending=False, inplace=True
             )
-            # format string: '{:N}{:5.2f} ({:5.2f})' where N is the longest reference name length
-            fmt = "{:" + str(pad) + "}{:5.2f} ({:5.2f})"
         else:
-            # format string: '{:N}{:5.2f}' where N is the longest reference name length
-            fmt = "{:" + str(pad) + "}{:5.2f}"
+            pass
 
         reference_to_reference_label = {}
         for ref_name, ref_contrib in reference_contributions_percent_sr.items():
@@ -633,9 +630,9 @@ class AllCombinationFitTask:
             else:
                 if include_ref_only_contribution:
                     ref_only_contrib = reference_only_contributions_percent_sr[ref_name]
-                    label = fmt.format(ref_name, ref_contrib, ref_only_contrib)
+                    label = f"{ref_name:{pad}}{ref_contrib:5.2f} ({ref_only_contrib:5.2f})"
                 else:
-                    label = fmt.format(ref_name, ref_contrib)
+                    label = f"{ref_name:{pad}}{ref_contrib:5.2f}"
             reference_to_reference_label[ref_name] = label
 
         return reference_to_reference_label
