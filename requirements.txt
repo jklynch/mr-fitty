@@ -3,6 +3,5 @@ matplotlib
 numpy
 pandas
 scipy
-scikits.bootstrap
 scikit-learn
 statsmodels

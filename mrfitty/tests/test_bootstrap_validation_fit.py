@@ -22,15 +22,15 @@ def test_best_fit_has_bootstrap_stats(arsenic_references, arsenic_unknowns):
     best_fit, _ = task.fit(arsenic_unknowns[0])
 
     assert hasattr(best_fit, "median_ssr")
-    assert hasattr(best_fit, "median_ssr_ci_lo")
-    assert hasattr(best_fit, "median_ssr_ci_hi")
+    assert hasattr(best_fit, "ssr_ci_lo")
+    assert hasattr(best_fit, "ssr_ci_hi")
     assert hasattr(best_fit, "bootstrap_df")
     assert hasattr(best_fit, "bootstrap_coef_ci_df")
 
     assert "ssr" in best_fit.bootstrap_df.columns
     assert len(best_fit.bootstrap_df) == 10  # bootstrap_count
 
-    assert best_fit.median_ssr_ci_lo <= best_fit.median_ssr <= best_fit.median_ssr_ci_hi
+    assert best_fit.ssr_ci_lo <= best_fit.median_ssr <= best_fit.ssr_ci_hi
 
     assert set(best_fit.bootstrap_coef_ci_df.columns) == {"median", "ci_lo", "ci_hi"}
     assert len(best_fit.bootstrap_coef_ci_df) == len(best_fit.reference_spectra_seq)

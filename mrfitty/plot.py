@@ -599,9 +599,7 @@ def bootstrap_validation_box_plots(ax, title, sorted_fits):
     ax.boxplot(
         x=[fit_i.bootstrap_df["ssr"] for fit_i in sorted_fits],
         usermedians=[fit_i.median_ssr for fit_i in sorted_fits],
-        conf_intervals=[
-            [fit_i.median_ssr_ci_lo, fit_i.median_ssr_ci_hi] for fit_i in sorted_fits
-        ],
+        conf_intervals=[[fit_i.ssr_ci_lo, fit_i.ssr_ci_hi] for fit_i in sorted_fits],
         notch=True,
     )
 
@@ -644,7 +642,7 @@ def best_bootstrap_fit_for_component_count_box_plots(
             fit_i.median_ssr for i, fit_i in sorted(top_fit_per_component_count.items())
         ],
         conf_intervals=[
-            [fit_i.median_ssr_ci_lo, fit_i.median_ssr_ci_hi]
+            [fit_i.ssr_ci_lo, fit_i.ssr_ci_hi]
             for i, fit_i in sorted(top_fit_per_component_count.items())
         ],
         notch=True,
