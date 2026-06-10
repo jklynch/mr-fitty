@@ -2,37 +2,44 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Environment
+
+Always use the `mrfitty-py313` conda environment:
+```bash
+mamba run -n mrfitty-py313 <command>
+```
+
 ## Commands
 
 **Install for development:**
 ```bash
-pip install -e .
-pip install -r requirements-dev.txt
+mamba run -n mrfitty-py313 pip install -e .
+mamba run -n mrfitty-py313 pip install -r requirements-dev.txt
 ```
 
 **Run tests:**
 ```bash
-pytest -s -v mrfitty/tests/
+mamba run -n mrfitty-py313 pytest -s -v mrfitty/tests/
 ```
 
 **Run a single test:**
 ```bash
-pytest -s -v mrfitty/tests/test_foo.py::TestClass::test_method
+mamba run -n mrfitty-py313 pytest -s -v mrfitty/tests/test_foo.py::TestClass::test_method
 ```
 
 **Run tests with coverage:**
 ```bash
-pytest -s --cov=mrfitty mrfitty/tests/
+mamba run -n mrfitty-py313 pytest -s --cov=mrfitty mrfitty/tests/
 ```
 
 **Lint:**
 ```bash
-flake8 mrfitty/
+mamba run -n mrfitty-py313 flake8 mrfitty/
 ```
 
 **Format:**
 ```bash
-black mrfitty/
+mamba run -n mrfitty-py313 black mrfitty/
 ```
 
 Max line length is 115 (configured in `.flake8`).
