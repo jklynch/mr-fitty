@@ -3,7 +3,6 @@ from setuptools import setup, find_packages
 import sys
 import versioneer
 
-
 # NOTE: This file must remain Python 2 compatible for the foreseeable future,
 # to ensure that we error out properly for people with outdated setuptools
 # and/or pip.
@@ -19,9 +18,7 @@ This may be due to an out-of-date pip. Make sure you have pip >= 9.0.1.
 Upgrade pip like so:
 
 pip install --upgrade pip
-""".format(
-        *(sys.version_info[:2] + min_version)
-    )
+""".format(*(sys.version_info[:2] + min_version))
     sys.exit(error)
 
 here = path.abspath(path.dirname(__file__))
@@ -44,7 +41,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     description="Linear least-squares fitting for XANES data.",
     long_description=readme,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     author="Joshua Lynch",
     author_email="joshua.kevin.lynch@gmail.com",
     url="https://github.com/jklynch/mr-fitty",

@@ -4,7 +4,6 @@ import os
 
 import sphinx_py3doc_enhanced_theme
 
-
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",

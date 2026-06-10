@@ -1,5 +1,3 @@
-from collections import Counter
-
 import pandas as pd
 
 from mrfitty.combination_fit import AllCombinationFitTask

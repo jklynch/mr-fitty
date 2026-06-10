@@ -630,7 +630,9 @@ class AllCombinationFitTask:
             else:
                 if include_ref_only_contribution:
                     ref_only_contrib = reference_only_contributions_percent_sr[ref_name]
-                    label = f"{ref_name:{pad}}{ref_contrib:5.2f} ({ref_only_contrib:5.2f})"
+                    label = (
+                        f"{ref_name:{pad}}{ref_contrib:5.2f} ({ref_only_contrib:5.2f})"
+                    )
                 else:
                     label = f"{ref_name:{pad}}{ref_contrib:5.2f}"
             reference_to_reference_label[ref_name] = label

@@ -1,10 +1,7 @@
-import os
 import tempfile
 
 import numpy as np
 import pandas as pd
-import pytest
-from sklearn.linear_model import LinearRegression
 
 from mrfitty.base import AdaptiveEnergyRangeBuilder, Spectrum
 from mrfitty.combination_fit import AllCombinationFitTask
