@@ -25,7 +25,7 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         energy_range_builder=AdaptiveEnergyRangeBuilder(),
         component_count_range=range(1, 4),
         best_fits_plot_limit=3,
-        bootstrap_count=1000,
+        bootstrap_count=9999,
     ):
         super().__init__(
             ls=ls,
@@ -47,7 +47,114 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
             "MSE: {:<8.3f}".format(any_given_fit.nss),
         ]
 
-    def calculate_bootstrap_results(self, fit):
+    def calculate_bootstrap_statistics(self, fit):
+        """
+        Split the spectrum into even-indexed (training) and odd-indexed (validation)
+        data sets. Run self.bootstrap_count bootstrap fits using the method of resampled
+        residuals. For each fit record the reference coefficients and the sum of squared
+        residuals on the validation set.
+
+        Calculate 95% confidence intervals of the median of the bootstrapped
+        coefficients and normalized sum of squared residuals. In particular the
+        normalized ssr distibution is one-tailed and standard methods of determining
+        the confidence interval of the mean do not work well.
+
+        The return value is a pandas.DataFrame such as this
+                As2O3_ref_avg_als_cal.e	     ssr
+            0                  0.997711 2.308403
+            1                  1.000515 2.309184
+            2                  0.987700 2.308011
+            3                  0.933714 2.369647
+            ...
+        1000 rows × 2 columns
+
+        Parameters
+        ----------
+        fit : SpectrumFit
+
+        Returns
+        -------
+        pd.DataFrame
+            Rows = bootstrap iterations, columns = [ref1_name, ..., refN_name, "ssr"].
+        """
+        n = len(fit.unknown_spectrum_b)
+        train_idx = np.arange(0, n, 2)
+        valid_idx = np.arange(1, n, 2)
+
+        A = fit.reference_spectra_A_df.values
+        b = fit.unknown_spectrum_b.values
+        ref_names = list(fit.reference_spectra_A_df.columns)
+        ref_names_and_ssr = ref_names + ["ssr"]
+
+        # training_model = self.ls()
+        # training_model.fit(A[train_idx], b[train_idx])
+        # training_model_b = training_model.predict(A[train_idx])
+        # training_model_residuals = b[train_idx] - training_model_b
+        training_coef, _, _, _ = np.linalg.lstsq(A[train_idx], b[train_idx])
+        training_residuals = b[train_idx] - A[train_idx] @ training_coef
+
+        rng = np.random.default_rng()
+        bootstrap_res = rng.choice(
+            training_residuals, size=(len(training_residuals), 9999), replace=True
+        )
+        # bootstrap_res has shape (N, 9999)
+        # bootstrap_res.shape
+
+        # coef has shape (len(ref_names), 9999)
+        bootstrap_coefs, _, _, _ = np.linalg.lstsq(
+            A[train_idx], np.atleast_2d(b[train_idx]).T + bootstrap_res
+        )
+
+        bootstrap_validation_ssr = np.sqrt(
+            np.sum(
+                np.square(
+                    A[valid_idx] * bootstrap_coefs - np.atleast_2d(b[valid_idx]).T
+                ),
+                axis=0,
+            )
+        )
+
+        bootstrap_distribution = np.hstack(
+            (bootstrap_coefs.T, np.atleast_2d(bootstrap_validation_ssr).T)
+        )
+        bootstrap_distribution_df = pd.DataFrame(
+            bootstrap_distribution, columns=ref_names_and_ssr
+        )
+        # bootstrap_distribution_df looks like
+        #        As2O3_ref_avg_als_cal.e       ssr
+        #  0                    0.933248  2.370635
+        #  1                    1.073729  2.430369
+        #  ...                       ...       ...
+        #  9997                 0.971169  2.315552
+        #  9998                 1.024857  2.328230
+        #  [9999 rows x 2 columns])
+
+        confidence = 0.95
+        alpha = (1.0 - confidence) / 2.0
+        alpha_interval = np.asarray(((alpha,), (1 - alpha,)))
+        # alpha_interval looks like this
+        #   [[0.025],
+        #    [0.975]]
+
+        bootstrap_percentile_ci_df = pd.DataFrame(
+            data=np.vstack(
+                (
+                    scipy.stats.quantile(bootstrap_distribution, alpha_interval),
+                    np.std(bootstrap_distribution, correction=1, axis=0, keepdims=True),
+                )
+            ),
+            index=("ci_lower", "ci_upper", "stderr"),
+            columns=ref_names_and_ssr,
+        )
+        # bootstrap_percentile_ci_df looks like
+        #           As2O3_ref_avg_als_cal.e       ssr
+        # ci_lower                 0.938335  2.307737
+        # ci_upper                 1.055698  2.392696
+        # stderr                   0.029756  0.024232
+
+        return bootstrap_percentile_ci_df, bootstrap_distribution_df
+
+    def calculate_bootstrap_statistics_classic(self, fit):
         """
         Split the spectrum into even-indexed (training) and odd-indexed (validation) data points.
         Run bootstrap_count bootstrapped fits on samples drawn with replacement from the
@@ -79,43 +186,112 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         A = fit.reference_spectra_A_df.values
         b = fit.unknown_spectrum_b.values
         ref_names = list(fit.reference_spectra_A_df.columns)
+        ref_names_and_ssr = ref_names + ["ssr"]
 
-        records = []
-        for _ in range(self.bootstrap_count):
+        bootstrap_distribution = np.zeros(
+            (self.bootstrap_count, len(ref_names_and_ssr)), dtype=np.float64
+        )
+
+        for i in range(self.bootstrap_count):
             boot_idx = np.random.choice(train_idx, size=len(train_idx), replace=True)
             lm = self.ls()
             lm.fit(A[boot_idx], b[boot_idx])
-            predicted = lm.predict(A[valid_idx])
-            ssr = float(np.sqrt(np.sum((b[valid_idx] - predicted) ** 2)))
-            record = dict(zip(ref_names, lm.coef_))
-            record["ssr"] = ssr
-            records.append(record)
+            ssr = np.sqrt(np.sum(np.square(lm.predict(A[valid_idx]) - b[valid_idx])))
+            bootstrap_distribution[i, :-1] = lm.coef_
+            bootstrap_distribution[i, -1] = ssr
 
-        return pd.DataFrame(records, columns=ref_names + ["ssr"])
+        confidence = 0.95
+        alpha = (1.0 - confidence) / 2.0
+        alpha_interval = np.asarray(((alpha,), (1 - alpha,)))
+        # alpha_interval looks like this
+        #   [[0.025],
+        #    [0.975]]
 
-    def calculate_bootstrap_confidence_intervals(self, bootstrap_statistics_df):
-        percent_confidence = 0.95
-        alpha = 1 - percent_confidence
-        # e.g. alpha_interval = [0.05, 0.95]
-        alpha_interval = np.stack([alpha, 1 - alpha], axis=-1)
-        ci_values = scipy.stats.quantile(
-            bootstrap_statistics_df.values.T, alpha_interval, axis=-1
+        bootstrap_percentile_ci_df = pd.DataFrame(
+            data=np.vstack(
+                (
+                    scipy.stats.quantile(bootstrap_distribution, alpha_interval),
+                    np.std(bootstrap_distribution, correction=1, axis=0, keepdims=True),
+                )
+            ),
+            index=("ci_lower", "ci_upper", "stderr"),
+            columns=ref_names_and_ssr,
         )
-        # ci_values looks like this
-        # array([[0.85397455, 0.99841509],
-        #        [2.81561397, 2.94134189]])
+        # bootstrap_percentile_ci_df looks like
+        #           As2O3_ref_avg_als_cal.e       ssr
+        # ci_lower                 0.938335  2.307737
+        # ci_upper                 1.055698  2.392696
+        # stderr                   0.029756  0.024232
 
-        bootstrap_ci_df = pd.DataFrame(
+        bootstrap_distribution_df = pd.DataFrame(
+            bootstrap_distribution, columns=ref_names_and_ssr
+        )
+        # bootstrap_distribution_df looks like
+        #        As2O3_ref_avg_als_cal.e       ssr
+        #  0                    0.933248  2.370635
+        #  1                    1.073729  2.430369
+        #  ...                       ...       ...
+        #  9997                 0.971169  2.315552
+        #  9998                 1.024857  2.328230
+        #  [9999 rows x 2 columns])
+
+        return bootstrap_percentile_ci_df, bootstrap_distribution_df
+
+    def calculate_bootstrap_statistics_1(self, fit):
+        """
+        Split the spectrum into even-indexed (training) and odd-indexed (validation) data points.
+        Run bootstrap_count bootstrapped fits on samples drawn with replacement from the
+        training set. For each fit record the reference coefficients and the SSR on the
+        validation set.
+
+        Parameters
+        ----------
+        fit : SpectrumFit
+
+        Returns
+        -------
+        pd.DataFrame
+            Rows = bootstrap iterations, columns = [ref1_name, ..., refN_name, "ssr"].
+        """
+        n = len(fit.unknown_spectrum_b)
+        train_idx = np.arange(0, n, 2)
+        valid_idx = np.arange(1, n, 2)
+
+        A = fit.reference_spectra_A_df.values
+        b = fit.unknown_spectrum_b.values
+
+        def statistics(*idx):
+            lm = self.ls()
+            lm.fit(A[idx], b[idx])
+            ssr = np.sqrt(np.sum(np.square(lm.predict(A[valid_idx]) - b[valid_idx])))
+            return list(lm.coef_) + [ssr]
+
+        bootstrap_results = scipy.stats.bootstrap(
+            data=(train_idx,),
+            statistic=statistics,
+            n_resamples=self.bootstrap_count,
+            method="percentile",
+            confidence_level=0.95,
+        )
+
+        column_names = (*fit.reference_spectra_A_df.columns, "ssr")
+        ci_df = pd.DataFrame(
+            data=bootstrap_results.confidence_interval,
             index=["lower", "upper"],
-            columns=bootstrap_statistics_df.columns,
-            data=ci_values.T,
+            columns=column_names,
         )
-        # bootstrap_ci_df looks like this
-        #             Fh2l_sorbed_arsenite_pH8_10um_als_cal.e	ssr
-        # lower       0.853975                                  2.815614
-        # upper       0.998415                                  2.941342
 
-        return bootstrap_ci_df
+        standard_error_df = pd.DataFrame(
+            data=bootstrap_results.standard_error,
+            index=column_names,
+            columns=("standard error",),
+        ).transpose()
+
+        bootstrap_distribution_df = pd.DataFrame(
+            data=bootstrap_results.bootstrap_distribution.T, columns=column_names
+        )
+
+        return ci_df, standard_error_df, bootstrap_distribution_df
 
     def choose_best_component_count(self, all_counts_spectrum_fit_table):
         """
@@ -156,28 +332,25 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
             )
 
             for fit_j in sorted_fits[:20]:
-                bootstrap_df = self.calculate_bootstrap_results(fit_j)
-                bootstrap_ci_df = self.calculate_bootstrap_confidence_intervals(
-                    bootstrap_statistics_df=bootstrap_df
+                bootstrap_ci_df, bootstrap_df = self.calculate_bootstrap_statistics(
+                    fit_j
                 )
 
                 fit_j.bootstrap_df = bootstrap_df
 
-                fit_j.median_ssr = np.median(bootstrap_df["ssr"].values)
-                fit_j.ssr_ci_lo = bootstrap_ci_df.loc["lower", "ssr"]
-                fit_j.ssr_ci_hi = bootstrap_ci_df.loc["upper", "ssr"]
+                fit_j.median_ssr = bootstrap_df["ssr"].median()
+                fit_j.ssr_ci_lo = bootstrap_ci_df.loc["ci_lower", "ssr"]
+                fit_j.ssr_ci_hi = bootstrap_ci_df.loc["ci_upper", "ssr"]
 
                 reference_coef_records = {}
                 for reference_coef_col in fit_j.reference_spectra_A_df.columns:
                     reference_coef_records[reference_coef_col] = {
-                        "median": float(
-                            np.median(bootstrap_df[reference_coef_col].values)
-                        ),
+                        "median": float(bootstrap_df[reference_coef_col].median()),
                         "ci_lo": float(
-                            bootstrap_ci_df.loc["lower", reference_coef_col]
+                            bootstrap_ci_df.loc["ci_lower", reference_coef_col]
                         ),
                         "ci_hi": float(
-                            bootstrap_ci_df.loc["upper", reference_coef_col]
+                            bootstrap_ci_df.loc["ci_upper", reference_coef_col]
                         ),
                     }
                 fit_j.bootstrap_coef_ci_df = pd.DataFrame(reference_coef_records).T

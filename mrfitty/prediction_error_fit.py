@@ -3,7 +3,7 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scikits.bootstrap
+import scipy.stats
 import sklearn.model_selection
 
 from mrfitty.base import AdaptiveEnergyRangeBuilder
@@ -95,19 +95,12 @@ class PredictionErrorFitTask(AllCombinationFitTask):
                     fit_j, n_splits=self.bootstrap_count
                 )
 
-                fit_j.mean_C_p = np.mean(prediction_errors)
-                mean_ci_lo, mean_ci_hi = scikits.bootstrap.ci(
-                    data=prediction_errors, statfunction=np.mean
-                )
-                fit_j.mean_C_p_ci_lo = mean_ci_lo
-                fit_j.mean_C_p_ci_hi = mean_ci_hi
-
                 fit_j.median_C_p = np.median(prediction_errors)
-                median_ci_lo, median_ci_hi = scikits.bootstrap.ci(
-                    data=prediction_errors, statfunction=np.median
+                bootstrap_results = scipy.stats.bootstrap(
+                    data=(prediction_errors,), statistic=np.median
                 )
-                fit_j.median_C_p_ci_lo = median_ci_lo
-                fit_j.median_C_p_ci_hi = median_ci_hi
+                fit_j.median_C_p_ci_lo = bootstrap_results.confidence_interval.low
+                fit_j.median_C_p_ci_hi = bootstrap_results.confidence_interval.high
 
                 fit_j.prediction_errors = prediction_errors
 
