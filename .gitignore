@@ -71,3 +71,5 @@ docs/_build
 .bootstrap
 *.bak
 .vscode
+jupyter-lab-log.txt
+
