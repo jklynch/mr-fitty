@@ -58,3 +58,72 @@ speedup. The function is now dominated by the intrinsic per-iteration work (NNLS
 residual/prediction-error reductions) rather than Python-loop overhead for block resampling.
 Further speedup would require reducing the number of NNLS calls or batching the solve itself —
 a larger change than this pass covered.
+
+## Investigation: NNLS vs. OLS in `do_moving_block_holdout_bootstrap`
+
+Since `scipy.optimize.nnls` was the single largest cost after the vectorization above (46.0% of
+the function's time), investigated whether replacing it with an unconstrained OLS solve (the
+same closed-form normal-equations approach as the notebook's `fit_ols` helper) would be faster.
+
+### Variant tested
+
+Same vectorized-gather structure, with the NNLS call:
+
+```python
+bootstrap_coef, _ = scipy.optimize.nnls(A[train_mask], bootstrap_b[train_mask])
+```
+
+replaced by:
+
+```python
+A_train = A[train_mask]
+b_train = bootstrap_b[train_mask]
+bootstrap_coef = np.linalg.solve(A_train.T @ A_train, A_train.T @ b_train)
+```
+
+### Timing result: OLS is slower, not faster
+
+Benchmarked with un-instrumented wall-clock time (3 repeats each) of the full
+`do_ref_subsets_moving_block_holdout_bootstrap` call (M=[1, 2, 3], 24 refs, 2,324 combinations x
+1,000 bootstrap iterations):
+
+| | NNLS (current) | OLS (normal equations) |
+|---|---|---|
+| mean | **27.71s** | **30.07s** |
+| range | 27.49–27.94s | 29.96–30.15s |
+
+OLS was **~8.5% slower** (speedup ratio 0.92x), the opposite of the expected result.
+
+**Why:** `scipy.optimize.nnls` is a single compiled Fortran active-set call. For these small
+matrices (max 3 columns, ~130–190 rows) it typically converges in one or two passes, since the
+unconstrained solution is often already non-negative for physically well-behaved reference
+spectra — so its real cost is close to that of one normal-equations solve. The OLS replacement,
+however, does the equivalent work as three separate NumPy calls per iteration
+(`A_train.T @ A_train`, `A_train.T @ b_train`, `np.linalg.solve`), each paying its own Python
+dispatch and small-array allocation overhead. At this problem's tiny matrix sizes, that per-call
+overhead outweighs whatever iteration cost NNLS's active-set loop would otherwise add.
+
+A line profile of the OLS variant confirmed this: the solve-related lines (`A_train = A[train_mask]`
+7.8%, `b_train = bootstrap_b[train_mask]` 2.4%, `np.linalg.solve(...)` 49.0%) totaled **59.2%** of
+the function's time, versus 46.0% for NNLS's single inline-sliced call — proportionally more
+expensive despite doing "less" algorithmically.
+
+(Note: the profiled *absolute* times for the two variants aren't directly comparable — the OLS
+loop body has two extra Python statements that `line_profiler` instruments, and that per-line
+overhead compounds over 2.32M iterations. The reliable number for absolute timing is the
+un-instrumented benchmark above; the profile is only meaningful for where within OLS the time
+goes.)
+
+### It also isn't equivalent
+
+- **25.7%** of the OLS bootstrap coefficients came out negative — physically invalid for this
+  XANES linear-combination fit, which is exactly why the notebook uses NNLS.
+- Median holdout prediction error differed by an average of **4.6%** (relative) per combination
+  between the two methods (mean of median PE: 0.206 for OLS vs. 0.195 for NNLS) — OLS's
+  unconstrained fits generalize slightly worse on held-out data here.
+
+### Conclusion
+
+Replacing NNLS with OLS in `do_moving_block_holdout_bootstrap` would be a net loss on both axes:
+slightly slower *and* it produces physically invalid (negative) coefficients and measurably
+different prediction-error estimates. Not recommended — NNLS should stay.
