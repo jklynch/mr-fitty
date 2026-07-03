@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development journal
+
+Keep `dev-journal.md` (top-level) up to date. After completing a meaningful piece
+of work, add an entry at the top with a date/time stamp (use `date "+%Y-%m-%d %H:%M %Z"`)
+summarizing what changed and why. Newest entries go first.
+
 ## Environment
 
 Always use the `mrfitty-py313` conda environment:
