@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development journal
 
-Keep `dev-journal.md` (top-level) up to date. After completing a meaningful piece
-of work, add an entry at the top with a date/time stamp (use `date "+%Y-%m-%d %H:%M %Z"`)
-summarizing what changed and why. Newest entries go first.
+Keep a `dev-journal.md` (top-level) with newest entries first, each with a
+date/time stamp (use `date "+%Y-%m-%d %H:%M %Z"`) summarizing what changed and why.
+Do NOT write to it automatically. Update it infrequently — batching several related
+changes into one entry — and always ask the user before writing an entry.
 
 ## Environment
 
