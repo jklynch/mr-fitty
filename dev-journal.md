@@ -4,6 +4,35 @@ A running log of development work on MrFitty. Newest entries at the top.
 
 ---
 
+## 2026-07-03 16:12 EDT — `plot_interpolated_references` visualization
+
+Added `plot_interpolated_references` to `notebooks/moving_block_holdout_bootstrap.ipynb`
+(new cells right after the tests) to visualize the output of
+`interpolate_references_at_sample_energies`, plus a demo cell that runs it on both
+the 3-reference and full 24-reference pools. Key design points:
+
+- **One axis.** The sample response vector `b` (bold black) over the common range,
+  the interpolated reference columns of `A`, and the full sample spectrum across
+  *all* its energies (dimmed dashed) so the sample points outside the common range
+  are visible.
+- **Range markers.** Red dashed lines at the exact common-range bounds (recovered
+  from the limiting spectra), and gray dotted lines at the first/last sample
+  energies actually present in `A`/`b` (which can sit just inside the exact bounds).
+- **Scales to many references.** Rather than one colour + legend row per reference
+  (which gave a page-wide, hue-repeating legend), references are coloured by the
+  *role* they play: low-edge limiters blue, high-edge limiters orange, both-edge
+  limiters green, and every other reference a single faint-gray "other references
+  (N)" entry. The legend collapses to one row per role with counts; the bound lines
+  name the limiting spectra (full names when ≤ 2 tie, otherwise "N spectra"). Colour
+  is never the sole cue — roles/counts are spelled out and limiters are named.
+- **Readability tuning.** Legend placed outside the axes on the right; dimmed
+  context/out-of-range lines darkened; colored reference lines made slightly
+  transparent so overlapping references show through.
+
+Verified rendering against both the 3- and 24-reference pools.
+
+---
+
 ## 2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests
 
 Work on `notebooks/moving_block_holdout_bootstrap.ipynb`, focused on the
