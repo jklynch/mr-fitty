@@ -4,6 +4,92 @@ A running log of development work on MrFitty. Newest entries at the top.
 
 ---
 
+## 2026-07-03 18:21 EDT — Sum-of-squares reduction in `do_moving_block_holdout_bootstrap`
+
+Investigated, then applied, moving the per-iteration holdout prediction-error (RMSE)
+reduction out of the hot loop in `do_moving_block_holdout_bootstrap`
+(`notebooks/moving_block_holdout_bootstrap.ipynb`).
+
+### Motivation
+
+After the earlier block-gather vectorization, the per-iteration line
+`bootstrap_pes[i] = np.sqrt(np.mean(np.square(holdout_residuals)))` was the largest
+remaining pure-Python-overhead cost in the loop. The idea: accumulate each
+iteration's holdout residuals and compute all the RMSEs at once after the loop.
+
+### Benchmark setup
+
+Focused benchmark isolating the part the change affects — the bootstrap loop over
+all **2,324 reference combinations × 1,000 iterations** (24-reference pool,
+`select_holdout_blocks_v3`, seed 42). Full-data fits and holdout draws are
+precomputed once and shared, so only `do_moving_block_holdout_bootstrap`'s loop is
+timed. 3 repeats each.
+
+### Two candidate forms, and why the rectangular one was rejected
+
+- **Rectangular** (the literal "accumulate residuals in an array"): fill an
+  `(n_bootstrap, n_holdout)` array and reduce with
+  `np.sqrt(np.mean(np.square(hr), axis=1))`. **Rejected** — it assumes every
+  iteration holds out the same number of points. Checked all five selectors: v1/v2/v3
+  hold out a constant 66 points, but **v4 and v5 vary (49–80)**. Since the function is
+  generic and called with all five, a fixed-width array would break v4/v5.
+- **Sum-of-squares** (adopted): accumulate two scalar arrays per iteration —
+  `holdout_sum_of_squares[i] = holdout_residuals @ holdout_residuals` and
+  `holdout_point_counts[i] = holdout_residuals.shape[0]` — then
+  `bootstrap_pes = np.sqrt(holdout_sum_of_squares / holdout_point_counts)` once after
+  the loop. Robust to ragged holdout counts, and slightly faster than the rectangular
+  form because a single BLAS dot replaces the `np.square` + `np.mean` pair.
+
+### Timing (3 repeats, focused loop over all combinations)
+
+| variant | mean time | speedup |
+|---|---|---|
+| current (per-iteration `sqrt(mean(square(·)))`) | 26.90s | 1.00× |
+| accumulate residuals in rectangular array (constant-count only) | 24.15s | 1.11× (−10%) |
+| **accumulate sum-of-squares + counts (adopted)** | **23.09s** | **1.17× (−14%)** |
+
+(±~1s run-to-run variance, so treat as ~10–15%.) The speedup is smaller end-to-end
+in `do_ref_subsets_...` because that also spends a few shared seconds on the 2,324
+full-data NNLS fits.
+
+### Correctness
+
+`bootstrap_pes` matches the original formula to machine epsilon and coefficients are
+bit-identical: max |Δpe| = 1.1e-16, max |Δcoef| = 0. Also verified on **v4** (variable
+holdout counts 55–78 in that run): max |Δpe| = 6.9e-18, no NaN/inf — confirming the
+ragged-safe path on the case that would have broken the rectangular version.
+
+### line_profiler comparison (233 combinations × 1,000 iterations)
+
+The PE-reduction work dropped from **1.63 s → 0.22 s** (~7.4×):
+
+| | line | per-hit | % of fn |
+|---|---|---|---|
+| OLD | `bootstrap_pes[i] = np.sqrt(np.mean(np.square(holdout_residuals)))` | 7012 ns | 30.6% |
+| NEW | `holdout_sum_of_squares[i] = holdout_residuals @ holdout_residuals` | 712 ns | 4.3% |
+| NEW | `holdout_point_counts[i] = holdout_residuals.shape[0]` | 237 ns | 1.4% |
+| NEW | `bootstrap_pes = np.sqrt(...)` *(after loop, 233 hits)* | 2471 ns | ~0% |
+
+The single per-iteration line at 7012 ns/hit is replaced by one dot product at
+712 ns/hit (~10× cheaper — `r @ r` is a single BLAS call returning a scalar with no
+temporary array, versus three dispatched NumPy calls that each allocate/reduce), plus
+a trivial `.shape[0]`, with the `sqrt`/divide now run once per call (233×) instead of
+once per iteration (233,000×). Everything else is unchanged: NNLS is ~10.5 µs/hit in
+both (its *share* rises 46% → 62% only because total time shrank), and the holdout
+matmul `A[holdout_mask] @ bootstrap_coef - b[holdout_mask]` is ~3.2 µs/hit in both.
+(Profiled *totals* — OLD 5.35 s, NEW 3.82 s — are inflated by line_profiler's per-line
+overhead and are only meaningful for *where* time goes; the honest speedup is the
+~10–15% from the un-instrumented benchmark above.)
+
+### Result
+
+Adopted the sum-of-squares form in the notebook, using explicit variable names
+(`holdout_sum_of_squares`, `holdout_point_counts`) and a comment explaining both the
+speedup and the ragged-count-safety rationale. NNLS (~62% of the loop) remains the
+dominant cost; further speedup would require reducing or batching the NNLS solves.
+
+---
+
 ## 2026-07-03 16:12 EDT — `plot_interpolated_references` visualization
 
 Added `plot_interpolated_references` to `notebooks/moving_block_holdout_bootstrap.ipynb`
