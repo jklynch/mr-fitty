@@ -4,6 +4,90 @@ A running log of development work on MrFitty. Newest entries at the top.
 
 ---
 
+## 2026-07-19 12:41 EDT — `plot_holdout_block_structure` visualization
+
+Added `plot_holdout_block_structure` to `notebooks/moving_block_holdout_bootstrap.ipynb`,
+along with two small helpers (`contiguous_run_lengths`, `smooth`), a markdown
+introduction, and a demo cell. The new cells sit immediately after
+`select_holdout_blocks_v5` and *before* the "Development of `select_holdout_blocks`
+v1–v5" write-up, so the write-up now has a figure to refer to.
+
+### Motivation
+
+The existing v1–v5 comparison cell measures *outcomes* — holdout frequency per
+position, PE histograms, violins, and 95% CIs. But every argument in the v1–v5
+write-up is a claim about mask **geometry**: whether the block grid is aligned or
+shifted, which positions a shifted grid never reaches, where the circular wrap seam
+lands, whether the truncated final block always falls at the high-energy end. The
+only geometric evidence in the notebook was a single scalar per version (the holdout
+frequency std). This figure plots the masks themselves so those claims can be read
+off a plot instead of taken on faith.
+
+It is also cheap: it consumes only `select_holdout_blocks*` output — no NNLS, no
+`do_moving_block_holdout_bootstrap` — so it runs in seconds rather than the minutes
+the PE comparisons take.
+
+### Layout
+
+One column per version (reusing the label/color convention already established in the
+v1–v5 comparison cell: steelblue, darkorange, crimson, mediumseagreen, mediumpurple),
+four rows:
+
+1. **Mask rasters + frequency marginal.** Two rasters per column — the low-energy and
+   high-energy ends — over a full-width plot of `holdout_masks.mean(axis=0)`, which is
+   the column marginal of the very array shown above. Gray vertical lines mark where an
+   aligned grid would put its boundaries.
+2. **Held-out fraction per iteration.** Shows v1–v3 collapsing to a spike at a constant
+   66/198 points while v4/v5 spread over 53–79.
+3. **Realized contiguous run lengths.** The *effective* block geometry rather than the
+   nominal `block_length`: adjacent selected blocks merge into longer runs, and
+   truncated or wrapped blocks appear as short ones.
+4. **Holdout vs. resample coverage**, both relative to uniform. The resampling side —
+   which blocks remain available after the `valid_block_starts` filter — was not
+   plotted anywhere else in the notebook.
+
+### Three revisions the first render forced
+
+- **The raster was illegible.** 198 columns compressed into ~250 px gave ~1.3 px per
+  position, so v1's aligned grid did not visibly align — the panel failed at exactly
+  the thing it existed to show. Widening the figure could not fix this. Since all the
+  interesting differences between versions are *edge* effects, the raster now shows
+  the two ends of the spectrum side by side instead of a squeezed whole, at 25
+  iterations rather than 50.
+- **Run lengths were squeezed** into the first tenth of the axis by a handful of very
+  long runs (several selected blocks landing adjacent). The shared x-limit is now the
+  99.5th percentile, with the true longest run and the count of runs beyond the axis
+  reported in the legend.
+- **Row 4 autoscaled per column**, which blew each version's Poisson sampling noise up
+  to fill its own axis and made versions that are genuinely flat at 1.0 look as
+  structured as v2, whose edges really do collapse. All five columns now share one
+  coverage scale. Both curves are also smoothed over one block length; unsmoothed, the
+  ~33k resample draws are dominated by counting noise.
+
+`tight_layout` cannot handle the nested `GridSpecFromSubplotSpec` used for the row-1
+raster pair, so margins are set explicitly with `subplots_adjust`.
+
+### Verification
+
+- All five holdout frequency stds reproduce the write-up's results table exactly at
+  `seed=0`, `n_bootstrap=1000`: 0.0158 / 0.0441 / 0.0122 / 0.0184 / 0.0148.
+- `contiguous_run_lengths` checked against a brute-force Python loop over 200 random
+  masks, plus all-empty and all-full edge cases. `smooth` verified to leave a constant
+  signal constant including at the array edges — it normalizes by a convolution of an
+  all-ones array rather than relying on zero padding, which matters because the edges
+  are precisely where the versions differ.
+- Cells 0–40 executed against the real arsenic data with `UserWarning` promoted to an
+  error: clean, 30 axes as expected, and `nbformat.validate` passes.
+
+### Known limitation
+
+v5's alternating mirror is the one claim the figure does not make visually obvious —
+it registers only as v5's lower frequency std versus v4, since v5's per-iteration
+fraction and run-length distributions are identical to v4's by construction. The other
+four versions' distinguishing geometry reads directly off row 1.
+
+---
+
 ## 2026-07-03 18:21 EDT — Sum-of-squares reduction in `do_moving_block_holdout_bootstrap`
 
 Investigated, then applied, moving the per-iteration holdout prediction-error (RMSE)
