@@ -4,6 +4,118 @@ A running log of development work on MrFitty. Newest entries at the top.
 
 ---
 
+## 2026-07-19 15:44 EDT — Linear vs. cubic spline interpolation of reference spectra
+
+Made the interpolation method a parameter of
+`interpolate_references_at_sample_energies` in
+`notebooks/moving_block_holdout_bootstrap.ipynb`, and added a permanent in-notebook
+comparison of linear against cubic spline interpolation. Notebook-only change;
+`mrfitty/base.py` was not touched.
+
+### Motivation
+
+Every reference spectrum is measured on its own energy grid, so all of them are
+resampled onto the sample's grid before any fitting happens. That resampling is the
+first step in the pipeline, which puts the interpolation method underneath the design
+matrix, the NNLS coefficients, the prediction error, and ultimately the reference
+combination reported as the best fit. The method had never been examined: it was
+whatever `ReferenceSpectrum.__init__` happened to build, an
+`InterpolatedUnivariateSpline` (cubic), which
+`interpolate_references_at_sample_energies` read off the spectrum object.
+
+### Changes
+
+- New cell defining `make_linear_interpolant` and `make_cubic_spline_interpolant`,
+  both built on `scipy.interpolate.make_interp_spline` — the current spline-construction
+  API, replacing the legacy `interp1d` / `splrep` interface — so the two methods differ
+  only in the degree argument `k` rather than in which function is called.
+- `interpolate_references_at_sample_energies` gained a `make_interpolant` parameter
+  (default `make_cubic_spline_interpolant`) and now builds the interpolant from each
+  reference's own `data_df` rather than reading the pre-built `ref.interpolant`. That
+  is what makes the method selectable. The chosen method is printed in the function's
+  report, so every downstream figure's output records which interpolation produced it.
+- `FakeSpectrum` dropped its now-unused `.interpolant` attribute and the legacy
+  `interp1d` import. Two tests added: one that the parameter genuinely selects the
+  method (using data with real curvature — every pre-existing fixture uses linear or
+  zero data, which *both* methods reproduce exactly and so cannot tell them apart), and
+  one pinning the default to cubic.
+- New comparison section at the end of the notebook: `compare_interpolation_methods`,
+  `summarize_interpolation_comparison`, a six-panel
+  `plot_interpolation_method_comparison`, a driver, and a findings write-up.
+
+### Keeping the comparison controlled
+
+Both arms are matched so that the design matrix is the only thing that differs. The
+common energy range depends only on the measured ranges of the sample and references,
+never on how they are interpolated, so both arms fit the same `n` points and the same
+response vector `b`. Because `n` matches, each arm's freshly seeded generator draws
+*identical* holdout masks, and every bootstrap iteration trains and scores on exactly
+the same positions. All three invariants are asserted at runtime rather than assumed.
+
+### Results
+
+Run on `OTT3_55_spot0.e` against the 24-reference pool, M = [1, 2, 3] (2,324
+combinations), 1,000 iterations, `select_holdout_blocks_v3`, seed 42, ~23.5 s per arm.
+
+The design matrices differ substantially — max `|cubic − linear|` = **0.05353** norm
+units against a best-fit RMSE of ~0.0280, so the peak disagreement is nearly twice the
+error the model is judged by. Despite that, **nothing downstream changes**: Spearman ρ
+of median PE across all 2,324 combinations is **0.99992**, the best subset agrees at
+every subset size, the ten best combinations are the same ten, and the selected M=3
+coefficients sit well inside each other's bootstrap 95% intervals.
+
+Cubic is marginally worse on the typical combination (median Δ = +0.000263) but
+marginally better at the optimum (0.028023 vs 0.028235). Small either way, and this
+data cannot separate the candidate explanations — recorded as an observation, not a
+conclusion.
+
+Recommendation: keep cubic as the default. The valuable result is the negative one —
+the hardcoded spline in `mrfitty/base.py` is not quietly steering model selection on
+this dataset.
+
+### A premise the data corrected
+
+Going in, the expectation was that the six references measured every 1.05 eV — coarser
+than the sample's 0.5 eV grid — would dominate the disagreement. They are indeed
+over-represented among the worst offenders, but the single worst is `scorodite`, on an
+ordinary 0.50 eV grid. The disagreement is essentially zero above ~11900 eV and
+concentrates entirely in 11845–11880 eV, the absorption edge and white line.
+**Curvature drives it, not node spacing**: where a spectrum is nearly straight between
+nodes a chord and a spline agree however far apart the nodes are, and where it turns
+sharply they diverge. The write-up states this rather than the original framing.
+
+This also bounds how far the conclusion travels. The disagreement lives at the edge, so
+a reference set measured coarsely *through the edge* — rather than coarsely overall, as
+here — could behave differently. Re-running the section is the way to check, which is
+why it is a permanent notebook artifact rather than a one-off answer.
+
+### Verification
+
+- The default is non-breaking: on the real 24-reference pool it reproduces what the
+  original `ref.interpolant` code computed to **1.9e-15**, so every earlier result in
+  the notebook stays reproducible. Separately confirmed the parameter does change
+  something (linear differs by 0.05353), so the equivalence is not a no-op.
+- All seven tests (five existing, unmodified, plus two new) pass in the notebook
+  runner; the full notebook executes and `nbformat.validate` passes at 57 cells.
+- `pytest mrfitty/tests/`: 8 failed / 50 passed / 1 skipped — identical to the same run
+  on a clean tree, so the pre-existing failures are unrelated to this change.
+
+### Plot revisions worth remembering
+
+Four panels needed fixing after the first render, all the same class of problem as the
+previous visualization: an autoscale or default that technically works but communicates
+the wrong thing. The zoom showing *why* the methods differ used a ±12 eV window in
+which the two curves are visually identical (narrowed to ±2 eV, where the linear chord
+across the white-line peak is obvious); the per-reference emphasis colors were sampled
+from a colormap slice and one landed on gray, the same color as the de-emphasized
+references; the PE scatter on linear axes collapsed every well-fitting combination —
+the only ones model selection can choose between — into one corner (now log-log); and
+the coefficient bars were grouped by method, so the two methods' values for the same
+reference could not be compared side by side (now grouped by reference, over the union
+of both selected subsets so it still reads correctly if the methods ever disagree).
+
+---
+
 ## 2026-07-19 12:41 EDT — `plot_holdout_block_structure` visualization
 
 Added `plot_holdout_block_structure` to `notebooks/moving_block_holdout_bootstrap.ipynb`,
