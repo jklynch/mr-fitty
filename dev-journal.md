@@ -4,6 +4,77 @@ A running log of development work on MrFitty. Newest entries at the top.
 
 ---
 
+## 2026-07-19 21:27 EDT — v1–v5 write-up updated with structural evidence
+
+Added a `### Structural evidence from plot_holdout_block_structure` section to the
+"Development of `select_holdout_blocks` v1–v5" markdown cell in
+`notebooks/moving_block_holdout_bootstrap.ipynb`, between the results table and the
+Analysis section. Pure insertion — no existing text was reworded or removed.
+
+### Motivation
+
+The write-up's comparison rested on two outcome metrics: holdout frequency std and
+prediction error with CIs. Its *arguments*, though, are about block geometry, and the
+block-structure figure added earlier in the notebook now measures that geometry
+directly. Several claims that had been reasoned about could be checked, and a few
+things the two summary metrics cannot express could be stated.
+
+All numbers are at `seed=0`, `n_bootstrap=1000`, `n=198` — the same draws the existing
+results table is built from — and were re-derived from the selectors rather than read
+off the figure.
+
+### Claims confirmed
+
+- **v2's boundary effect.** The shifted grid rarely reaches position 0 or n−1: both
+  ends are held out together in **1.5%** of iterations against ~10.7% for v1. This
+  accounts for the whole of v2's std penalty (0.0441 vs 0.0158) and confirms it is an
+  edge artifact, not a distributed one.
+- **v3's wrap-around.** Occurs in **27.3%** of iterations against a predicted
+  P(offset > 0) × P(that block held out) = (5/6)(11/33) = 27.8%. v3 is also the only
+  version in which a boundary-spanning run is ever a *single* block (12.6%); v1, v2, v4
+  and v5 register 0%, their boundary runs being two separately-selected end blocks that
+  happen to abut. The physically artificial construct is confirmed unique to v3.
+- **v4/v5's wider CIs.** The write-up attributed these to the holdout fraction
+  fluctuating when random block lengths do not sum cleanly to n. Confirmed and sized:
+  v1–v3 hold out exactly 66 points every iteration, v4/v5 range over **53–79**
+  (0.268–0.399 of the data).
+
+### Facts the summary metrics could not show
+
+- **Nominal block length is not realized block length.** v1–v3 all use L=6, but because
+  ~1/3 of blocks are selected independently, adjacent selections merge: median run is 6
+  as designed, longest runs reach **48, 42 and 36** points. v4/v5 (lengths from [6, 10])
+  have median 9, longest 56.
+- **v4/v5 leave a larger resample pool** — **52.7%** of block starts available against
+  ~47.7% for v1–v3. Both hold out ~1/3 of the data, so this follows from arrangement
+  rather than amount: v1–v3 hold out 11 separate blocks of 6 while v4/v5 hold out ~8
+  averaging 8, and fewer separate holdout regions contaminate fewer overlapping windows.
+  A point in v4/v5's favor that neither existing metric captures, though a ~5 percentage
+  point difference is modest.
+
+### A separate question, deliberately scoped out
+
+The reconstructed residual series retains only ~76% of the original lag-1
+autocorrelation, ~41% at lag 3, and essentially none by lag 5 — where the original
+residuals still carry +0.183. Since `block_length = round(n^(1/3)) = 6` and significant
+autocorrelation extends to roughly lag 5–6, L=6 looks marginal for this data.
+
+This applies to **all five versions equally** — they share the same `block_length`
+formula and differ only in holdout selection — so it has no bearing on the choice among
+them. It is recorded in its own subsection, explicitly flagged as a question about the
+block length rather than about v1–v5, and left for a separate investigation.
+
+### Effect on the conclusions
+
+None of the recommendations change, and the section says so explicitly. Quantifying
+v3's wrap at more than a quarter of iterations strengthens rather than weakens the
+existing argument that v1 is the fallback if the wrap is judged physically
+unacceptable. The only finding pointing the other way — v4/v5's larger resample pool —
+is real but small and does not offset the variance from their fluctuating holdout
+fraction.
+
+---
+
 ## 2026-07-19 20:27 EDT — Resampling rows added to `plot_holdout_block_structure`
 
 Extended `plot_holdout_block_structure` in
