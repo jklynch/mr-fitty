@@ -4,6 +4,81 @@ A running log of development work on MrFitty. Newest entries at the top.
 
 ---
 
+## 2026-07-19 20:27 EDT — Resampling rows added to `plot_holdout_block_structure`
+
+Extended `plot_holdout_block_structure` in
+`notebooks/moving_block_holdout_bootstrap.ipynb` from four rows to eight. The original
+four described only the *holdout* draw; the new rows cover the *resample* draw —
+`sampled_starts`, the moving blocks pasted together to build each bootstrap iteration's
+residual series — and what that resampling actually produces.
+
+### Motivation
+
+Each `select_holdout_blocks` version makes two draws, and only one of them was being
+visualized. The resample draw was represented by a single smoothed coverage curve in
+row 4 and nothing else, even though it is the half that determines what
+`do_moving_block_holdout_bootstrap` feeds to NNLS on every one of its ~2.32M inner
+iterations. The two draws are also coupled — holding out a block withdraws every
+resample block overlapping it — and that coupling had no picture at all.
+
+### New rows
+
+- **Row 5 — available vs. drawn resample blocks.** Per iteration, each block start is
+  classified as unavailable (overlaps a held-out point), available but not drawn, drawn
+  once, or drawn 2+ times, since blocks are drawn with replacement. Windowed at both
+  ends of the energy range exactly as row 1 is, and for the same reason: a start is one
+  or two pixels wide across the full range, and the ends are where the versions differ.
+  Each column gets its own legend strip tinted in that column's version color.
+- **Row 6 — source position reuse.** How often a source position is reused within one
+  iteration. The zero bar (~0.53) sits above the held-out fraction (0.333); the excess
+  is the non-held-out positions the draw simply missed.
+- **Row 7 — reconstructed vs. original residual series** (only with `residuals=`).
+- **Row 8 — autocorrelation.** The substantive one. Block resampling exists to carry
+  the residuals' short-range autocorrelation into the bootstrap, and this panel is
+  where you can see whether it does: the reconstructed ACF tracks the original out to
+  roughly one block length, then collapses past the `block_length` marker. It also sits
+  visibly *below* the original at lags 1–5, so the preservation is partial.
+
+`residuals=` is optional and defaults to `None`; without it the function stays purely
+geometric, needs no fit, and draws rows 1–6 only (50 axes vs. 60).
+
+### Row 5 was rebuilt once
+
+The first version of row 5 was a *source-position mosaic*: x a position in the
+reconstructed series, y the iteration, color the position each value was copied from.
+It was correct and it did show the block layout — but it answered "where did this value
+come from" when the more useful question is "which blocks could this iteration draw
+from, and which did it take". Replaced on that basis. The mosaic's underlying
+`source_positions` array is still computed and still drives rows 7–8.
+
+Availability is derived as a cumulative-sum window count — a start `s` is available when
+`[s, s + block_length)` contains no held-out point — which restates the condition every
+selector applies when it builds `valid_block_starts`, evaluated for all iterations at
+once instead of per start.
+
+### Verification
+
+- The block gather used for rows 7–8 reproduces the production gather **exactly**:
+  asserted against the original per-iteration
+  `np.concatenate([residuals[s:s + block_length] ...])[:n]` form that
+  `do_moving_block_holdout_bootstrap` used before it was vectorized. The figure
+  therefore shows the real block layout, not an idealization that could drift from the
+  code.
+- Row 5 asserts that no selector ever draws a resample block overlapping its own
+  holdout, rather than drawing a picture that quietly assumes it. Passes for all five.
+- Both the with- and without-residuals paths render warning-free; notebook executes
+  end-to-end, `nbformat.validate` passes, all seven tests pass; `pytest mrfitty/tests/`
+  unchanged at the 8 pre-existing failures / 50 passed.
+
+### Layout note
+
+The figure is now 25×31 inches with residuals. Row heights are driven by a
+`height_ratios` list scaled by a fixed inches-per-unit constant, and the margins are
+expressed in inches rather than figure fractions, so rows can be added without
+squeezing the header or changing how tall each existing row renders.
+
+---
+
 ## 2026-07-19 15:44 EDT — Linear vs. cubic spline interpolation of reference spectra
 
 Made the interpolation method a parameter of
