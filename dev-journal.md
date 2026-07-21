@@ -4,6 +4,69 @@ A running log of development work on MrFitty. Newest entries at the top.
 
 ---
 
+## 2026-07-20 20:52 EDT — moving-block length tuned from the data
+
+Added a block-length tuning section to
+`notebooks/moving_block_holdout_bootstrap.ipynb` and made the tuned length the default.
+Eleven new cells: the estimator and `choose_block_length` inserted before
+`do_ref_subsets_moving_block_holdout_bootstrap`, four tests, and a sweep study (function,
+six-panel figure, driver, findings) at the end.
+
+### Motivation
+
+Every `select_holdout_blocks` version set `block_length = round(n ** (1/3)) = 6`. That
+is the *rate* at which the MSE-optimal moving-block length grows with n, not the length
+itself — the constant in front depends on the residual dependence, and the code silently
+took it to be 1. The v1–v5 write-up had already flagged that blocks of 6 lose most of the
+residual autocorrelation by lag 5 (open question left for separate work). This settles it.
+
+### What was added
+
+- **`politis_white_block_length`** — Politis & White (2004), the standard data-driven
+  block length. Returns a dict (b_opt, m_hat, bandwidth, long-run variance, curvature,
+  cap) so the number can be audited. Sanity-checked: white noise → 1.16, AR(1) φ=0.8 → 18.3.
+- **`choose_block_length`** — reduces the per-combination estimates to one value with a
+  **low quantile, not the median**. The holdout draw is shared across all 2,324
+  combinations, so one length must serve all. Underfit subsets' residuals contain
+  unmodeled spectrum, which the estimator reads as long-range dependence (RMSE–b_opt rank
+  correlation +0.54; every M=1 subset pins the cap). That contamination is one-sided —
+  it can only inflate the estimate — so the low order statistics are the trustworthy end.
+  The p1/p5/p10/p25 sweep prints on every call. Default percentile 10.
+- **Four tests**, with their own runner: short blocks for white noise, monotone in φ,
+  capped for near-unit-root, and the aggregate surviving structure-dominated rows (the
+  one-sided-contamination argument pinned as a test, not a comment).
+- **`compare_block_lengths` + `plot_block_length_study`** — sweep L ∈ {3,6,9,10,12,15,20}
+  through the whole pipeline with shared seed and design matrix.
+
+### Results
+
+The rule of thumb is too short: p1/p5/p10/p25 = 8.0/10.0/10.3/11.7 over 2,324
+combinations, not one asking for 6. **Tuned default is 10.**
+
+But changing it changes no answer. The selected 3-reference subset is `(0,11,19)` at every
+L from 3 to 20; the 2-reference subset is `(1,2)` throughout; Spearman ρ of the 2,324
+median PEs vs. L=6 never drops below 0.969. The null result is the point — no conclusion
+elsewhere in the notebook is an artifact of block length. Both direct diagnostics (ACF
+fidelity, bootstrap long-run variance) are *monotone* in L with no interior optimum, so
+they only rule 6 out; Politis–White supplies the actual number.
+
+### Scope and knock-on
+
+`do_ref_subsets_moving_block_holdout_bootstrap` now defaults to `block_length='auto'`;
+v1–v5 selectors gained an explicit `block_length`. The v1–v5 comparison cells (43/45/49)
+are pinned at `block_length=6` — that work is about geometry at the rule-of-thumb length,
+and its stored figures and stds (0.0158/0.0441/0.0122/0.0184/0.0148, verified unchanged)
+must keep meaning what they said. The interpolation comparison re-ran at L=10: Spearman
+moved 0.99992 → 0.99995, same subset selected, so that conclusion is block-length
+independent; its findings cell was updated in place with a note. Production
+(`mrfitty/prediction_error_fit.py`) is untouched — a separate decision if the tuning is
+ever wanted there.
+
+Notebook executes end-to-end clean; 7 existing + 4 new in-notebook tests pass; pytest
+unchanged (same 8 pre-existing failures, 50 passed). No `mrfitty/` source modified.
+
+---
+
 ## 2026-07-19 21:27 EDT — v1–v5 write-up updated with structural evidence
 
 Added a `### Structural evidence from plot_holdout_block_structure` section to the
