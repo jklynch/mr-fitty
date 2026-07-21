@@ -2,6 +2,50 @@
 
 A running log of development work on MrFitty. Newest entries at the top.
 
+## Contents
+
+<!-- toc -->
+- [2026-07-20 21:03 EDT — auto-generated table of contents for this journal](#2026-07-20-2103-edt--auto-generated-table-of-contents-for-this-journal)
+- [2026-07-20 20:52 EDT — moving-block length tuned from the data](#2026-07-20-2052-edt--moving-block-length-tuned-from-the-data)
+- [2026-07-19 21:27 EDT — v1–v5 write-up updated with structural evidence](#2026-07-19-2127-edt--v1v5-write-up-updated-with-structural-evidence)
+- [2026-07-19 20:27 EDT — Resampling rows added to `plot_holdout_block_structure`](#2026-07-19-2027-edt--resampling-rows-added-to-plot_holdout_block_structure)
+- [2026-07-19 15:44 EDT — Linear vs. cubic spline interpolation of reference spectra](#2026-07-19-1544-edt--linear-vs-cubic-spline-interpolation-of-reference-spectra)
+- [2026-07-19 12:41 EDT — `plot_holdout_block_structure` visualization](#2026-07-19-1241-edt--plot_holdout_block_structure-visualization)
+- [2026-07-03 18:21 EDT — Sum-of-squares reduction in `do_moving_block_holdout_bootstrap`](#2026-07-03-1821-edt--sum-of-squares-reduction-in-do_moving_block_holdout_bootstrap)
+- [2026-07-03 16:12 EDT — `plot_interpolated_references` visualization](#2026-07-03-1612-edt--plot_interpolated_references-visualization)
+- [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
+- [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
+<!-- /toc -->
+
+---
+
+## 2026-07-20 21:03 EDT — auto-generated table of contents for this journal
+
+Added a `## Contents` section to the top of this file and made it self-maintaining, so
+new entries no longer need a hand-written link.
+
+### How it works
+
+- **`scripts/gen_toc.py`** — a stdlib-only generator. It reads the `## ` entry headings,
+  builds GitHub-style anchor slugs (lowercase; backticks, colons and commas dropped;
+  ` — ` collapses to `--`), and rewrites whatever sits between the `<!-- toc -->` and
+  `<!-- /toc -->` markers. It skips fenced code blocks and the `## Contents` heading
+  itself, and de-duplicates slugs the way GitHub does. Run directly as
+  `python3 scripts/gen_toc.py dev-journal.md`.
+- **`.pre-commit-config.yaml`** — a `local` hook, `journal-toc`, runs the script whenever
+  a commit touches `dev-journal.md`. Like the `black` hook already here, it rewrites the
+  file and exits non-zero if it changed anything, so the commit stops and the refreshed
+  TOC gets re-staged.
+
+### Notes
+
+- `language: system` with `python3`, matching the config's `default_language_version`.
+  The script has no third-party imports, so it does not need the `mrfitty-py313` env.
+- The hook fires only on commit, not on editor or Jupyter saves. To preview the TOC
+  before committing, run the script by hand.
+- Verified end to end: a no-change run passes; injecting a new heading makes the hook
+  repair the TOC and fail once, then pass on re-run, with correctly slugged anchors.
+
 ---
 
 ## 2026-07-20 20:52 EDT — moving-block length tuned from the data

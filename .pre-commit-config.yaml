@@ -13,3 +13,10 @@ repos:
     rev: 0.9.1
     hooks:
       - id: nbstripout
+  - repo: local
+    hooks:
+      - id: journal-toc
+        name: regenerate dev-journal table of contents
+        entry: python3 scripts/gen_toc.py
+        language: system
+        files: ^dev-journal\.md$
