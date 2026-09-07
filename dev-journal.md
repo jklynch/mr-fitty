@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-06 21:24 EDT — the v1–v5 ranking was a statement about `n mod block_length`](#2026-09-06-2124-edt--the-v1v5-ranking-was-a-statement-about-n-mod-block_length)
 - [2026-07-20 21:03 EDT — auto-generated table of contents for this journal](#2026-07-20-2103-edt--auto-generated-table-of-contents-for-this-journal)
 - [2026-07-20 20:52 EDT — moving-block length tuned from the data](#2026-07-20-2052-edt--moving-block-length-tuned-from-the-data)
 - [2026-07-19 21:27 EDT — v1–v5 write-up updated with structural evidence](#2026-07-19-2127-edt--v1v5-write-up-updated-with-structural-evidence)
@@ -16,6 +17,131 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-06 21:24 EDT — the v1–v5 ranking was a statement about `n mod block_length`
+
+Reworked the holdout-block sections of `notebooks/moving_block_holdout_bootstrap.ipynb`.
+The block-structure figure was refactored into per-panel functions and redrawn at the
+tuned block length, which exposed that the v1–v5 recommendation was an artifact of one
+number dividing another. `select_holdout_blocks_v5` replaces v3 as the notebook's
+selector, the affected sections were re-run, and the write-up's numbers are now all
+produced by cells rather than quoted from working notes.
+
+### Motivation
+
+`plot_holdout_block_structure` was drawing its two rasters — the holdout masks and the
+resample-block availability they cause — in non-adjacent rows, at different heights, on
+different windows. Making them comparable meant extracting each panel type into its own
+function, matching the raster geometry, and drawing the figure at `block_length=10`, the
+value `choose_block_length` actually tunes for this data, rather than the rule-of-thumb 6.
+
+At 10 the rasters no longer looked like the write-up described them.
+
+### What the sweep found
+
+`sweep_selector_block_lengths` runs every version at every block length from 4 to 20, at
+three seeds each, and repeats the geometry at n ∈ {150, 198, 200, 233}.
+
+**The original ranking was sampling noise.** A per-position holdout frequency is a mean of
+B Bernoulli draws, so a perfectly uniform selector still measures a std across positions of
+`sqrt(p(1-p)/B)` — 0.0149 at p = 1/3 and 1,000 iterations. At L = 6 the reported figures
+were v1 0.0158, v3 0.0122, v4 0.0184, v5 0.0148: all four sit within a quarter of the
+floor, and the spread across seeds 0–2 alone is [0.0148, 0.0158], [0.0122, 0.0151] and
+[0.0129, 0.0184]. At 4,000 and 16,000 iterations all of them track the floor down as
+1/√B. Only v2 (3.0× the floor, growing to 11.3× at 16,000 iterations) was ever measurable.
+
+**What actually decides the ranking is whether the block length divides n.** A fixed-length
+grid covers `floor(n/L) * L` positions and has to put the remainder somewhere:
+
+- **v1** leaves it at the high-energy end permanently. At L = 10 positions 190–197 are held
+  out in *zero* of 1,000 iterations. The count of never-held-out positions equals
+  `n mod L` at every block length tested.
+- **v3** wraps the grid modulo n, which does not create coverage it does not have — the
+  uncovered arc is still `n mod L` wide, it just rotates with the offset, turning the dead
+  zone into a ramp at each end. At L = 10 the frequency falls from 0.33 mid-spectrum to
+  0.058 at position 0 and 0.068 at position 197.
+- **v4/v5** have no remainder: they partition [0, n) into random-length blocks every
+  iteration, so every position is in exactly one block at every block length.
+
+v1 and v3 are at the sampling floor in exactly four of the seventeen block lengths swept —
+6, 9, 11 and 18, the divisors of 198 in range — and 2.3–6.7× above it everywhere else.
+v4 and v5 are within 1.1× of the floor at all seventeen, and across all 24 (n, L) pairs.
+n = 200 is the control: there 10 divides n and 6 does not, and the versions swap places.
+
+**This was live.** `do_ref_subsets_moving_block_holdout_bootstrap` defaults to
+`block_length='auto'`, which tunes to 10 for this data, and every downstream cell ran v3 —
+so the notebook's headline fits were using the one combination the sweep identifies as
+worst. It is a knife-edge: the Politis–White p10 estimate is 10.28, and restricted to
+subsets of M ≤ 2 it is 10.61, which rounds to 11 — a divisor of 198, where the defect
+vanishes entirely. Uniformity should not depend on whether a tuned estimate happens to
+round onto a divisor of the number of energy points.
+
+Prediction error does not discriminate either way: every version's mean-PE CI overlaps
+every other's at L = 6, 10 and 15, as the original analysis said.
+
+### What changed
+
+- **`plot_holdout_block_structure`** — nine panel functions extracted (one per row), rows
+  reordered so the two rasters are adjacent, and the resample-start rasters matched to the
+  mask rasters in height (`START_RASTER_HEIGHT_FRACTION`, so the caller sizes the row
+  rather than hardcoding a magic ratio), in window, and in the aligned grid ruled across
+  them. Runs at `block_length=10`.
+- **New sweep cells** — the machinery, a four-panel sensitivity figure, the sweep itself,
+  a sampling-floor convergence check, and the structural geometry and ACF tables.
+- **v3 → v5 everywhere downstream** — `make_block_length_selector`'s default,
+  `do_fits_and_plot_summaries`, `compare_interpolation_methods`. The v1–v5 pipeline
+  comparison now runs at both 6 and 10, since the point is how the ranking moves with L.
+- **Re-ran the affected sections.** The interpolation comparison is unchanged in substance:
+  ρ 0.99995 → 0.99994, the same subset selected at every size, cubic still marginally
+  better at the optimum. The block-length study's null result is *stronger* under v5 — the
+  selected subset is identical from L = 3 to 15 and the rank correlation against L = 6 never
+  drops below 0.987, against 0.969 under v3, suggesting some of the earlier drift with
+  block length was v3's own coverage defect growing with the remainder. New finding: at
+  L = 20 the selection does move, at all three subset sizes.
+
+### Reproducibility and runtime
+
+Every number the v1–v5 write-up quotes is now printed by a cell — 125 of 125 numeric
+tokens, checked mechanically against the stored outputs. That audit turned up three
+errors of its own:
+
+- The wrap-rate prediction was wrong. Holdout blocks are drawn *without* replacement, so
+  the closed forms are (5/6)(11/33) + (1/6)(11/33)(10/32) = **29.5%** for v3 and
+  (11/33)(10/32) = **10.4%** for v1, not the 27.8% and 11.1% the write-up gave. The old
+  numbers looked right only because a rate near 0.3 carries a 1.4-point standard error at
+  1,000 iterations. `predicted_both_ends_held_out` derives them for any (n, L), and the
+  cell re-measures at 40,000 iterations, where both land: 29.3% and 10.5%.
+- The L = 6 results table's confidence-interval columns had drifted from what the cell
+  prints.
+- v5's std is 1.00× the floor, not 0.99×.
+
+The sweeps and the four heaviest cells now run their arms through `joblib.Parallel`
+(loky backend, `N_JOBS` at the top of the sweep machinery). Every arm already built its
+own `default_rng(seed)` and shares nothing, so this is a scheduling change and not a
+numerical one — the re-run's outputs are byte-identical for the cells that were only
+parallelized, and the sweep cell asserts it every run by re-executing one arm in-process
+and comparing element-wise. The notebook went from 5m18s to 2m02s.
+
+### Notes
+
+- loky rather than a forked `ProcessPoolExecutor`: both measured the same speedup and both
+  gave identical results, but loky pickles the notebook's functions by value, so it does
+  not depend on workers inheriting `__main__` and does not fork a process that has already
+  loaded matplotlib and BLAS. joblib arrives with `scikit-learn`, already in
+  `requirements.txt`.
+- Arms run in worker processes, so they take everything they need as arguments — including
+  the selector — and hand back whatever they printed, since a worker's stdout never reaches
+  the notebook. `run_arms` returns results in task order so the printed tables do not
+  depend on scheduling.
+- v4/v5's uniformity is not an artifact of their holding out slightly more data. An
+  explicit `block_length=L` slides their random range to [L, L+4], so at nominal L they
+  hold out ~4% more of the spectrum in longer blocks; the sweep reports realized run length
+  and held-out fraction alongside. They sit at the floor at every L from 4 to 20, while
+  v1/v3 sit at it only at divisors.
+- The "v4/v5 leave a larger resample pool" finding from the earlier structural write-up is
+  retired: it is +5 points at L = 6, gone at L = 10, and reversed by L = 15.
 
 ---
 
