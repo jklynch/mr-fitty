@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-07 12:25 EDT — pipeline overview at the top of the bootstrap notebook](#2026-09-07-1225-edt--pipeline-overview-at-the-top-of-the-bootstrap-notebook)
 - [2026-09-06 22:32 EDT — `ssr` renamed to `rss_residuals`](#2026-09-06-2232-edt--ssr-renamed-to-rss_residuals)
 - [2026-09-06 22:10 EDT — three bugs behind eight failing tests](#2026-09-06-2210-edt--three-bugs-behind-eight-failing-tests)
 - [2026-09-06 21:24 EDT — the v1–v5 ranking was a statement about `n mod block_length`](#2026-09-06-2124-edt--the-v1v5-ranking-was-a-statement-about-n-mod-block_length)
@@ -19,6 +20,46 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-07 12:25 EDT — pipeline overview at the top of the bootstrap notebook
+
+`notebooks/moving_block_holdout_bootstrap.ipynb` opened straight into imports. Its
+individual sections each carry a thorough write-up, but nothing said what the notebook as a
+whole does, so the pipeline had to be reconstructed by reading 72 cells in order. Added one
+markdown cell at the top that states it. Documentation only: no code, no figures and no
+reported number changes.
+
+### What the cell says
+
+- **The question and the estimator.** Which combination of references explains the unknown
+  spectrum, and how confident is that choice — both answered by the same moving-block
+  holdout bootstrap.
+- **The pipeline, in six steps**, each naming the function that performs it: read spectra →
+  interpolate references onto the sample grid over the common energy range (`A`, `b`) →
+  NNLS fit and residual diagnostics → pre-generate the shared holdout masks and moving-block
+  starts → resample, refit, score prediction error at the held-out energies → sweep all
+  2,324 reference combinations for M = 1, 2, 3 and rank by median prediction error.
+- **The three studies** that follow, each with its conclusion in a line: the v1–v5 holdout
+  geometry comparison, block-length tuning, and linear vs. cubic interpolation.
+
+### Written for a reader who does not already know the method
+
+The section write-ups below it assume the vocabulary; the overview does not, and this drove
+most of the wording:
+
+- A bootstrap is defined by what it does here — refit many versions of the same spectrum,
+  each the fitted curve plus a reshuffled copy of the leftover noise, and take the spread of
+  the resulting mixing coefficients and prediction errors as the measure of confidence.
+- The autocorrelation of the residuals is described by its observable behavior — where the
+  fitted curve runs above the measurement it stays above it across a stretch of adjacent
+  energies, because the misfit is a smooth feature many points wide — which is also what
+  makes a block the right unit to resample and to hold out. "Moving" is glossed as blocks
+  that may start at any energy and may overlap.
+- Why prediction error rather than goodness of fit is stated outright, since it is the
+  premise the rest of the notebook rests on: adding a reference can only improve the fit, so
+  residual size cannot say how many references are justified.
 
 ---
 
