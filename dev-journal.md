@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-06 22:10 EDT — three bugs behind eight failing tests](#2026-09-06-2210-edt--three-bugs-behind-eight-failing-tests)
 - [2026-09-06 21:24 EDT — the v1–v5 ranking was a statement about `n mod block_length`](#2026-09-06-2124-edt--the-v1v5-ranking-was-a-statement-about-n-mod-block_length)
 - [2026-07-20 21:03 EDT — auto-generated table of contents for this journal](#2026-07-20-2103-edt--auto-generated-table-of-contents-for-this-journal)
 - [2026-07-20 20:52 EDT — moving-block length tuned from the data](#2026-07-20-2052-edt--moving-block-length-tuned-from-the-data)
@@ -17,6 +18,70 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-06 22:10 EDT — three bugs behind eight failing tests
+
+`pytest mrfitty/tests/` had eight failures. They looked like one problem — a matplotlib
+API removal — and were three, two of which the first was hiding. All in `mrfitty/`;
+nothing in the notebooks. The suite is back to 58 passed, 1 skipped.
+
+### `matplotlib.cm.get_cmap` removed in 3.9
+
+`plot_reference_tree` colored dendrogram leaf labels with `plt.cm.get_cmap("Accent", 2)`.
+That call was deprecated in matplotlib 3.7 and removed in 3.9; the two-argument form's
+replacement is `matplotlib.colormaps[name].resampled(n)`, which returns the same
+two-entry lookup table, so `leaf_colors(0)` and `leaf_colors(1)` behave as before. The
+commented-out variant a few lines above was updated to the same API so it still works if
+uncommented. `plot.py` needed a plain `import matplotlib`, since `import
+matplotlib.gridspec as gridspec` binds only `gridspec`.
+
+This is why `requirements.txt` leaving `matplotlib` unpinned is now load-bearing: the fix
+needs >= 3.6 for `colormaps` and `.resampled`.
+
+### `"\n".join` over `Spectrum` objects
+
+`AllCombinationFitTask.fit_all` catches every per-spectrum failure into `failed_fits` and
+then reports them with `"\n".join(failed_fits)` — but that list holds `Spectrum` objects,
+not names. Harmless until a fit actually fails, at which point it replaced the list of
+what went wrong with `TypeError: sequence item 0: expected str instance, Spectrum found`.
+
+That is what four of the eight tests were actually reporting: the colormap crash made
+every fit fail, which tripped the join, which masked the real error. Now joins
+`s.file_name`.
+
+### Elementwise where a matrix product was meant
+
+`calculate_bootstrap_statistics` predicted the validation half of the spectrum for every
+bootstrap iteration with `A[valid_idx] * bootstrap_coefs`. `A[valid_idx]` is
+(n_valid, n_refs) and `bootstrap_coefs` is (n_refs, bootstrap_count), so the result wants
+to be (n_valid, bootstrap_count) — a matrix product, `@`.
+
+**Why it survived.** With a single reference the shapes are (n_valid, 1) and
+(1, bootstrap_count), and elementwise broadcasting produces *exactly* the array the matrix
+product would. Checked `*` against `@` against an explicit per-iteration loop at
+n_refs = 1, 2 and 3: at one reference all three agree, at two or more `*` raises
+`ValueError: operands could not be broadcast together` and `@` matches the loop. So this
+path had only ever run on one-component fits, which is also what the docstring's worked
+example shows. No existing result changes; two- and three-component fits now work.
+
+### `bootstrap_count` was ignored
+
+With the `ValueError` gone, one test got far enough to fail on `assert 9999 == 100`.
+`calculate_bootstrap_statistics` hardcoded `9999` for the resampled-residual draw while
+the rest of the file honours `self.bootstrap_count` — which `fit_task_builder` plumbs
+from `bootstrap_count` in the config's `[fit]` section, default 1000. Anyone who set that
+option was silently getting 9999 iterations, roughly ten times the work they asked for.
+Now uses `self.bootstrap_count`; the constructor default is 9999, so default behavior is
+unchanged.
+
+### Left open
+
+`bootstrap_validation_ssr` is `sqrt(sum(square(...)))` — a residual norm, not the sum of
+squared residuals its name and the docstring claim. Either the name is wrong or the
+`sqrt` is. It feeds the "Bootstrap SSR 95% ci" line in the fit-quality text, so correcting
+it would move published numbers; it needs a decision rather than a drive-by fix.
 
 ---
 

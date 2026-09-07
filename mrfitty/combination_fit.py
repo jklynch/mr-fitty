@@ -124,7 +124,7 @@ class AllCombinationFitTask:
 
         if len(failed_fits) > 0:
             print("failed fits:")
-            print("\n".join(failed_fits))
+            print("\n".join(s.file_name for s in failed_fits))
 
         self.fit_table = _fit_table
         return self.fit_table

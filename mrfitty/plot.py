@@ -2,6 +2,7 @@ import datetime
 import itertools
 import logging
 
+import matplotlib
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
@@ -313,7 +314,7 @@ def plot_reference_tree(
         labels=reference_df.columns,
     )
 
-    # leaf_colors = plt.cm.get_cmap("Accent", 2)
+    # leaf_colors = matplotlib.colormaps["Accent"].resampled(2)
     # for i, leaf_label in enumerate(plt.gca().get_ymajorticklabels()):
     #    leaf_label.set_color(leaf_colors(i % 2))
 
@@ -322,7 +323,7 @@ def plot_reference_tree(
     ax.set_title("{}\n".format(title))
     ax.set_xlabel("{} distance\n{} linkage".format(pdist_metric, linkage_method))
 
-    leaf_colors = plt.cm.get_cmap("Accent", 2)
+    leaf_colors = matplotlib.colormaps["Accent"].resampled(2)
     for leaf_label in plt.gca().get_ymajorticklabels():
         if leaf_label.get_text() in reference_spectra_names:
             leaf_label.set_color(leaf_colors(1))

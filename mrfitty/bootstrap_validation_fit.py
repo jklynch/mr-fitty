@@ -95,12 +95,13 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
 
         rng = np.random.default_rng()
         bootstrap_res = rng.choice(
-            training_residuals, size=(len(training_residuals), 9999), replace=True
+            training_residuals,
+            size=(len(training_residuals), self.bootstrap_count),
+            replace=True,
         )
-        # bootstrap_res has shape (N, 9999)
-        # bootstrap_res.shape
+        # bootstrap_res has shape (N, bootstrap_count)
 
-        # coef has shape (len(ref_names), 9999)
+        # coef has shape (len(ref_names), bootstrap_count)
         bootstrap_coefs, _, _, _ = np.linalg.lstsq(
             A[train_idx], np.atleast_2d(b[train_idx]).T + bootstrap_res
         )
@@ -108,7 +109,7 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         bootstrap_validation_ssr = np.sqrt(
             np.sum(
                 np.square(
-                    A[valid_idx] * bootstrap_coefs - np.atleast_2d(b[valid_idx]).T
+                    A[valid_idx] @ bootstrap_coefs - np.atleast_2d(b[valid_idx]).T
                 ),
                 axis=0,
             )
