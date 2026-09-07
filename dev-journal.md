@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-06 22:32 EDT — `ssr` renamed to `rss_residuals`](#2026-09-06-2232-edt--ssr-renamed-to-rss_residuals)
 - [2026-09-06 22:10 EDT — three bugs behind eight failing tests](#2026-09-06-2210-edt--three-bugs-behind-eight-failing-tests)
 - [2026-09-06 21:24 EDT — the v1–v5 ranking was a statement about `n mod block_length`](#2026-09-06-2124-edt--the-v1v5-ranking-was-a-statement-about-n-mod-block_length)
 - [2026-07-20 21:03 EDT — auto-generated table of contents for this journal](#2026-07-20-2103-edt--auto-generated-table-of-contents-for-this-journal)
@@ -18,6 +19,52 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-06 22:32 EDT — `ssr` renamed to `rss_residuals`
+
+Closes the item left open by the previous entry. `BootstrapValidationFitTask` called its
+validation statistic `ssr` while computing `sqrt(sum(square(r)))` — the *root* sum of
+squares of the validation residuals, their Euclidean norm, not the residual sum of squares
+the abbreviation reads as. All three bootstrap methods compute it the same way, so the
+name was consistently wrong rather than inconsistent, and the fix is a rename: no
+arithmetic changed and no reported number moves.
+
+### What was renamed
+
+`ssr` → `rss_residuals` everywhere it named this quantity:
+
+- the local variables at all three computation sites, and `ref_names_and_ssr`
+- the `"ssr"` column of `bootstrap_df` and `bootstrap_coef_ci_df`
+- the fit attributes `median_ssr`, `ssr_ci_lo` and `ssr_ci_hi`, and the two lookup dicts
+  in `choose_best_component_count`
+- the plot y-axis labels, the fit-quality line, and two log messages
+- the six assertions in `test_bootstrap_validation_fit.py` that pin those names
+
+`OlsWithStats.residual = self._result.ssr` in `linear_model.py` is untouched: that is
+statsmodels' own attribute and a genuine residual sum of squares.
+
+### What a user sees
+
+Nothing in the numbers, and nothing in `write_table`'s TSV — that file carries `nss` and
+`residuals_contribution`, never this column. Two strings in the PDF change ("Bootstrap RSS
+residuals 95% ci of median" in the fit-quality block, "Bootstrap Validation RSS Residuals"
+on the two boxplot axes), and the attribute names on `SpectrumFit` change, which is a break
+for any downstream script reading `fit.median_ssr`.
+
+### Incidentals
+
+- `calculate_bootstrap_statistics`' docstring now defines the quantity once, explicitly, so
+  the abbreviation cannot be misread again: *the root sum of squares of the validation
+  residuals, `sqrt(sum(r ** 2))`, which is their Euclidean norm and not the residual sum of
+  squares the abbreviation is sometimes used for.*
+- Two docstrings in `plot.py` documented attributes that never existed
+  (`median_ssr_ci_lo`, `median_ssr_ci_hi`); they now name the real ones.
+- The six illustrative pandas tables in comments and docstrings were re-aligned, since
+  `rss_residuals` is ten characters wider than `ssr` and the sample values no longer sat
+  under their header. Two of those headers had been separating columns with a literal tab,
+  which is why they rendered inconsistently; the file now has no tabs.
 
 ---
 

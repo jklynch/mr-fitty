@@ -39,10 +39,10 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
 
     def get_fit_quality_score_text(self, any_given_fit):
         return [
-            "Bootstrap SSR 95% ci of median: {:.3f} <-- {:.3f} --> {:.3f}".format(
-                any_given_fit.ssr_ci_lo,
-                any_given_fit.median_ssr,
-                any_given_fit.ssr_ci_hi,
+            "Bootstrap RSS residuals 95% ci of median: {:.3f} <-- {:.3f} --> {:.3f}".format(
+                any_given_fit.rss_residuals_ci_lo,
+                any_given_fit.median_rss_residuals,
+                any_given_fit.rss_residuals_ci_hi,
             ),
             "MSE: {:<8.3f}".format(any_given_fit.nss),
         ]
@@ -51,20 +51,22 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         """
         Split the spectrum into even-indexed (training) and odd-indexed (validation)
         data sets. Run self.bootstrap_count bootstrap fits using the method of resampled
-        residuals. For each fit record the reference coefficients and the sum of squared
-        residuals on the validation set.
+        residuals. For each fit record the reference coefficients and rss_residuals on
+        the validation set -- the *root* sum of squares of the validation residuals,
+        sqrt(sum(r ** 2)), which is their Euclidean norm and not the residual sum of
+        squares the abbreviation is sometimes used for.
 
         Calculate 95% confidence intervals of the median of the bootstrapped
-        coefficients and normalized sum of squared residuals. In particular the
-        normalized ssr distibution is one-tailed and standard methods of determining
-        the confidence interval of the mean do not work well.
+        coefficients and of rss_residuals. In particular the normalized rss_residuals
+        distibution is one-tailed and standard methods of determining the confidence
+        interval of the mean do not work well.
 
         The return value is a pandas.DataFrame such as this
-                As2O3_ref_avg_als_cal.e	     ssr
-            0                  0.997711 2.308403
-            1                  1.000515 2.309184
-            2                  0.987700 2.308011
-            3                  0.933714 2.369647
+                As2O3_ref_avg_als_cal.e       rss_residuals
+            0                  0.997711            2.308403
+            1                  1.000515            2.309184
+            2                  0.987700            2.308011
+            3                  0.933714            2.369647
             ...
         1000 rows × 2 columns
 
@@ -75,7 +77,7 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         Returns
         -------
         pd.DataFrame
-            Rows = bootstrap iterations, columns = [ref1_name, ..., refN_name, "ssr"].
+            Rows = bootstrap iterations, columns = [ref1_name, ..., refN_name, "rss_residuals"].
         """
         n = len(fit.unknown_spectrum_b)
         train_idx = np.arange(0, n, 2)
@@ -84,7 +86,7 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         A = fit.reference_spectra_A_df.values
         b = fit.unknown_spectrum_b.values
         ref_names = list(fit.reference_spectra_A_df.columns)
-        ref_names_and_ssr = ref_names + ["ssr"]
+        ref_names_and_rss_residuals = ref_names + ["rss_residuals"]
 
         # training_model = self.ls()
         # training_model.fit(A[train_idx], b[train_idx])
@@ -106,7 +108,7 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
             A[train_idx], np.atleast_2d(b[train_idx]).T + bootstrap_res
         )
 
-        bootstrap_validation_ssr = np.sqrt(
+        bootstrap_validation_rss_residuals = np.sqrt(
             np.sum(
                 np.square(
                     A[valid_idx] @ bootstrap_coefs - np.atleast_2d(b[valid_idx]).T
@@ -116,18 +118,18 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         )
 
         bootstrap_distribution = np.hstack(
-            (bootstrap_coefs.T, np.atleast_2d(bootstrap_validation_ssr).T)
+            (bootstrap_coefs.T, np.atleast_2d(bootstrap_validation_rss_residuals).T)
         )
         bootstrap_distribution_df = pd.DataFrame(
-            bootstrap_distribution, columns=ref_names_and_ssr
+            bootstrap_distribution, columns=ref_names_and_rss_residuals
         )
         # bootstrap_distribution_df looks like
-        #        As2O3_ref_avg_als_cal.e       ssr
-        #  0                    0.933248  2.370635
-        #  1                    1.073729  2.430369
-        #  ...                       ...       ...
-        #  9997                 0.971169  2.315552
-        #  9998                 1.024857  2.328230
+        #        As2O3_ref_avg_als_cal.e       rss_residuals
+        #  0                    0.933248            2.370635
+        #  1                    1.073729            2.430369
+        #  ...                       ...                 ...
+        #  9997                 0.971169            2.315552
+        #  9998                 1.024857            2.328230
         #  [9999 rows x 2 columns])
 
         confidence = 0.95
@@ -145,13 +147,13 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
                 )
             ),
             index=("ci_lower", "ci_upper", "stderr"),
-            columns=ref_names_and_ssr,
+            columns=ref_names_and_rss_residuals,
         )
         # bootstrap_percentile_ci_df looks like
-        #           As2O3_ref_avg_als_cal.e       ssr
-        # ci_lower                 0.938335  2.307737
-        # ci_upper                 1.055698  2.392696
-        # stderr                   0.029756  0.024232
+        #           As2O3_ref_avg_als_cal.e       rss_residuals
+        # ci_lower                 0.938335            2.307737
+        # ci_upper                 1.055698            2.392696
+        # stderr                   0.029756            0.024232
 
         return bootstrap_percentile_ci_df, bootstrap_distribution_df
 
@@ -159,15 +161,15 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         """
         Split the spectrum into even-indexed (training) and odd-indexed (validation) data points.
         Run bootstrap_count bootstrapped fits on samples drawn with replacement from the
-        training set. For each fit record the reference coefficients and the SSR on the
-        validation set.
+        training set. For each fit record the reference coefficients and rss_residuals
+        -- the root sum of squares of the residuals -- on the validation set.
 
         The return value is a pandas.DataFrame such as this
-                As2O3_ref_avg_als_cal.e	     ssr
-            0                  0.997711 2.308403
-            1                  1.000515 2.309184
-            2                  0.987700 2.308011
-            3                  0.933714 2.369647
+                As2O3_ref_avg_als_cal.e       rss_residuals
+            0                  0.997711            2.308403
+            1                  1.000515            2.309184
+            2                  0.987700            2.308011
+            3                  0.933714            2.369647
             ...
         1000 rows × 2 columns
 
@@ -178,7 +180,7 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         Returns
         -------
         pd.DataFrame
-            Rows = bootstrap iterations, columns = [ref1_name, ..., refN_name, "ssr"].
+            Rows = bootstrap iterations, columns = [ref1_name, ..., refN_name, "rss_residuals"].
         """
         n = len(fit.unknown_spectrum_b)
         train_idx = np.arange(0, n, 2)
@@ -187,19 +189,21 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         A = fit.reference_spectra_A_df.values
         b = fit.unknown_spectrum_b.values
         ref_names = list(fit.reference_spectra_A_df.columns)
-        ref_names_and_ssr = ref_names + ["ssr"]
+        ref_names_and_rss_residuals = ref_names + ["rss_residuals"]
 
         bootstrap_distribution = np.zeros(
-            (self.bootstrap_count, len(ref_names_and_ssr)), dtype=np.float64
+            (self.bootstrap_count, len(ref_names_and_rss_residuals)), dtype=np.float64
         )
 
         for i in range(self.bootstrap_count):
             boot_idx = np.random.choice(train_idx, size=len(train_idx), replace=True)
             lm = self.ls()
             lm.fit(A[boot_idx], b[boot_idx])
-            ssr = np.sqrt(np.sum(np.square(lm.predict(A[valid_idx]) - b[valid_idx])))
+            rss_residuals = np.sqrt(
+                np.sum(np.square(lm.predict(A[valid_idx]) - b[valid_idx]))
+            )
             bootstrap_distribution[i, :-1] = lm.coef_
-            bootstrap_distribution[i, -1] = ssr
+            bootstrap_distribution[i, -1] = rss_residuals
 
         confidence = 0.95
         alpha = (1.0 - confidence) / 2.0
@@ -216,24 +220,24 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
                 )
             ),
             index=("ci_lower", "ci_upper", "stderr"),
-            columns=ref_names_and_ssr,
+            columns=ref_names_and_rss_residuals,
         )
         # bootstrap_percentile_ci_df looks like
-        #           As2O3_ref_avg_als_cal.e       ssr
-        # ci_lower                 0.938335  2.307737
-        # ci_upper                 1.055698  2.392696
-        # stderr                   0.029756  0.024232
+        #           As2O3_ref_avg_als_cal.e       rss_residuals
+        # ci_lower                 0.938335            2.307737
+        # ci_upper                 1.055698            2.392696
+        # stderr                   0.029756            0.024232
 
         bootstrap_distribution_df = pd.DataFrame(
-            bootstrap_distribution, columns=ref_names_and_ssr
+            bootstrap_distribution, columns=ref_names_and_rss_residuals
         )
         # bootstrap_distribution_df looks like
-        #        As2O3_ref_avg_als_cal.e       ssr
-        #  0                    0.933248  2.370635
-        #  1                    1.073729  2.430369
-        #  ...                       ...       ...
-        #  9997                 0.971169  2.315552
-        #  9998                 1.024857  2.328230
+        #        As2O3_ref_avg_als_cal.e       rss_residuals
+        #  0                    0.933248            2.370635
+        #  1                    1.073729            2.430369
+        #  ...                       ...                 ...
+        #  9997                 0.971169            2.315552
+        #  9998                 1.024857            2.328230
         #  [9999 rows x 2 columns])
 
         return bootstrap_percentile_ci_df, bootstrap_distribution_df
@@ -242,8 +246,8 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         """
         Split the spectrum into even-indexed (training) and odd-indexed (validation) data points.
         Run bootstrap_count bootstrapped fits on samples drawn with replacement from the
-        training set. For each fit record the reference coefficients and the SSR on the
-        validation set.
+        training set. For each fit record the reference coefficients and rss_residuals
+        -- the root sum of squares of the residuals -- on the validation set.
 
         Parameters
         ----------
@@ -252,7 +256,7 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         Returns
         -------
         pd.DataFrame
-            Rows = bootstrap iterations, columns = [ref1_name, ..., refN_name, "ssr"].
+            Rows = bootstrap iterations, columns = [ref1_name, ..., refN_name, "rss_residuals"].
         """
         n = len(fit.unknown_spectrum_b)
         train_idx = np.arange(0, n, 2)
@@ -264,8 +268,10 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         def statistics(*idx):
             lm = self.ls()
             lm.fit(A[idx], b[idx])
-            ssr = np.sqrt(np.sum(np.square(lm.predict(A[valid_idx]) - b[valid_idx])))
-            return list(lm.coef_) + [ssr]
+            rss_residuals = np.sqrt(
+                np.sum(np.square(lm.predict(A[valid_idx]) - b[valid_idx]))
+            )
+            return list(lm.coef_) + [rss_residuals]
 
         bootstrap_results = scipy.stats.bootstrap(
             data=(train_idx,),
@@ -275,7 +281,7 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
             confidence_level=0.95,
         )
 
-        column_names = (*fit.reference_spectra_A_df.columns, "ssr")
+        column_names = (*fit.reference_spectra_A_df.columns, "rss_residuals")
         ci_df = pd.DataFrame(
             data=bootstrap_results.confidence_interval,
             index=["lower", "upper"],
@@ -297,7 +303,8 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
     def choose_best_component_count(self, all_counts_spectrum_fit_table):
         """
         Calculate bootstrap validation statistics for the top 20 fits per component count,
-        then select the component count whose best fit has the lowest 95% CI of median SSR.
+        then select the component count whose best fit has the lowest 95% CI of median
+        rss_residuals.
         When confidence intervals overlap, prefer the lower component count.
 
         Parameters
@@ -313,17 +320,17 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
         a_fit = all_counts_spectrum_fit_table[component_counts[0]][0]
         log = logging.getLogger(__name__ + ":" + a_fit.unknown_spectrum.file_name)
 
-        component_count_to_median_ssr = {
+        component_count_to_median_rss_residuals = {
             cc: np.inf for cc in all_counts_spectrum_fit_table.keys()
         }
-        component_count_to_ssr_ci_lo_hi = {
+        component_count_to_rss_residuals_ci_lo_hi = {
             cc: (np.inf, np.inf) for cc in all_counts_spectrum_fit_table.keys()
         }
 
         all_counts_spectrum_fit_bv_table = defaultdict(list)
         for component_count_i in sorted(all_counts_spectrum_fit_table.keys()):
             log.debug(
-                "calculating bootstrap validation SSR CI for %d component(s)",
+                "calculating bootstrap validation RSS residuals CI for %d component(s)",
                 component_count_i,
             )
 
@@ -339,9 +346,13 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
 
                 fit_j.bootstrap_df = bootstrap_df
 
-                fit_j.median_ssr = bootstrap_df["ssr"].median()
-                fit_j.ssr_ci_lo = bootstrap_ci_df.loc["ci_lower", "ssr"]
-                fit_j.ssr_ci_hi = bootstrap_ci_df.loc["ci_upper", "ssr"]
+                fit_j.median_rss_residuals = bootstrap_df["rss_residuals"].median()
+                fit_j.rss_residuals_ci_lo = bootstrap_ci_df.loc[
+                    "ci_lower", "rss_residuals"
+                ]
+                fit_j.rss_residuals_ci_hi = bootstrap_ci_df.loc[
+                    "ci_upper", "rss_residuals"
+                ]
 
                 reference_coef_records = {}
                 for reference_coef_col in fit_j.reference_spectra_A_df.columns:
@@ -361,29 +372,32 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
             all_counts_spectrum_fit_bv_table[component_count_i] = sorted(
                 all_counts_spectrum_fit_bv_table[component_count_i],
                 key=lambda fit: (
-                    fit.median_ssr,
-                    fit.ssr_ci_lo,
-                    fit.ssr_ci_hi,
+                    fit.median_rss_residuals,
+                    fit.rss_residuals_ci_lo,
+                    fit.rss_residuals_ci_hi,
                 ),
             )
 
             best_for_count = all_counts_spectrum_fit_bv_table[component_count_i][0]
-            component_count_to_median_ssr[component_count_i] = best_for_count.median_ssr
-            component_count_to_ssr_ci_lo_hi[component_count_i] = (
-                best_for_count.ssr_ci_lo,
-                best_for_count.ssr_ci_hi,
+            component_count_to_median_rss_residuals[component_count_i] = (
+                best_for_count.median_rss_residuals
+            )
+            component_count_to_rss_residuals_ci_lo_hi[component_count_i] = (
+                best_for_count.rss_residuals_ci_lo,
+                best_for_count.rss_residuals_ci_hi,
             )
 
             log.debug(
-                "component count %d: best SSR CI %8.3f <-- %8.3f --> %8.3f",
+                "component count %d: best RSS residuals CI %8.3f <-- %8.3f --> %8.3f",
                 component_count_i,
-                best_for_count.ssr_ci_lo,
-                best_for_count.median_ssr,
-                best_for_count.ssr_ci_hi,
+                best_for_count.rss_residuals_ci_lo,
+                best_for_count.median_rss_residuals,
+                best_for_count.rss_residuals_ci_hi,
             )
 
         best_component_count, _, _ = PredictionErrorFitTask.get_best_ci_component_count(
-            component_count_to_median_ssr, component_count_to_ssr_ci_lo_hi
+            component_count_to_median_rss_residuals,
+            component_count_to_rss_residuals_ci_lo_hi,
         )
         best_fit = all_counts_spectrum_fit_table[best_component_count][0]
         log.info("best fit: {}".format(best_fit))
@@ -397,12 +411,12 @@ class BootstrapValidationFitTask(AllCombinationFitTask):
             bv_fits = [
                 fit
                 for fit in fit_results.component_count_fit_table[component_count]
-                if hasattr(fit, "median_ssr")
+                if hasattr(fit, "median_rss_residuals")
             ]
             if not bv_fits:
                 continue
 
-            sorted_fits = sorted(bv_fits, key=lambda fit: fit.median_ssr)[:10]
+            sorted_fits = sorted(bv_fits, key=lambda fit: fit.median_rss_residuals)[:10]
             top_fit_per_component_count[component_count] = sorted_fits[0]
 
             f, ax = plt.subplots()

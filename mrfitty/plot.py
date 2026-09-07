@@ -577,7 +577,7 @@ def best_fit_for_component_count_box_plots(ax, title, top_fit_per_component_coun
 
 
 def bootstrap_validation_box_plots(ax, title, sorted_fits):
-    """Draw notched boxplots of bootstrap SSR distributions for the top fits.
+    """Draw notched boxplots of bootstrap RSS residuals distributions for the top fits.
 
     Each box corresponds to one fit in ``sorted_fits``, ordered left to right.
     User-supplied medians and confidence intervals from the fit objects override
@@ -590,30 +590,34 @@ def bootstrap_validation_box_plots(ax, title, sorted_fits):
     title : str
         Title placed above the axes.
     sorted_fits : list of BootstrapValidationFit
-        Fit result objects providing ``bootstrap_df`` (with an ``"ssr"`` column),
-        ``median_ssr``, ``median_ssr_ci_lo``, and ``median_ssr_ci_hi``.
+        Fit result objects providing ``bootstrap_df`` (with a ``"rss_residuals"`` column),
+        ``median_rss_residuals``, ``rss_residuals_ci_lo``, and ``rss_residuals_ci_hi``.
 
     Returns
     -------
     None
     """
     ax.boxplot(
-        x=[fit_i.bootstrap_df["ssr"] for fit_i in sorted_fits],
-        usermedians=[fit_i.median_ssr for fit_i in sorted_fits],
-        conf_intervals=[[fit_i.ssr_ci_lo, fit_i.ssr_ci_hi] for fit_i in sorted_fits],
+        x=[fit_i.bootstrap_df["rss_residuals"] for fit_i in sorted_fits],
+        usermedians=[fit_i.median_rss_residuals for fit_i in sorted_fits],
+        conf_intervals=[
+            [fit_i.rss_residuals_ci_lo, fit_i.rss_residuals_ci_hi]
+            for fit_i in sorted_fits
+        ],
         notch=True,
     )
 
     ax.set_title(title)
     ax.set_xlabel(f"top {len(sorted_fits)} fits")
-    ax.set_ylabel("Bootstrap Validation SSR")
+    ax.set_ylabel("Bootstrap Validation RSS Residuals")
     add_date_time_footer(ax)
 
 
 def best_bootstrap_fit_for_component_count_box_plots(
     ax, title, top_fit_per_component_count
 ):
-    """Draw notched boxplots of bootstrap SSR for the best fit at each component count.
+    """Draw notched boxplots of bootstrap RSS residuals for the best fit at each
+    component count.
 
     One box is drawn per component count, ordered by component count on the x-axis.
     User-supplied medians and confidence intervals from the fit objects override the
@@ -627,8 +631,8 @@ def best_bootstrap_fit_for_component_count_box_plots(
         Title placed above the axes.
     top_fit_per_component_count : dict of {int: BootstrapValidationFit}
         Mapping from component count to the best fit result for that count.  Each
-        fit provides ``bootstrap_df`` (with an ``"ssr"`` column), ``median_ssr``,
-        ``median_ssr_ci_lo``, and ``median_ssr_ci_hi``.
+        fit provides ``bootstrap_df`` (with a ``"rss_residuals"`` column), ``median_rss_residuals``,
+        ``rss_residuals_ci_lo``, and ``rss_residuals_ci_hi``.
 
     Returns
     -------
@@ -636,19 +640,20 @@ def best_bootstrap_fit_for_component_count_box_plots(
     """
     ax.boxplot(
         x=[
-            fit_i.bootstrap_df["ssr"]
+            fit_i.bootstrap_df["rss_residuals"]
             for i, fit_i in sorted(top_fit_per_component_count.items())
         ],
         usermedians=[
-            fit_i.median_ssr for i, fit_i in sorted(top_fit_per_component_count.items())
+            fit_i.median_rss_residuals
+            for i, fit_i in sorted(top_fit_per_component_count.items())
         ],
         conf_intervals=[
-            [fit_i.ssr_ci_lo, fit_i.ssr_ci_hi]
+            [fit_i.rss_residuals_ci_lo, fit_i.rss_residuals_ci_hi]
             for i, fit_i in sorted(top_fit_per_component_count.items())
         ],
         notch=True,
     )
     ax.set_title(title)
     ax.set_xlabel("component count")
-    ax.set_ylabel("Bootstrap Validation SSR")
+    ax.set_ylabel("Bootstrap Validation RSS Residuals")
     add_date_time_footer(ax)
