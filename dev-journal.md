@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-08 15:01 EDT — the cluster cutoff is coarse because the references are one family](#2026-09-08-1501-edt--the-cluster-cutoff-is-coarse-because-the-references-are-one-family)
 - [2026-09-08 11:11 EDT — reference clustering, and the trees folded into the fit summaries](#2026-09-08-1111-edt--reference-clustering-and-the-trees-folded-into-the-fit-summaries)
 - [2026-09-07 12:25 EDT — pipeline overview at the top of the bootstrap notebook](#2026-09-07-1225-edt--pipeline-overview-at-the-top-of-the-bootstrap-notebook)
 - [2026-09-06 22:32 EDT — `ssr` renamed to `rss_residuals`](#2026-09-06-2232-edt--ssr-renamed-to-rss_residuals)
@@ -21,6 +22,99 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-08 15:01 EDT — the cluster cutoff is coarse because the references are one family
+
+The previous entry left a question open: `cluster_reference_spectra` cuts the tree at the
+95th percentile of its randomized comparison, and on the arsenic pool that cut is
+permissive — 22 of 23 merges fall below it, leaving two clusters and saying nothing about
+the structure inside them. The suspicion was that the default percentile was wrong. It is
+not, and this entry records what is wrong instead. No default changed.
+
+All in `notebooks/moving_block_holdout_bootstrap.ipynb`.
+
+### The percentile is not the lever
+
+Sweeping it does almost nothing. From p50 to p99 the partition moves only between three
+clusters and two, under both distances:
+
+| percentile | correlation cutoff | clusters | cosine cutoff | clusters |
+|---|---|---|---|---|
+| p50 | 0.1624 | 3 | 0.0510 | 3 |
+| p90 | 0.2881 | 2 | 0.0904 | 2 |
+| **p95** | **0.3277** | **2** | **0.1034** | **2** |
+| p99 | 0.3715 | 2 | 0.1179 | 2 |
+
+The observed merges do not sit *inside* the distribution of randomized merge heights, they
+sit far below all of it. A percentile of that distribution is therefore not a dial with
+anything on the other end of it.
+
+### One tempting fix is arithmetically a no-op
+
+The obvious next idea was to preserve the shared absorption edge — model each reference as
+the mean spectrum plus a deviation, and shuffle only the deviations. It returns
+bit-identical cutoffs, because `mean + permute(A - mean)` and `permute(A)` are the same
+multiset: permuting within a row is invariant to adding a row constant. Any comparison that
+only re-centers rows is the comparison we already had.
+
+### The prototype that was supposed to be harder is easier
+
+`phase_randomize_columns` builds randomized references the standard surrogate-data way:
+Fourier transform each reference, replace the phases with uniform random ones, transform
+back, so each keeps its own power spectrum — mean, variance, smoothness — while whatever it
+shares with the others is destroyed. `cluster_reference_spectra` grew a `surrogate=`
+argument to select it, defaulting to `permute_within_rows` so nothing already measured
+moved, and records which one produced a cutoff.
+
+It is the weaker comparison, not the stronger one, and the reason is one number:
+
+| | mean \|cross-reference correlation\| | spread across references at one energy |
+|---|---|---|
+| real references | 0.809 | 0.146 |
+| `permute_within_rows` | **0.797** | 0.146 |
+| `phase_randomize_columns` | **0.289** | 0.557 |
+
+At any single energy the 24 references differ by very little, so shuffling which reference
+holds which value leaves every randomized copy still tracing the same absorption edge — it
+keeps 0.797 of the real 0.809. That makes the existing comparison a demanding one, with
+small merge heights (median 0.162) that a real merge has to beat. Phase randomization throws
+the shared edge away, its copies are nearly unrelated (0.289), its merge heights are large
+(median 0.575, against the real tree's root of 0.571), and at p95 the cutoff lands above the
+entire tree: **one cluster, every merge "significant", useless.**
+
+### What this means for the cut
+
+The two randomizations bracket the question rather than answering it — one preserves the
+common edge, one destroys it, and neither leaves a percentile that carves the pool into
+interpretable groups. That is a fact about the data: these references genuinely are
+variations on one element's absorption edge. The coarse cut is not a defect to tune away,
+and finer structure has to be read from merge heights, which is what the subtree brackets in
+`plot_reference_dendrogram` already report.
+
+`phase_randomize_columns` and the comparison stay in the notebook so the question can be
+re-asked on a less homogeneous reference set, where it could come out differently.
+
+### Wording
+
+Standalone "null" is gone from the new section — headings, prose, the printed report and
+`compare_surrogate_methods` (renamed from `compare_surrogate_nulls`) now say "randomized
+copies", "comparison" or "randomization". The dict key `null_merge_heights` became
+`chance_merge_heights`, all ten occurrences including the tests and
+`plot_cluster_metric_comparison`. The word now appears once in the notebook, in the sentence
+in `permute_within_rows` that defines it.
+
+### Notes
+
+- 14 clustering tests now: the surrogate must preserve each reference's power spectrum,
+  mean, std and realness while lowering cross-reference correlation, and the `surrogate`
+  argument must actually reach the cutoff rather than being accepted and ignored.
+- Randomizing the DC term, or Nyquist when the length is even, would make the inverse
+  transform complex; both phases are pinned to zero, which is also what keeps each
+  reference's mean.
+- Still unimplemented, and only worth doing if a descriptive partition is wanted: an
+  `n_clusters` argument cutting with `criterion='maxclust'`, clearly not inferential.
 
 ---
 
