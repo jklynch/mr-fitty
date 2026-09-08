@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-08 17:12 EDT — a fit in one file, and a table you can ask questions of](#2026-09-08-1712-edt--a-fit-in-one-file-and-a-table-you-can-ask-questions-of)
 - [2026-09-08 15:01 EDT — the cluster cutoff is coarse because the references are one family](#2026-09-08-1501-edt--the-cluster-cutoff-is-coarse-because-the-references-are-one-family)
 - [2026-09-08 11:11 EDT — reference clustering, and the trees folded into the fit summaries](#2026-09-08-1111-edt--reference-clustering-and-the-trees-folded-into-the-fit-summaries)
 - [2026-09-07 12:25 EDT — pipeline overview at the top of the bootstrap notebook](#2026-09-07-1225-edt--pipeline-overview-at-the-top-of-the-bootstrap-notebook)
@@ -22,6 +23,96 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-08 17:12 EDT — a fit in one file, and a table you can ask questions of
+
+Every figure in the notebook was drawn from a live fit, so redrawing any of them — after
+changing a plot, or to look again at last week's run — meant re-running the
+2,324-combination bootstrap. Nothing about a finished fit survived the kernel.
+
+`write_fit_results` now puts a fit in one Parquet file and `read_fit_results` hands back
+exactly the dict `do_fits_and_plot_summaries` returns, so no plotting function knows the
+difference. On the arsenic fit: **24.1 MB written in 0.5 s, read back in 1.7 s, against 24 s
+to compute it again.**
+
+All in `notebooks/moving_block_holdout_bootstrap.ipynb`, plus one line of `requirements.txt`.
+
+### Why a table and not a bag of arrays
+
+The interesting axis of this data *is* tabular — one row per reference combination — so the
+file is a Parquet table with one row per combination and the bootstrap draws as list columns.
+That makes the ranking every summary figure is built on readable by pandas, DuckDB, Polars or
+R without unpacking a thousand draws per row, which a `.npz` of arrays cannot offer at any
+size. Everything that is not per-combination — the design matrix, the energy grids, the
+reference names, both clusterings, and the provenance — rides in the file's key-value
+metadata as one JSON document with base64 arrays, which is where GeoParquet keeps its spec,
+and leaves the table itself clean for anyone querying it.
+
+Three decisions that account for the size:
+
+- **The draws are float32.** They are 75 MB of the 83 MB at float64, and nothing drawn from
+  them — medians, percentiles, violins — resolves anywhere near float32. The round trip is
+  therefore exact for every other array and `rtol=1e-6` for these two, which the tests assert
+  rather than assume.
+- **The NaN padding is not written.** In memory `ref_indices`, `coef` and `bootstrap_coefs`
+  are padded to `max_M`; Parquet list columns are variable-length, so each row stores its own
+  `M` values and the reader puts the padding back. Nothing downstream can tell.
+- **`fitted` is not written.** `fit_nnls` defines `residuals = fitted - b`, so it is exactly
+  `b + residuals` — 3.7 MB of arithmetic.
+
+Together with zstd that is 24.1 MB against the 82.6 MB the arrays occupy in memory, and well
+under the 40 MB estimated when planning. Parquet's own column statistics say where it went:
+`bootstrap_coefs` 15.70 MB, `bootstrap_pes` 6.43 MB, everything else under 1.5 MB together.
+
+### What it stores, and what it does not
+
+Coverage is deliberately the fit summaries — everything `do_fits_and_plot_summaries` draws.
+Left out, each for a reason worth recording:
+
+- **`holdout_masks` and `sampled_starts`**: only the holdout-geometry figures use them, and
+  those take selector *callables* and redraw the masks themselves, so they could not be
+  file-driven without refactoring.
+- **`chance_merge_heights` and `cophenetic_distances`**: read only by
+  `plot_cluster_metric_comparison`, and they would triple the metadata. The reader sets them
+  to `None` rather than omitting the keys, so a caller sees why they are missing.
+- **The references' raw measured points**: needed only by the interpolation-methods figure.
+  Cheap at ~0.09 MB, and the obvious first addition if the studies are ever wanted from file.
+
+`do_fits_and_plot_summaries` was widened to return `sample_energies`, `block_length`,
+`n_holdout_blocks`, `elapsed_time` and the seed, which it computed and dropped. `block_length`
+is the one that mattered: under `block_length='auto'` it is tuned from the residuals, so it is
+a *result* of the fit that was being thrown away.
+
+### The queries are the point
+
+A section of six demonstrations, each answering a question without recomputing anything: the
+provenance without reading a row; where the megabytes went; the best combinations from two
+small columns; the spread of median prediction error by subset size; and one combination's
+draws for an interval.
+
+The fourth is the one worth keeping. **`Arsenopyrite_Julcani` and `orpiment` each appear in 21
+of the best 25 three-component fits**, then a long tail — `As_pyrite` at 6, three others at 3.
+The prediction-error ranking names one winner; this says two of its three references are
+near-inevitable while the third is close to interchangeable. That is the same conclusion the
+cosine tree suggested from a completely different direction, and it is a question the old
+in-memory results could answer only by writing a loop.
+
+### Notes
+
+- 6 round-trip tests, on a miniature fit with real NaN padding and real clusterings, so they
+  run in milliseconds: shapes and dtypes, exactness where it is promised and `rtol` where it
+  is not, the padding, `fitted`, the provenance, the clusterings still drawing, the table
+  ranking combinations the same way the draws do, and a foreign Parquet file being refused.
+- `schema_version` is written into the file and checked on read, so a later format change
+  fails loudly instead of mis-parsing.
+- `pyarrow` is declared in `requirements.txt`, not just installed, so the writer and reader
+  can move into the `mrfitty` package without a dependency change. Reading it back takes 1.7 s,
+  nearly all of it Python-level list conversion rather than Arrow — the obvious thing to
+  optimize if it ever matters.
+- The file is a single row group, so column pruning saves I/O but row filters do not skip it.
+  The query cell says so rather than implying a skip that is not happening.
 
 ---
 

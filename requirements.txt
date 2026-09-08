@@ -2,6 +2,9 @@ jupyter
 matplotlib
 numpy
 pandas
+# results files written by notebooks/moving_block_holdout_bootstrap.ipynb; declared here
+# rather than only in the notebook so the writer and reader can move into the package
+pyarrow
 scipy
 scikit-learn
 statsmodels
