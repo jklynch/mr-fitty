@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-08 11:11 EDT — reference clustering, and the trees folded into the fit summaries](#2026-09-08-1111-edt--reference-clustering-and-the-trees-folded-into-the-fit-summaries)
 - [2026-09-07 12:25 EDT — pipeline overview at the top of the bootstrap notebook](#2026-09-07-1225-edt--pipeline-overview-at-the-top-of-the-bootstrap-notebook)
 - [2026-09-06 22:32 EDT — `ssr` renamed to `rss_residuals`](#2026-09-06-2232-edt--ssr-renamed-to-rss_residuals)
 - [2026-09-06 22:10 EDT — three bugs behind eight failing tests](#2026-09-06-2210-edt--three-bugs-behind-eight-failing-tests)
@@ -20,6 +21,125 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-08 11:11 EDT — reference clustering, and the trees folded into the fit summaries
+
+The notebook could say which combination of references fits best and how uncertain that
+choice is, but nothing about how the chosen references relate to each other. That matters
+for reading a result: NNLS cannot tell apart two references that are nearly the same
+vector, so three references drawn from one tight cluster are a weaker claim about the
+sample than three that are nothing alike, at identical prediction error. This batch adds
+the clustering that answers it, a study settling which distance to use, and the wiring that
+puts the answer next to each fit rather than in a section of its own.
+
+All of it is `notebooks/moving_block_holdout_bootstrap.ipynb`; no package code changed.
+
+### Clustering the design matrix
+
+`cluster_reference_spectra(A, ref_names, rng, ...)` clusters the *columns of the design
+matrix* rather than re-reading spectra from disk, so the tree describes exactly what was
+fitted — same interpolation, same common energy range, same grid. It returns the linkage,
+the pairwise distances, the flat clusters, the cophenetic correlation and the significance
+cutoff in one dict, so nothing is recomputed at draw time.
+
+The cutoff comes from a permutation test, reimplemented self-contained rather than reused
+from `mrfitty/combination_fit.py`: `permute_within_rows` shuffles the values inside each
+energy row, destroying resemblance between references while leaving each energy the values
+it measured, and the cutoff is the 95th percentile of the merge heights those randomized
+copies produce. It uses `rng.permuted(A, axis=1)`, which sidesteps the trap in the older
+notebook copies — `df.values[i, :] = shuffle(...)` can silently no-op under pandas
+copy-on-write, and the "null" then *is* the observed data, so the cutoff certifies whatever
+it is given. Two tests pin that specifically.
+
+`fcluster` and `cophenet` appear nowhere else in this repo; the prior art only ever drew
+the cutoff line, never cut the tree with it.
+
+### Showing where a combination sits
+
+`plot_reference_dendrogram(clustering, highlight=...)` takes one combination or several as
+`{label: refs}`, given as names or as column indices — so a NaN-padded row of
+`results['ref_indices']` can be passed through unchanged. Per group it shades the smallest
+subtree containing all of that combination's references and brackets it at the height that
+subtree merges. That height is the whole point: near zero means the combination came out of
+one cluster, at the root means it spans the reference set.
+
+Mechanics worth recording, all verified against scipy rather than assumed:
+
+- `orientation='left'` inverts the x axis (distance) and puts the leaves on y at
+  `10 * position + 5`; the leaf labels sit *outside* the axes on the right, so highlight
+  markers go inside via a blended transform.
+- A subtree's leaves are always contiguous in drawn order, so the shading is one `axhspan`.
+- scipy sizes the x axis from the root height alone, so a cutoff above the root would be
+  drawn off-axes — the limits are recomputed from both before anything is added.
+- The MRCA is found by unioning leaf sets and taking the smallest containing node, not by
+  scanning heights, which would assume a monotonic linkage the `method` parameter permits
+  callers to break.
+
+### Which distance: correlation or cosine
+
+A study in the style of the interpolation comparison, with a **Findings** cell. One design
+matrix, one linkage method, the same randomized copies behind each cutoff — asserted, not
+assumed, via a digest of the first permutation — and the same combinations located in both
+trees.
+
+The result is a split verdict. The two metrics agree almost perfectly on *neighbors*
+(Spearman 0.991 over 276 pairs; one reference of 24 changes nearest neighbor) and disagree
+on *where the tree is cut* (adjusted Rand 0.31): correlation isolates the five sulfides and
+arsenides, cosine splits 14/10 along oxidation state, which is the chemically meaningful
+line. It changes one reading — the best M=2 subset spans the root under correlation but
+sits inside a single significant cluster under cosine, the difference between "two distinct
+components" and "this pair may be partly interchangeable". Correlation stays the default
+for continuity with the package and because its tree is the more faithful summary of its
+own distances (cophenetic 0.901 vs 0.841); the recommendation is to read the cosine tree
+alongside it whenever a selection falls below the cutoff.
+
+### The trees now live with the fits
+
+- `plot_ref_subsets_summary` draws both trees, unhighlighted, as its first figure — the
+  reference pool as context for a section that covers every combination at once.
+- `plot_bootstrap_summary` marks *that* combination in both trees.
+- `do_fits_and_plot_summaries` clusters once per metric and passes a `{metric: clustering}`
+  dict to both, so the 1,000-permutation test is not repeated on each of nine calls, and
+  one place fixes the seed.
+- `plot_reference_dendrogram` gained `legend_loc`, because its default legend hangs below
+  the axes and lands on the next row when the panel is embedded.
+
+**`plot_bootstrap_summary` is now one figure per row rather than one gridspec.** A shared
+grid forces every row onto the same column edges, which split a two-panel row at
+`n_cols // 2` — lopsided whenever `n_cols` is odd, so a two-reference fit got a 1:2 split
+between its two trees — and left the per-reference panels narrow with wide gutters. Each
+row now sizes its own panels; the rows share a width so they still read as one unit, and
+the coefficient histograms and violins keep the same column count so a reference's violin
+stays under its histogram.
+
+### Order, and prose
+
+The clustering section moved up to sit immediately after the reference interpolation that
+builds the matrix it clusters; the highlighted demo and the metric study moved to just
+after the fits — the earliest point where the selected subsets exist. Four cross-references
+went stale in the move and were repaired, and the overview cell had been announcing "three
+sections examine choices the pipeline makes" while listing three of what are now four.
+
+Separately, every use of "null" as bare jargon was expanded for readers who do not already
+know the method: the term is now defined once where the null model is built, and figures
+say "tighter than 95% of merges from 1000 randomized copies" rather than "95th percentile
+of the null merges".
+
+### Notes
+
+- 12 in-notebook tests, run by an explicit list rather than a `globals()` scan, which would
+  re-run the earlier suites and misreport the count.
+- The permutation test is cheap — 1,000 replicates in about 0.1 s at this size — so the
+  clustering is not worth handing to `run_arms`.
+- The cutoff is conservative on this data: 22 of 23 merges fall below it, leaving two
+  clusters. It answers "is this grouping more than an accident", not "where does one group
+  end"; finer structure has to be read off merge heights. Whether the default percentile
+  should drop is still open.
+- Verified by executing the notebook end to end (`jupyter nbconvert --execute`) after each
+  change, not by spot checks; `nbstripout` already strips outputs at commit, so the
+  figures live only in the working copy.
 
 ---
 
