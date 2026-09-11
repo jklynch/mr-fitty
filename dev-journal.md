@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-11 19:51 EDT — `plot_bootstrap_summary` reports medians, and hands back its figures](#2026-09-11-1951-edt--plot_bootstrap_summary-reports-medians-and-hands-back-its-figures)
 - [2026-09-11 15:30 EDT — a fit file now says which mrfitty wrote it, and when](#2026-09-11-1530-edt--a-fit-file-now-says-which-mrfitty-wrote-it-and-when)
 - [2026-09-08 17:12 EDT — a fit in one file, and a table you can ask questions of](#2026-09-08-1712-edt--a-fit-in-one-file-and-a-table-you-can-ask-questions-of)
 - [2026-09-08 15:01 EDT — the cluster cutoff is coarse because the references are one family](#2026-09-08-1501-edt--the-cluster-cutoff-is-coarse-because-the-references-are-one-family)
@@ -24,6 +25,61 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-11 19:51 EDT — `plot_bootstrap_summary` reports medians, and hands back its figures
+
+Three changes to one function in `notebooks/moving_block_holdout_bootstrap.ipynb`. The first
+changes what the figures say; the second changes how they are used.
+
+### The blue marker is now the median
+
+Every bootstrap distribution in these figures was summarized by its mean — a blue dashed line
+on each histogram, a blue diamond on each violin. All of them are medians now.
+
+The mean was the wrong statistic for both distributions on the figure, for the same reason in
+each case: they are bounded below and lean right, so the mean sits above the bulk of the draws
+and reports a typical value the distribution rarely takes. The prediction errors are RMSEs, so
+zero is a hard floor and the tail runs upward. The coefficients pile up *against* zero, because
+the fit is non-negative least squares and a reference the fit does not want is pushed to exactly
+zero rather than to a small negative number — so a reference that the bootstrap zeroes out in
+most draws and gives real weight in a few gets a mean that sits well above the zero it usually
+takes.
+
+The other reason is that the median is what the combination search already ranks on — the
+"best" subset is the one with the lowest median prediction error, `median_pe` is the column
+written to the Parquet file, and `plot_descending_median_pe` plots medians. The blue marker was
+the one place reporting something else. It is now the same statistic that chose the combination
+the figure is about.
+
+One mean stays: `rmse = np.sqrt(np.mean(residuals ** 2))`. That mean is the definition of RMSE,
+not a summary of a bootstrap distribution, and the marker it feeds is labeled `RMSE=`. It is
+commented as such so the next reader does not tidy it.
+
+### The function returns figures instead of showing them
+
+`plot_bootstrap_summary` called `plt.show()` four times, so drawing was all it could do. It now
+returns its figures as a tuple in reading order — the fit, the reference trees, the residual
+diagnostics, the coefficient histograms, the coefficient violins — four of them, or five when
+`clusterings` is given. Callers do `for fig in plot_bootstrap_summary(...): display(fig)`, which
+is what both of them now do.
+
+Each figure is closed with `plt.close` before being returned, and that is load-bearing rather
+than tidiness: the inline backend draws every figure still open at the end of a cell, so a
+returned-but-open figure appears twice, once from that flush and once from the caller. Closing
+discards nothing — a closed figure still renders when displayed, saved, or edited further.
+
+The re-run confirms the arithmetic: the single-fit cell emits 4 figures, and the cell running
+the full search emits 48 — 3 from `plot_ref_subsets_summary` plus 9 combinations × 5 — all 48
+distinct by content hash, so nothing is drawn twice.
+
+### Docstring
+
+Parameters and Returns sections, numpydoc style, matching `write_fit_results`. Shapes for every
+array, `bootstrap_coefs` noted as ordered to match `ref_names` and `coef`, and the `fitted - b`
+residual convention spelled out. The existing prose about why each row is its own figure is
+kept above them.
 
 ---
 
