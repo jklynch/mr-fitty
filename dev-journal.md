@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-11 15:30 EDT — a fit file now says which mrfitty wrote it, and when](#2026-09-11-1530-edt--a-fit-file-now-says-which-mrfitty-wrote-it-and-when)
 - [2026-09-08 17:12 EDT — a fit in one file, and a table you can ask questions of](#2026-09-08-1712-edt--a-fit-in-one-file-and-a-table-you-can-ask-questions-of)
 - [2026-09-08 15:01 EDT — the cluster cutoff is coarse because the references are one family](#2026-09-08-1501-edt--the-cluster-cutoff-is-coarse-because-the-references-are-one-family)
 - [2026-09-08 11:11 EDT — reference clustering, and the trees folded into the fit summaries](#2026-09-08-1111-edt--reference-clustering-and-the-trees-folded-into-the-fit-summaries)
@@ -23,6 +24,55 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-11 15:30 EDT — a fit file now says which mrfitty wrote it, and when
+
+The Parquet file from the last entry recorded everything about the fit and nothing about the
+run that produced it. Open one six months from now and it cannot tell you whether its numbers
+came from the code you have checked out today. Two fields in the file's key-value metadata fix
+that:
+
+- **`mrfitty_version`** — `mrfitty.__version__`, the versioneer string, so the entry is a
+  commit and not just a release: `0.14.0.post68.dev0+g37574c4`. That is what tells a reader
+  whether a file predates a change in how the prediction errors were computed.
+- **`written_at`** — `datetime.now(timezone.utc).isoformat()`. UTC with an explicit offset, so
+  the timestamp means the same thing to a reader in another timezone and sorts as text.
+
+Both ride in the same JSON metadata document as the rest of the provenance, so reading them
+still touches no data — not one row, not one column. `read_fit_results` returns them alongside
+the seed and block length, and query 1 in the notebook's "six things the file answers" cell
+prints them.
+
+### Old files still open
+
+`RESULTS_SCHEMA_VERSION` goes 1 → 2, and the reader gained a separate
+`READABLE_SCHEMA_VERSIONS = (1, 2)`. The writer only ever writes the current version; the
+reader accepts every version in that tuple, so a file written before these two fields existed
+still opens and the fields come back as `None` — *this file does not say*, rather than a
+`KeyError` or a refusal. The returned dict has the same keys at every version, which is the
+point: a caller reads `mrfitty_version` without first asking what version the file is.
+
+Refusal is kept for the case that deserves it. A version outside the tuple is one this code
+cannot reconstruct, not one missing a label, and it still raises.
+
+### Tests
+
+Three, all in the same cell, nine there now and all passing:
+
+- `test_the_file_says_what_wrote_it_and_when` — the version matches the running package, and
+  the timestamp is parsed with `fromisoformat` rather than compared as text, so a malformed
+  one fails here rather than in whatever reads the file later. It checks the parsed time
+  carries a `tzinfo` and falls between the two clock readings that bracket the write.
+- `test_a_version_1_file_still_reads` — a version 1 file is manufactured by `_rewrite_metadata`,
+  which copies a results file with its metadata document edited and the table untouched, so
+  what the reader sees differs from a current file exactly where a real old file would. Asserts
+  everything version 1 carried round-trips unchanged and both new fields come back `None`.
+- `test_an_unreadable_schema_version_is_still_refused` — the same helper, stamped one past the
+  highest readable version.
+
+All in `notebooks/moving_block_holdout_bootstrap.ipynb`.
 
 ---
 
