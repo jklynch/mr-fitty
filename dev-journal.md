@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-12 15:50 EDT — subsets that tie the best one, and what "tie" has to mean](#2026-09-12-1550-edt--subsets-that-tie-the-best-one-and-what-tie-has-to-mean)
 - [2026-09-11 21:21 EDT — two coverage rows were one plot, and the block structure figure is returned](#2026-09-11-2121-edt--two-coverage-rows-were-one-plot-and-the-block-structure-figure-is-returned)
 - [2026-09-11 19:51 EDT — `plot_bootstrap_summary` reports medians, and hands back its figures](#2026-09-11-1951-edt--plot_bootstrap_summary-reports-medians-and-hands-back-its-figures)
 - [2026-09-11 15:30 EDT — a fit file now says which mrfitty wrote it, and when](#2026-09-11-1530-edt--a-fit-file-now-says-which-mrfitty-wrote-it-and-when)
@@ -26,6 +27,108 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-12 15:50 EDT — subsets that tie the best one, and what "tie" has to mean
+
+`plot_best_subset_bootstrap_summaries` ranks reference subsets by median holdout prediction
+error and labels the top three 1st, 2nd and 3rd best. That is a point estimate and says
+nothing about whether the gaps are real. `notebooks/moving_block_holdout_bootstrap.ipynb`
+gains `plot_best_peci_subset_bootstrap_summaries`, which reports the subsets whose prediction
+error cannot be distinguished from the lowest instead, and two studies that had to be run
+before it could be written.
+
+### The comparison is paired, and that is the whole reason it works
+
+`do_ref_subsets_moving_block_holdout_bootstrap` calls `select_holdout_blocks_fn` once and
+scores every combination on those draws, so on iteration k every subset predicted the same
+held-out energies. `bootstrap_pes[i] - bootstrap_pes[best]` is therefore a paired difference:
+an unlucky holdout that lands on the whiteline hurts both subsets at once and cancels.
+
+Comparing each subset's own interval against the best subset's interval for overlap throws
+that away, and on this data it would call nearly everything tied. Two subsets can have
+thoroughly overlapping intervals while one loses on every single iteration.
+`test_peci_paired_comparison_is_sharper_than_overlapping_intervals` is that construction.
+
+### Which interval estimator: they agree, but one of them often returns nothing
+
+Three things in this repository are called a 95% CI — BCa on the median
+(`mrfitty/prediction_error_fit.py`), raw percentiles of the draws
+(`mrfitty/bootstrap_validation_fit.py`), and the percentile bootstrap of the median
+(`bootstrap_ci`, already in the notebook for the v1–v5 comparison). The new section measures
+all three against a median known exactly, resampling an observed 1,000-draw array as its own
+population so the real right-skewed shape is preserved and nothing has to be assumed.
+
+They agree: intervals differ in the fourth significant figure, widths to about 1%, and no
+tied/not-tied verdict changes because of the estimator. Coverage is 94–95% for the percentile
+bootstrap and 95–96% for the order statistic, both inside the ±1% noise of a 500-replicate
+estimate.
+
+`scipy.stats.bootstrap` returned NaN on 5.6% of the prediction error arrays and 16.6% of the
+paired differences. BCa estimates an acceleration constant by jackknifing, and that estimate
+divides by zero when the jackknife values are all equal. A bootstrap prediction error array is
+full of ties — each entry is an RMSE over a resampled set of held-out points — so the median
+often does not move when one point is dropped. The degenerate case is the best subset against
+itself, a column of exact zeros, which fails every time; `peci_tie_table` special-cases that
+comparison rather than trusting any estimator with it.
+
+So the choice came down to cost, and the order statistic is about ten thousand times cheaper
+for the same answer. It is the default.
+
+### The rule that decides ties was the real question
+
+Putting a confidence interval on the median paired difference — the obvious reading of
+"compare the prediction error confidence intervals", and what
+`PredictionErrorFitTask.get_best_ci_component_count` does for component counts — does not
+work here. Its width falls as `1 / sqrt(n_bootstrap)`, so the tie set shrinks as the bootstrap
+runs longer while the data behind it never changes:
+
+| n_bootstrap | 50 | 100 | 250 | 500 | 1000 |
+|---|---|---|---|---|---|
+| CI on the median difference (M=3) | 3 | 2 | 1 | 1 | 1 |
+| middle 95% of the differences (M=3) | 12 | 14 | 6 | 6 | 6 |
+
+At 1,000 iterations it left exactly one subset at every subset size, which reduces the new
+function to what the old one already reported. Its answer is partly a statement about a knob
+the analyst set.
+
+Bracketing the middle 95% of the differences themselves asks instead how often the two
+subsets change places. That spread is a property of the spectrum and the references, it does
+not move with the iteration count, and on the same fit it gives tie sets of 2, 9 and 6.
+`tie_by_paired_distribution` is the default; `tie_by_paired_median_ci` is one argument away
+and kept, because its behavior here is a reason to look again at the component count
+selection in `prediction_error_fit.py`, which has the same dependence on an iteration count.
+
+The default is lenient — a subset that loses 90% of the draws still straddles zero — so
+`peci_tie_table` also records `d_win_rate`, the fraction of iterations a subset beat the best
+one, which is the same comparison with no interval convention in the way.
+
+### Ranking by median prediction error is not ranking head to head
+
+The `d_win_rate` column made an inversion visible immediately. At M=2 the subset ranked third
+by median prediction error has a *negative* median paired difference and predicts the held-out
+energies better than the nominal winner on 64% of iterations. The two orderings are different
+questions, and only the paired comparison shows it.
+
+### Shape of the new code
+
+`peci_tie_table` is pure computation and returns one row per combination, following the
+separation `best_subsets_by_size` already keeps. `plot_best_peci_subset_bootstrap_summaries`
+takes that table as an argument rather than computing it, and returns its figures closed, the
+treatment `plot_bootstrap_summary` and `plot_holdout_block_structure` already got.
+`max_subsets_per_size` is the only thing bounding the output: a tie set can hold hundreds of
+subsets and each costs four or five figures.
+
+Nine tests, run by a driver at the foot of the cell. Two of them are arguments rather than
+numbers — that pairing beats overlap, and that one tie rule sharpens with iterations while the
+other does not. The second asserts interval *widths*, not tie counts: a verdict flips only
+when the width crosses the offset, and where that happens for any one draw is luck.
+
+Verified against a real 92-combination fit from the arsenic sample data rather than the full
+2,324-combination search, which is a long job; the counts quoted in the Findings cells are
+stated as trends for that reason. `pytest mrfitty/tests/` is unchanged at 58 passed, 1
+skipped.
 
 ---
 
