@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-11 21:21 EDT — two coverage rows were one plot, and the block structure figure is returned](#2026-09-11-2121-edt--two-coverage-rows-were-one-plot-and-the-block-structure-figure-is-returned)
 - [2026-09-11 19:51 EDT — `plot_bootstrap_summary` reports medians, and hands back its figures](#2026-09-11-1951-edt--plot_bootstrap_summary-reports-medians-and-hands-back-its-figures)
 - [2026-09-11 15:30 EDT — a fit file now says which mrfitty wrote it, and when](#2026-09-11-1530-edt--a-fit-file-now-says-which-mrfitty-wrote-it-and-when)
 - [2026-09-08 17:12 EDT — a fit in one file, and a table you can ask questions of](#2026-09-08-1712-edt--a-fit-in-one-file-and-a-table-you-can-ask-questions-of)
@@ -25,6 +26,69 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-11 21:21 EDT — two coverage rows were one plot, and the block structure figure is returned
+
+`plot_holdout_block_structure` in `notebooks/moving_block_holdout_bootstrap.ipynb` had nine
+rows; it has eight, because two of them were drawing the same quantity.
+
+### The same curve twice
+
+Row 3 was `plot_holdout_frequency_marginal`: the fraction of iterations that held out each
+position, against energy. Row 4 was `plot_coverage_relative_to_uniform`, whose holdout curve
+was that same array divided by its mean and smoothed over one block length, drawn against the
+same energy axis directly beneath it. Two rows, one quantity, differing in a constant scale
+factor and a smoothing window.
+
+They are now one row. What each had that the other did not is kept:
+
+- **The absolute scale.** Row 4 could only say "1.3× as often as uniform"; row 3 could say
+  "held out in 39% of iterations". A `secondary_yaxis` on the right restates the left axis in
+  absolute terms, so the panel answers *how evenly* and *how much* at once. It takes forward
+  and inverse transforms rather than fixed limits, so it follows the shared y-limits without
+  being told about them. It calibrates the holdout curve only — the resample curve is divided
+  by its own mean, which is a count of block starts and not a fraction of anything.
+- **The unsmoothed curve.** The merged panel draws the holdout frequency per position, as row
+  3 did. The resample curve is still smoothed, because unsmoothed it is Poisson noise from
+  tens of thousands of draws with no readable structure, but the holdout curve is not: its
+  wobble is mostly the sampling noise of `n_bootstrap` Bernoulli draws per position, and that
+  noise is the scale any apparent structure has to be judged against. Smoothing it away
+  invites reading a version as flat when it is merely quiet. Only one of the two curves is
+  smoothed, so the title now says which.
+- **The uniformity statistic.** The mean and std of the unsmoothed frequency are in the
+  legend. That std is what the v1–v5 results table is built from.
+
+Dropping the smoothed holdout curve meant the shared y-limits had to be recomputed from the
+unsmoothed one. They were taken over the smoothed curve, which is narrower, and left as they
+were would have clipped what the panel actually draws.
+
+The removal is not only a tidier figure: v1's high-energy end is a step down to zero, and the
+smoothed curve had been drawing it as a gentle ramp.
+
+### The figure is returned, not shown
+
+`plot_holdout_block_structure` ended in `plt.show()`. It now returns the one figure it builds,
+closed with `plt.close` first — the inline backend draws every figure still open at the end of
+a cell, so a returned-but-open figure appears twice, once from that flush and once from the
+caller. The caller is `display(plot_holdout_block_structure(...))`. Same treatment
+`plot_bootstrap_summary` got in the previous entry.
+
+### Two layout repairs the new axis forced
+
+Neither was optional; the merged row is unreadable without them.
+
+- `wspace` 0.25 → 0.42. The right-hand axis label ran into the next column's left label.
+- The right margin was a flat `right=0.99`, which left the rightmost column's tick labels,
+  axis label and title off the edge of the figure once that column had an axis on its right.
+  It is now `1 - 0.75 / figure_width`, in inches like the top and bottom margins, so it holds
+  as columns are added.
+
+Both were found by rendering the figure and looking at it, not by reading the code. Executing
+the whole notebook takes about twelve minutes; the figure alone, from a script that runs the
+cells it depends on, takes twenty seconds, which is what made looking twice cheap enough to
+do.
 
 ---
 
