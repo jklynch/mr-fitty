@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-12 19:36 EDT — the notebook has sections you can navigate to](#2026-09-12-1936-edt--the-notebook-has-sections-you-can-navigate-to)
 - [2026-09-12 18:34 EDT — what prediction error is actually measuring, and a correction](#2026-09-12-1834-edt--what-prediction-error-is-actually-measuring-and-a-correction)
 - [2026-09-12 15:50 EDT — subsets that tie the best one, and what "tie" has to mean](#2026-09-12-1550-edt--subsets-that-tie-the-best-one-and-what-tie-has-to-mean)
 - [2026-09-11 21:21 EDT — two coverage rows were one plot, and the block structure figure is returned](#2026-09-11-2121-edt--two-coverage-rows-were-one-plot-and-the-block-structure-figure-is-returned)
@@ -28,6 +29,62 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-12 19:36 EDT — the notebook has sections you can navigate to
+
+Finding the start of anything in `notebooks/moving_block_holdout_bootstrap.ipynb` meant
+scrolling. The eight studies each had a `##` heading, but the pipeline stages had none — they
+were runs of code cells with nothing marking where one ended and the next began — so there was
+nothing for the introduction to link to even if it had wanted to.
+
+### Five headings, then the links
+
+The pipeline stages now have headings, each sitting immediately before the code it introduces:
+reading the spectra, building the design matrix, fitting and what the residuals look like, the
+moving-block holdout bootstrap, and searching the combinations. They double as link targets and
+as the visible section starts the notebook was missing, and they populate the JupyterLab
+table-of-contents panel, which makes the sections reachable without going through the
+introduction at all.
+
+Three existing headings changed level so the outline is flat and every section is a sibling of
+every other. "Tests for `interpolate_references_at_sample_energies`" dropped to `###`, because
+it is part of the design-matrix section rather than a peer of it. "Choosing the block length
+from the data" was promoted to `##`, because it is a study in its own right and had been
+sitting as a subsection of the v1–v5 work.
+
+The introduction's numbered pipeline list and its bulleted study list are now links, sixteen of
+them.
+
+### Explicit anchors, not heading slugs
+
+Each link points at an `<a id="..."></a>` placed before the heading rather than at an
+auto-generated heading slug. The slugs differ between JupyterLab versions, nbconvert and
+GitHub; an anchor written down is the same everywhere. Verified by rendering the whole notebook
+with `jupyter nbconvert --to html` and checking every `href="#..."` against the ids in the
+output: sixteen of sixteen resolve, no duplicates, no anchors left unlinked.
+
+### Two things the layout forced
+
+Steps 4 and 5 of the pipeline share one section, because they are the same body of code. And
+the helpers step 3 uses — `fit_nnls`, `fit_ols` — are defined early, with the reading, so the
+link for step 3 jumps backwards relative to step 2. That is the notebook defining things before
+they are needed rather than in the order the introduction describes them, which is the right
+order for a notebook to run in; rather than reorganize around the prose, a line under "The
+pipeline" now says so.
+
+`## Saving a fit: results to one file, and back` was in neither list, so it had no route in at
+all. It has an anchor and a one-sentence pointer after the studies list now.
+
+### Also, a title that ran off its axes
+
+`plot_holdout_block_structure`'s coverage row titled itself "Holdout vs. resample coverage
+(resample smoothed over N points)" on one line, which overran the panel and collided with the
+neighbouring column. It breaks after "coverage" now. Checked by rendering the figure rather
+than by reading the code, since the question was whether the taller title would eat into the
+row spacing that cell is careful about: it does not, there is about an inch of clearance
+between it and the legend strip of the raster row above.
 
 ---
 
