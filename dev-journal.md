@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-12 18:34 EDT — what prediction error is actually measuring, and a correction](#2026-09-12-1834-edt--what-prediction-error-is-actually-measuring-and-a-correction)
 - [2026-09-12 15:50 EDT — subsets that tie the best one, and what "tie" has to mean](#2026-09-12-1550-edt--subsets-that-tie-the-best-one-and-what-tie-has-to-mean)
 - [2026-09-11 21:21 EDT — two coverage rows were one plot, and the block structure figure is returned](#2026-09-11-2121-edt--two-coverage-rows-were-one-plot-and-the-block-structure-figure-is-returned)
 - [2026-09-11 19:51 EDT — `plot_bootstrap_summary` reports medians, and hands back its figures](#2026-09-11-1951-edt--plot_bootstrap_summary-reports-medians-and-hands-back-its-figures)
@@ -27,6 +28,119 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-12 18:34 EDT — what prediction error is actually measuring, and a correction
+
+Four pieces of work on `notebooks/moving_block_holdout_bootstrap.ipynb`, all following from
+one question the previous entry left open.
+
+### A correction to the previous entry
+
+That entry reported an inversion: at M=2 a subset ranked third by median prediction error
+beat the nominal winner on 64% of iterations. That is real, but it is not the pipeline — it
+came from a seven-reference pool used for quick iteration, and I reported it without checking
+it at scale. On the full 24-reference search there are **zero** such inversions at any subset
+size (0 of 23, 0 of 275, 0 of 2023), and median prediction error and mean prediction error
+pick the same winner everywhere.
+
+The mechanism behind it is real, though, and the rest of this entry is what it turned out to
+be.
+
+### Prediction error is mostly one binary event
+
+The measured spectrum peaks at 11869.7 eV, and the whiteline — taken as the full width at half
+maximum around that peak — is 11 of 198 energies. The moving-block holdout removes about 35%
+of the spectrum in blocks of 10 to 14 points, so one block covers the whole window, and about
+a third of the iterations hold out most of it.
+
+Knowing only whether that happened accounts for a median of **65%** of the variance in a
+subset's prediction error, and for nearly every combination in the search rather than a few
+unusual ones. That is why the prediction error distributions have two humps with a gap
+between them, and why a median taken across both is a fragile thing to rank on: it lands in
+the gap, where almost no iteration actually is.
+
+New in the notebook: `whiteline_window`, which derives the window from the measured spectrum
+rather than hardcoding an energy range so it works on an edge other than arsenic K;
+`holdout_regimes`, which splits the iterations; and `regime_variance_explained`. Given
+`regimes`, `peci_tie_table` now also reports `pe_median_held_out`, `pe_median_retained`,
+`d_win_rate_held_out` and `d_win_rate_retained`, which makes visible what the pooled numbers
+hide. At M=1 the anchor is beaten by one subset when the whiteline is held out and by a
+different one when it is retained, and by neither overall.
+
+### The tie set is anchored on a rank now
+
+`peci_tie_table` anchored on the lowest median prediction error, which is exactly the
+statistic the above says is fragile. It now anchors on `subset_mean_ranks`: on every iteration
+all the subsets faced the same held-out energies, so they can be put in order, and a subset's
+mean rank is where it usually lands.
+
+The argument for the change is not that it moves the answer — on this fit the two anchors pick
+the same subset at every size, and they agree at Spearman 0.994. It is that medians do not
+subtract. `median(A - B)` is not `median(A) - median(B)`, so the old anchor could name a subset
+that the paired comparison deciding ties said was behind; a mean rank is an average of
+within-iteration comparisons and cannot disagree with them that way. The reported order does
+change: at M=2 the fourth row now has a lower median prediction error than the second.
+
+### Is holding out the whole whiteline a test worth running? No
+
+The open question from the regime section, answered by building 96 spectra whose answer is
+known — three real references in known proportions, plus noise block-resampled from a real
+fit's residuals, which carries the observed lag-1 correlation of 0.46 where an AR(1) fitted to
+the same residuals decays far too fast.
+
+Each spectrum is searched once and that one search is scored five ways, differing only in
+which iterations the scoring may look at. Two of the five are drawn down at random to exactly
+the number of iterations the held-out scope has, because that scope sees only a third of the
+run and comparing it against the full one would confound what those iterations contain with
+how many there are. That control turned out to matter: before adding it, the held-out scope's
+bad tail looked like it might be nothing but the smaller sample.
+
+- It does not find the right answer more often. Naming all three references correctly happens
+  40 to 46 percent of the time in every scope, and 96 spectra cannot tell them apart.
+- It misses by much more when it misses. Against the same number of ordinary iterations, the
+  true combination is in the top five for 78% of spectra against 90%; the two disagree on 15
+  spectra and 13 of those go against the held-out scope, which is a one-in-a-hundred accident
+  if they were equally good. On its worst tenth it buries the truth around 13th against about
+  6th, and at its very worst 143rd of 2,024.
+- It is perfectly self-consistent while being wrong. Split its iterations in half and the two
+  halves rank the combinations almost identically — as reproducible as any other scope. It
+  reliably produces the same ordering; that ordering is just further from the truth.
+
+That last point is the one worth keeping. "I got the same answer when I ran it again" is the
+usual reassurance that a number means something, and here it does not distinguish the good
+scope from the bad one.
+
+The explanation is that removing the whole whiteline is not the gap-filling cross-validation
+is built for. It asks a subset to reconstruct a feature it cannot see, which rewards having
+roughly the right peak shape rather than actually being present. Nothing in the pipeline
+changes as a result — those iterations are a third of the draws and are outvoted — but the
+held-out columns are a diagnostic, not a stricter examiner, and should not be used as a
+tiebreaker.
+
+### The fit file carries the holdout masks
+
+Which iterations held out the whiteline is a property of the draws and of nothing else in the
+file, so a reloaded fit could not be split into regimes. `write_fit_results` now stores them
+as a `holdout_mask` column of booleans, one row per bootstrap iteration: 8 kB for a thousand
+iterations over two hundred energies, because Parquet stores BOOLEAN as bits already and zstd
+takes it from there. An earlier attempt packed the bits by hand with `np.packbits` into the
+metadata blob and came out three times larger.
+
+The cost is that the table now holds two kinds of row. The masks are per iteration and
+everything else is per combination, and Parquet columns in one table share a length, so the
+table is as long as whichever there are more of and each column is null past its own end. In a
+real search there are 2,324 combinations against 1,000 iterations, so only the mask column is
+padded; a search over a handful of references inverts that. A query over combinations wants
+`WHERE M IS NOT NULL`, and the reader trims using the counts already in the metadata.
+
+At the same time the schema versioning came out. This branch has never been released, so there
+are no older files to read and no reason to carry a table of readable versions, a
+`_read_holdout_masks` that tolerated a missing column, or `.get()` fallbacks for fields that
+are always written. One `RESULTS_SCHEMA_VERSION = 1`, anything else refused. `holdout_masks`
+is required in the fit summary rather than optional, which is the same reasoning: the optional
+path only described fits made before the masks were kept.
 
 ---
 
