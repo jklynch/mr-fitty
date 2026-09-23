@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-23 19:24 EDT — which references the tie set actually uses](#2026-09-23-1924-edt--which-references-the-tie-set-actually-uses)
 - [2026-09-12 19:36 EDT — the notebook has sections you can navigate to](#2026-09-12-1936-edt--the-notebook-has-sections-you-can-navigate-to)
 - [2026-09-12 18:34 EDT — what prediction error is actually measuring, and a correction](#2026-09-12-1834-edt--what-prediction-error-is-actually-measuring-and-a-correction)
 - [2026-09-12 15:50 EDT — subsets that tie the best one, and what "tie" has to mean](#2026-09-12-1550-edt--subsets-that-tie-the-best-one-and-what-tie-has-to-mean)
@@ -29,6 +30,128 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-23 19:24 EDT — which references the tie set actually uses
+
+The tie-structure figure now comes with the reference trees, shaded by how much of the tie set
+uses each reference, and `plot_reference_dendrogram` has been split into three functions along
+the two ways it was being called.
+
+### Membership said nothing; frequency says a lot
+
+The first version marked every reference appearing in any tied subset — the union. On the real
+24-reference fit that is *every* reference at M=2 and M=3: 102 and 136 tied subsets between
+them use the whole pool, so both trees came out entirely red with the enclosing-subtree bracket
+at the root. Truthful and useless.
+
+The shares are steeply uneven, which is where the information turned out to be. At M=3,
+`As_pyrite_A_Foster_sln.e` is in 82% of the 136 tied subsets, orpiment in 30%, and the tail sits
+around 4% — whatever else varies, the data insists on that one reference. At M=2 nothing exceeds
+23%, which is a finding of the opposite kind: the tie set has no favourites. `tied_subset_references`
+became `tied_subset_reference_shares` accordingly.
+
+Three choices in how that is drawn, none of them obvious:
+
+- **The colour scale is absolute, 0 to 100%, not rescaled per figure.** A shade means the same
+  thing at M=1, M=2 and M=3, which is what makes the contrast between them readable. The cost is
+  that M=2 comes out uniformly pale — correctly, since nothing dominates, and the legend names
+  the maximum so it cannot be mistaken for a failed render.
+- **The ramp starts 45% into `Reds` rather than at white**, because these colours are also the
+  leaf label text and a near-zero weight rendered as white text is invisible.
+- **A reference in no tied subset is left out rather than recorded as zero**, so "not used" stays
+  distinguishable from "used rarely" — it is drawn plain and black.
+
+At M=1 the shares are all 12.5% by construction: each tied subset is one reference and they are
+all distinct, so colour degenerates to membership there. The useful content is still where those
+eight sit in each tree, which the two metrics disagree about — under correlation distance they
+enclose the whole tree, under cosine only 10 of 24 leaves, inside the cutoff.
+
+### The bars moved out of the tree, and the legend moved twice
+
+The bars started inside the axes at the right edge, lying over the terminal branches. They now
+sit in a gutter between the tree and the leaf labels, made by pushing the labels out with
+`tick_params(pad=...)`. Both measurements are in inches, and the bars grow from the axes edge so
+the column reads as a bar chart standing beside the leaves.
+
+One wrinkle is in a comment at the site: the bars are drawn in axes coordinates, so their length
+is converted from inches using the axes width, and `tight_layout` then narrows the axes to fit
+the labels the new padding pushed out — which shortens the bars with it. That errs safely, since
+the gutter is set in points and does not move, and the test asserts every bar starts at the axes
+edge and stops short of the labels.
+
+The legend went from the lower left to `loc='best'` to the upper left, in that order, because
+each position was wrong for a reason the previous one hid. Lower left was chosen when the cosine
+tree was the only one being drawn and lands squarely on the correlation tree's deepest cluster.
+`'best'` then put it over the leaf labels, because `'best'` counts only the branches and knows
+nothing about text drawn outside the axes. Upper left is fixed, and the comment says why it is
+not automatic.
+
+### Separate figures do not align on their own
+
+The trees began as a second row of the tie figure and moved to a figure of their own, so that
+the panel and the trees would line up. They did not. Each figure is laid out independently, and
+the trees keep a wide margin outside their axes for the labels and bars, so the plot boxes came
+out at 0.030–0.993 of the width for the panel against 0.007–0.817 for the trees.
+
+Measuring that was the useful step. Both figures are the same width, so a fraction is the same
+distance in either; after laying both out, `subplots_adjust` sets them to one span — the right
+edge from the trees, which are the ones with something outside the axes to make room for, and
+the left from whichever needs more, so the panel keeps room for its y axis labels. Both are now
+0.030–0.817, and a test asserts the edges agree so it cannot quietly regress.
+
+### `plot_reference_dendrogram` split three ways
+
+It had grown two unrelated annotation jobs bolted onto one tree-drawing routine. Now:
+
+- `plot_reference_dendrogram` — the tree alone. Keeps the name, so the two plain callers did not
+  have to change.
+- `plot_highlighted_reference_dendrogram` — combinations marked by membership, with the
+  enclosing-subtree bracket. Returns `(ax, groups)`.
+- `plot_weighted_reference_dendrogram` — the whole pool shaded by degree, with the gutter bars.
+
+The DRY pressure point was not the tree drawing, which is the obvious shared part, but the
+legend and the leaf label styling: both annotations contribute legend entries and both restyle
+tick labels, and each can only be applied once. So `_draw_reference_tree` returns a small record
+carrying `handles`, `labels` and `leaf_styles`, the annotations append to it, and
+`_finish_reference_tree` applies the lot. That also keeps the cutoff entry last in the legend,
+where it was, since it describes the tree rather than what is drawn on it. Each public function
+is three lines: draw, annotate, finish. The shared arguments are documented once, on the plain
+function, and the other two point at it.
+
+The check that mattered was not the test suite but re-rendering every affected figure and
+comparing the PNGs byte for byte against the pre-refactor versions — all identical, which is
+what a behaviour-preserving split should give. The first run of that check was a false pass: the
+throwaway render script still called the old API, raised `TypeError`, and because its stderr was
+redirected the stale PNGs sat there and compared equal. Worth remembering that a comparison
+against files a failed run did not overwrite proves nothing.
+
+### Where each change came from
+
+Asked for:
+
+- a row of correlation and cosine trees under the tie-structure panel, with the references from
+  the tied subsets coloured
+- colouring by how often each reference appears in the tie set
+- a title over the row of trees
+- the bars moved out of the tree, between it and the reference names
+- the legend moved off the branches, first to `'best'` and then to the upper left
+- `plot_reference_dendrogram` divided by its two kinds of use
+- the two rows made into separate figures
+
+Proposed here:
+
+- frequency instead of membership in the first place, after the union turned out to be the whole
+  pool at M=2 and M=3 — reported with the numbers rather than changed unilaterally, since it was
+  a change of meaning
+- `leaf_weights` as an argument to the dendrogram function rather than recolouring at the call
+  site, so how to draw on a tree stays with the tree
+- the absolute colour scale, the ramp floor, and omitting unused references
+- measuring the alignment and setting both figures to one span, since separate figures alone did
+  not deliver it
+- keeping the plain function's existing name to limit churn, and byte-comparing rendered output
+  to check the split changed nothing
 
 ---
 
