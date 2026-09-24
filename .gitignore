@@ -73,3 +73,7 @@ docs/_build
 .vscode
 jupyter-lab-log.txt
 
+
+# notebook caches -- fit files are ~24 MB each, study summaries are regenerated on demand
+notebooks/fit_cache/
+notebooks/study_results/

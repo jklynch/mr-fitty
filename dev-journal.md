@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-24 00:54 EDT — the bootstrap notebook rewritten, and the window it was measuring was wrong](#2026-09-24-0054-edt--the-bootstrap-notebook-rewritten-and-the-window-it-was-measuring-was-wrong)
 - [2026-09-23 20:46 EDT — every figure says what drew it](#2026-09-23-2046-edt--every-figure-says-what-drew-it)
 - [2026-09-23 20:26 EDT — shorter holdout blocks help, for the wrong reason](#2026-09-23-2026-edt--shorter-holdout-blocks-help-for-the-wrong-reason)
 - [2026-09-23 19:24 EDT — which references the tie set actually uses](#2026-09-23-1924-edt--which-references-the-tie-set-actually-uses)
@@ -32,6 +33,174 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-24 00:54 EDT — the bootstrap notebook rewritten, and the window it was measuring was wrong
+
+`notebooks/moving_block_holdout_bootstrap.ipynb` had reached 129 cells and 11,025 lines: ten
+study sections, 219 functions, a quarter of the code arguing a question settled months ago, and
+one unknown spectrum analysed out of the sixteen available. It had stopped being a document and
+become a derivation history. It is now replaced by a rewrite of 78 cells and 6,751 lines, and
+the old file is kept verbatim as `moving_block_holdout_bootstrap_development.ipynb` with a
+banner naming the two things now known to be wrong in it.
+
+The rewrite was asked to do four things: shorten and restructure; give every study a synthetic
+arm with a known answer alongside the real one; analyse five unknowns rather than one; and add
+the study on separating resample length from holdout length. All four are done. Three of them
+turned up results the single-unknown, real-data-only version could not have produced.
+
+### The whiteline window was defined from the wrong thing
+
+This is the correction, and it invalidates a number quoted in two previous entries.
+
+`whiteline_window` took the argmax of the *unknown* and walked outward to half height. These
+spectra have two white lines — reduced arsenic near 11869.7 eV, arsenate near 11875.3 eV — so
+the argmax jumps between them depending on which is taller, and on a near-50/50 spectrum the
+walk never comes back down. Extending to five unknowns made that visible immediately:
+`Ott3_73_AsXANES_spot6_000` returned a 200-point window on a 198-point grid, and its own repeat
+scan `_001` — correlation 0.994 with it — returned 78. The window was not measuring the
+whiteline. On some spectra it was measuring the whole spectrum.
+
+The replacement derives the window from *where the references disagree*: the standard deviation
+across the design matrix rows, thresholded at half its maximum. That is the information the fit
+is actually using, it does not depend on which unknown is being fitted, and it returns a mask of
+two runs rather than one interval. For all five unknowns it gives 16 energies in two runs, at
+11867.6–11871.9 and 11873.6–11876.9 eV, the ±0.2 eV being each unknown's own measurement grid.
+The per-unknown two-peak heights survive as a reported diagnostic, where they separate the
+chemistry cleanly — 0.707/3.831 for the most arsenate-dominated spectrum against 2.510/1.108 for
+the most reduced.
+
+**What this changes:** any regime percentage quoted against the old window. The entry of
+2026-09-23 20:26 has a table of "window held out whole" by block length, and 2026-09-12 18:34
+quotes 13.9% at L = 10. Those were correct for the window as then defined; against the
+reference-derived window the primary unknown is mostly held out on 29.7% of iterations. The
+conclusions drawn in those entries do not depend on the number — the 2026-09-23 result is that
+the whiteline is *not* the mechanism, and it survives intact — but the percentages themselves
+should be read as belonging to the old definition.
+
+### Separating the resample length from the holdout length
+
+Two recorded results were in tension and could not be reconciled, because one number caused
+both: short blocks recover the true combination more often (53.7% at L = 3 against 48.7% at
+L = 10), and long blocks preserve residual autocorrelation better (error 0.075 at L = 10 against
+0.126 at L = 3). `select_holdout_blocks` used `block_length_min` for two different jobs — the
+length of the blocks held out, and the length of the blocks resampled to fill them. Nothing
+about the method requires that.
+
+It now takes `resample_block_length` separately, defaulting to `block_length_min` so nothing
+recorded moves. Four places used the old value: `n_blocks_needed`, `resample_block_starts`, the
+`valid_resample_starts` overlap test, and the returned length. The draws are verified identical
+to the old function draw-for-draw at three settings and pinned by mask digest.
+
+The sweep says each score tracks the length it should. Autocorrelation error is a property of
+the resample length and barely notices the holdout length — 0.154–0.160 at resample 4,
+0.115–0.124 at 10, 0.108–0.118 at 16, moving by less than 0.01 down any column. Recovery moves
+along the rows instead. A 256-replicate paired confirmation on the two pairs that matter:
+
+| | holdout 3, resample 10 | holdout 10, resample 10 |
+|---|---|---|
+| names the true combination | 53% | 45% |
+| median rank of the truth | 1 | 2 |
+| truth in the top 5 | 88.7% | 87.9% |
+
+Paired, the short holdout is right where the tuned pair is wrong 24 times and wrong where it is
+right 3 times — p = 5 × 10⁻⁵. Top five is level, so this is not finding combinations the other
+missed; it is separating the best from the near-best. The cost is autocorrelation error 0.124
+rather than 0.115 — a tenth of the gap that a tied short block would have forced (0.158), which
+is exactly why the old "use L = 3" result was not adopted.
+
+The constraint is availability. A resample block may not overlap the holdout, so it needs a
+clear run that long, and short holdout blocks chop the spectrum into short clear runs precisely
+when a long resample block needs a long one. Usable starts fall from 0.647 at (14, 4) to 0.189
+at (3, 16), and (3, 16) was the one pair of sixteen that passed a five-seed feasibility probe and
+then failed to draw at some replicate seeds. The sweep catches that per pair and drops it with a
+message; the draw function raises a `ValueError` naming both lengths rather than quietly
+returning fewer blocks. Feasibility is seed-dependent near the corner, and the code now says so
+instead of dying halfway through a sweep.
+
+### What five unknowns showed that one could not
+
+**The tuned block length ranges 8 to 32.** The development notebook validated L = 3–15 and found
+selection starting to move at 20. `Ott3_73_AsXANES_spot5_000` asks for 32 on a 248-point grid —
+an eighth of the spectrum per block. The shape of its estimate distribution is the tell: first
+percentile 1.3, tenth percentile 32, median 48. `choose_block_length` takes a low quantile on the
+argument that underfit combinations inflate the estimate and the low quantile reads the
+well-fitted ones. That argument needs most combinations to be well fitted. Here nine tenths of
+2,324 combinations report dependence longer than 32, so the quantile has nothing to select from.
+Nothing is hitting the ⌈n/3⌉ cap, so this is not saturation — it is the estimator correctly
+reporting that the reference pool does not span this sample. Left as a flagged finding rather
+than patched, because the informative response (treat a leap between low percentiles as a
+diagnostic about the chemistry) needs testing before it becomes a rule.
+
+**Three of five unknowns crown different winners in the two holdout regimes.** Rank correlation
+between regimes runs 0.77–0.96, so the regimes broadly agree on ordering and still disagree on
+first place three times out of five. A single prediction error averages two measurements of
+different things and can name a combination neither regime would name alone.
+
+### The synthetic arms earned their place
+
+Three studies got a known answer to check against, and two of them changed conclusion-grade
+facts that no amount of real data could have settled:
+
+- **BCa is the wrong interval for this.** On the paired difference — the quantity every tie rule
+  consumes — scipy's BCa covers 71.8% of a nominal 95% and refuses to produce an interval at all
+  on 23.8% of replicates. The cause is structural: paired differences are taken against a shared
+  set of holdout draws, so many iterations give *identical* differences, and BCa's jackknife
+  acceleration term is undefined when the jackknife replicates do not vary. The order statistic
+  covers 95.6% at the same width to within a fraction of a per cent.
+- **Cosine distance is wrong for reference clustering, provably.** With planted groups and
+  baseline offsets, correlation recovers the truth perfectly at every offset scale — 1.000 mean
+  *and* 1.000 worst case over 120 replicates — while cosine falls from 1.000 to 0.075, with
+  replicates scoring below zero. Adding a constant rotates a vector toward the all-ones
+  direction; correlation centres first and never sees it. On the real pool the two rank pairwise
+  distances almost identically (Spearman 0.991, one nearest-neighbour change of 24) and still
+  cluster differently (adjusted Rand 0.315), and cosine places the best M = 2 inside a single
+  cluster — which would have read as the fit leaning on near-duplicate references. Keeping
+  correlation is no longer a preference about which tree looks better.
+- **Holding out the window is a fair test.** Iterations that lose it recover the planted
+  combination 42.7% against 47.9% for those that keep it, 8 better / 4 worse paired, p = 0.39 —
+  no bias. What it costs is resolution below first place: at matched iteration count the truth
+  reaches the top five 75.0% against 90.6%, 2 better / 17 worse, p = 7 × 10⁻⁴. So the window is
+  where near-equal combinations separate, and the right response is to keep those iterations and
+  report the regime split, not to drop a third of the sample.
+
+The tie-rule comparison also settled a question that had been left open. The median-CI rule
+collapses to a unique winner by 500 draws (tie sets of 1 at M = 2 and M = 3), which is
+arithmetic rather than evidence — a CI on a median narrows like 1/√n, so the rule eventually
+resolves every pair and its tie set reports how long the bootstrap ran. The distribution rule
+asks for a fixed quantile of a fixed distribution, settles by 100 draws, and holds across a
+twentyfold range. Both defaults in `peci_tie_table` now have a reason behind them.
+
+### Caching, and what is not committed
+
+Each study writes one small Parquet summary to `notebooks/study_results/` through
+`cached_study(name, compute, recompute=False, **scale)`, stamping the scale parameters,
+`mrfitty_version` and `written_at` into the file's key-value metadata the way `write_fit_results`
+already does. Neither that directory nor `notebooks/fit_cache/` is committed — a fit file is
+about 24 MB and five unknowns would be 120 MB — so both are in `.gitignore`, which had no
+`notebooks/` entries before.
+
+That has a consequence the prose had to be written around: a fresh clone renders no tables until
+it has run, so every Findings section states its numbers in text rather than pointing at a table
+above it. That was already the habit; it is now a requirement.
+
+### Verification
+
+Every driver passes — 72 tests across the notebook, zero execution errors — and
+`pytest mrfitty/tests/` is unchanged at 58 passed, 1 skipped, confirming the package was not
+touched. The continuity check is the one that matters: on `OTT3_55_spot0` at the tuned block
+length the new notebook reproduces the recorded selections exactly (M = 1 → `7`, M = 2 → `1,2`,
+M = 3 → `0,11,19`) and the recorded tie sets of 8 / 102 / 136 under the distribution rule. The
+only divergence from the recorded results is the regime percentage, which is the window
+redefinition above and is expected.
+
+Two things to be straight about. The rewrite is 6,751 lines against a target of 5,000–5,500; a
+pass looking for dead code found 188 functions and nothing genuinely unreferenced, so the
+overshoot stands rather than being met by deleting working machinery. And the from-empty cache
+rebuild — delete `notebooks/study_results/` and confirm every study recomputes to within Monte
+Carlo noise — has not been run. It is about forty minutes plus refitting five unknowns, and it
+is the remaining item on the verification list.
 
 ---
 
