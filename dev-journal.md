@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-23 20:46 EDT — every figure says what drew it](#2026-09-23-2046-edt--every-figure-says-what-drew-it)
 - [2026-09-23 20:26 EDT — shorter holdout blocks help, for the wrong reason](#2026-09-23-2026-edt--shorter-holdout-blocks-help-for-the-wrong-reason)
 - [2026-09-23 19:24 EDT — which references the tie set actually uses](#2026-09-23-1924-edt--which-references-the-tie-set-actually-uses)
 - [2026-09-12 19:36 EDT — the notebook has sections you can navigate to](#2026-09-12-1936-edt--the-notebook-has-sections-you-can-navigate-to)
@@ -31,6 +32,70 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-23 20:46 EDT — every figure says what drew it
+
+`notebooks/moving_block_holdout_bootstrap.ipynb` draws something like sixty figures across
+nine studies, most of them assembled from several panel functions, and nothing on a figure
+said which call would produce it again. Each one now carries the name of the function that
+drew it, in small grey type in the bottom right corner.
+
+### The label goes on at creation, not on the way out
+
+The obvious mechanism is a decorator that stamps whatever a plotting function returns. It
+does not work here, because the notebook has two kinds of plotting function. Most hand their
+figures back for the caller to display. Four — `plot_ref_subsets_summary`,
+`plot_compare_select_holdout_blocks_functions`, `plot_interpolation_method_comparison` and
+`plot_block_length_study` — drew their own with `plt.show()` and returned nothing, and a
+return-value decorator would have skipped them in silence.
+
+So the label is applied when the figure is made. `names_its_figures` pushes the function's
+name on a stack, and a wrapped `plt.figure` stamps anything created while that stack is
+occupied. `plt.subplots` builds its figure by calling the module-level `plt.figure`, so
+replacing that one name catches both routes and every helper that goes through either.
+
+The property that makes this worth the indirection is that the *innermost* marked function
+wins. `plot_best_peci_subset_bootstrap_summaries` returns twenty-one figures: six it builds
+itself and fifteen that `plot_bootstrap_summary` built for it. The six say
+`plot_best_peci_subset_bootstrap_summaries()` and the fifteen say `plot_bootstrap_summary()`,
+which is what someone holding the figure wants to know — what to call to redraw *this*, not
+what happened to be running at the time. A panel function handed an `ax` adds no label at
+all, because the figure is not its to claim.
+
+None of this is in the plotting functions. They carry one `@names_its_figures` line and
+nothing else; eighteen of them are marked.
+
+Two details that took a second pass. Re-running the cell would have wrapped the wrapper and
+grown a chain of them, so it now recovers the original through `functools.wraps`'s
+`__wrapped__` and rewraps that — verified stable at depth one over three executions. And the
+stack is unwound in a `finally`, so a plot that raises cannot leave its name on whatever is
+drawn next; that is one of five tests, along with innermost-wins, leaving unclaimed figures
+alone, and stamping being idempotent.
+
+### And then the four holdouts were converted anyway
+
+Having the stamping work for `plt.show()` functions is not a reason to keep them. All four now
+return their figures closed, the treatment `plot_bootstrap_summary` and
+`plot_holdout_block_structure` got earlier, which finishes a conversion this notebook has been
+making a piece at a time. Every figure-producing function in the notebook now hands its
+figures back.
+
+`plot_ref_subsets_summary` needed a decision: it ended with a `display` of a summary table as
+well as three `plt.show()` calls, so returning only figures would have quietly dropped the
+table. It returns `(figures, table)` now, which is what `plot_whiteline_recovery_study` and
+`plot_whiteline_block_length_study` already do.
+
+All four were checked by running them rather than by reading them, which is the part of this
+worth insisting on — a two-line tail replacement is exactly where a typo hides. The block
+length study is the useful witness: it came back with the same numbers its findings already
+record — mean absolute ACF error 0.0627 at L = 15, Spearman 0.98845 against L = 6, selected
+subsets `M1=7`, `M2=1,2`, `M3=0,11,19` — so the conversion changed the plumbing and nothing
+else.
+
+The `plt.show()` calls that remain are in demo and run cells that draw inline rather than
+inside a function. Those have no figure to return and no function to name.
 
 ---
 
