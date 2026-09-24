@@ -92,13 +92,43 @@ turns on the last bits of its input is not one to build a selection rule on. The
 has no acceleration term, costs nothing in width (0.000225 against 0.000226), covers at 95.6%,
 and returns the same interval every time.
 
-### Still open
+### Both loose ends, closed
 
-Two things this surfaced that are not yet fixed. `bootstrap_ci` defaults to `rng=None` and then
-constructs an unseeded `default_rng()` — every current call site passes a generator, so nothing
-is wrong today, but the default is a trap for the next caller. And the float32 storage means a
-warm-cache run and a cold run hand the studies numerically different arrays, so "reproducible"
-currently depends on which path you took. Both are addressed next.
+`bootstrap_ci` took `rng=None` and then built an unseeded `default_rng()`. Every call site
+passed a generator, so nothing was wrong today; the default was a trap for the next caller, and
+silent irreproducibility is the one failure this notebook can least afford. `rng` is now
+keyword-only and required, with a test that asserts both the refusal and that two calls on one
+seed agree exactly.
+
+The float32 divergence is fixed by computing at the precision the data is stored at, not by
+widening the file. The float32 choice is deliberate and worth keeping — it is 83 MB of draws
+against 24 MB — so `do_ref_subsets_moving_block_holdout_bootstrap` now allocates
+`bootstrap_pes` and `bootstrap_coefs` as float32 and each value is computed in float64 and
+rounded exactly once, on assignment. A cold run and a cache-read run now hand the studies the
+same arrays.
+
+That allowed the round-trip test to be tightened from `rtol=1e-6` to exact equality plus a
+dtype assertion. The old tolerance is how this went unnoticed: it passed for months while the
+two paths were genuinely disagreeing.
+
+### A third error, found while checking the fix
+
+Re-running everything against the changed fits meant re-deriving every number quoted in the
+findings, which turned up a mistake that had nothing to do with precision. Study 4's synthetic
+arm reported "8 better, 4 worse when paired, p = 0.39" for iterations that lost the diagnostic
+window against iterations that kept it. That paired test is real but it is a *different*
+comparison — retained against every-iteration — pasted under the wrong claim. The correct
+held-out-against-retained figures are 11 better and 17 worse, p = 0.35, on recovery rates of
+41.7% and 47.9%. The conclusion is the one that was already drawn, and drawn for the right
+reason: no significant difference, so holding the window out is a fair test. Only the evidence
+cited for it was wrong.
+
+Everything else re-derived unchanged: the study 3 confirmation is bit-identical (0.527 against
+0.445, 24 better / 3 worse, p = 5 × 10⁻⁵), the regime table, the tie-set sequence ending at
+8 / 102 / 136, and the planted-group recovery all reproduce, as does the continuity check
+(M = 1 → `7`, M = 2 → `1,2`, M = 3 → `0,11,19`). BCa came back at 0.928 and 0.718 this time —
+the baseline values, having been 0.894 and 0.744 one run earlier, which is the instability
+described above behaving exactly as advertised.
 
 ---
 
