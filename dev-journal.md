@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-23 20:26 EDT — shorter holdout blocks help, for the wrong reason](#2026-09-23-2026-edt--shorter-holdout-blocks-help-for-the-wrong-reason)
 - [2026-09-23 19:24 EDT — which references the tie set actually uses](#2026-09-23-1924-edt--which-references-the-tie-set-actually-uses)
 - [2026-09-12 19:36 EDT — the notebook has sections you can navigate to](#2026-09-12-1936-edt--the-notebook-has-sections-you-can-navigate-to)
 - [2026-09-12 18:34 EDT — what prediction error is actually measuring, and a correction](#2026-09-12-1834-edt--what-prediction-error-is-actually-measuring-and-a-correction)
@@ -30,6 +31,102 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-23 20:26 EDT — shorter holdout blocks help, for the wrong reason
+
+*Is holding out the whole whiteline a test worth running?* ended by naming a change it had not
+tested: shorten the holdout blocks so part of the whiteline always survives, turning the
+reconstruction back into filling in a gap. That is now tested, in a new section of
+`notebooks/moving_block_holdout_bootstrap.ipynb`. Shorter blocks do help. The whiteline has
+nothing to do with it.
+
+### What the block length actually controls
+
+Not how much of the whiteline is held out. The holdout is a third of the spectrum whatever the
+blocks are, so the 11-point window loses about a third of its points at every length. What
+changes is the shape of that loss — whether the window goes whole or in pieces. Over 2000
+draws:
+
+| L | window held out whole | window untouched |
+|---|---|---|
+| 2 | 1.7% | 24.3% |
+| 6 | 8.3% | 40.6% |
+| 10 | 13.8% | 44.1% |
+| 12 | 20.0% | 52.5% |
+
+That sweep costs seconds, needs no fitting, and was worth running before anything expensive:
+it establishes that the lever exists and says what it moves.
+
+### The result
+
+The recovery machinery from the whiteline study already builds spectra with known answers, so
+it carried over. One change was needed first, and it is the kind that is easy to get wrong:
+`whiteline_recovery_arm` used one block length both to generate the synthetic spectrum and to
+run the search on it. A sweep over the search's block length would then have moved the data and
+the estimator together and been unable to say which mattered. `noise_block_length` pins the
+spectra at the tuned value while the search varies.
+
+Over 320 spectra, all seen by both settings, against the tuned L = 10:
+
+| | L = 3 | L = 10 |
+|---|---|---|
+| names the exact combination | 53.7% | 48.7% |
+| median rank of the truth | 1 | 2 |
+| truth in the top 5 | 87.2% | 86.3% |
+| rank on the worst tenth | 6.1 | 7.0 |
+
+Paired, L = 3 is right where L = 10 is wrong on 25 spectra and wrong where it is right on 9 —
+a 25-to-9 split, which luck produces about nine times in a thousand. Nothing is paid for it:
+top five is a 10-to-7 split, which is nothing, and the tail is marginally better. The gain sits
+where a sharper search would put it, at rank 1, with the rest of the distribution unmoved.
+
+### The mechanism is not the whiteline
+
+This is the part worth remembering. If shorter blocks helped by sparing the window, the
+iterations that lose the window would be the ones improving. They do not improve
+preferentially. Going from L = 10 to L = 3: the iterations holding out the whiteline go
+0.453 → 0.519, those keeping it 0.459 → 0.516, pooled 0.488 → 0.538. The gap between the two
+regimes is within a percentage point of zero at both lengths, while the window coverage itself
+changes by a factor of three.
+
+So the advantage appears just as strongly where the window was never at risk. The likely
+explanation is the plain one — a finely spread holdout leaves every scored point close to
+training points and gives more nearly independent draws to average — but block length moves
+both at once and this study cannot separate them. What it can say is that the whiteline story
+is not supported, which is the story it was built to test.
+
+### The default did not change
+
+The improvement is in selection, and the pipeline reports more than a selection. *Is the tuned
+block length better?* already measured the cost: mean absolute autocorrelation error over lags
+1–10 rises from 0.075 at L = 10 to 0.126 at L = 3, with the long-run variance estimate still
+climbing past L = 10. The block length exists to carry residual dependence into the bootstrap,
+and the coefficient intervals and prediction error spread are built on that. The result is a
+split one: **L = 3 picks the right references more often; L = 10 gives more trustworthy
+intervals around whatever it picks.**
+
+Which points at the experiment this actually calls for, and which is not run here. The holdout
+block length and the resample block length are the same number, doing opposite jobs — holdout
+blocks want to be short enough to score finely, resample blocks long enough to carry the
+dependence. `select_holdout_blocks_v5` ties them together by holding the resample length at
+`block_length_min`. Nothing about the method requires that.
+
+### A note on reading the small run
+
+The first pass used 96 spectra over six block lengths. It put exact recovery at p = 0.096 —
+suggestive, not settled — and, more to the point, its top-five measure appeared to move the
+*other* way, 2 spectra better against 5 worse at the short lengths. At 320 spectra that
+reversed to 10 better against 7 worse, which is to say it was never there. Seven discordant
+replicates look like a pattern and are not one. The rule that saved this from being written up
+wrongly was simply to go back and run more of them when the first answer straddled the line.
+
+**Caveats.** One spectrum's references and one noise model. Exact identity of a
+three-reference combination among 2,024 is an unforgiving measure, made harder by several
+near-duplicate references in this pool. And L = 2 is not better than L = 3 — 0.500 against
+0.531 on 96 spectra — so the curve has flattened or turned by then, and that was not resolved
+further.
 
 ---
 
