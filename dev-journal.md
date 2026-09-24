@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-24 10:12 EDT — the from-empty rebuild, and why one estimator would not reproduce](#2026-09-24-1012-edt--the-from-empty-rebuild-and-why-one-estimator-would-not-reproduce)
 - [2026-09-24 00:54 EDT — the bootstrap notebook rewritten, and the window it was measuring was wrong](#2026-09-24-0054-edt--the-bootstrap-notebook-rewritten-and-the-window-it-was-measuring-was-wrong)
 - [2026-09-23 20:46 EDT — every figure says what drew it](#2026-09-23-2046-edt--every-figure-says-what-drew-it)
 - [2026-09-23 20:26 EDT — shorter holdout blocks help, for the wrong reason](#2026-09-23-2026-edt--shorter-holdout-blocks-help-for-the-wrong-reason)
@@ -33,6 +34,71 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-24 10:12 EDT — the from-empty rebuild, and why one estimator would not reproduce
+
+The rewrite entry below closed with one verification item outstanding: delete the caches and run
+the notebook the way a fresh clone would, to confirm every study recomputes to the same answer.
+That run is done — 35 minutes, exit 0, all five fits and all twelve study summaries regenerated
+with their scale parameters intact. Ten of the twelve Parquet summaries came back **bit-identical**
+to the pre-delete baseline.
+
+The two that did not are the interesting part, and one of them corrects an explanation written
+into the notebook yesterday.
+
+### `regime_effect` — floating-point only
+
+Every integer count and the `same winner` column reproduced exactly. Only the rank correlations
+moved, in the seventh decimal (max relative difference 1.3 × 10⁻⁴ on a quantity quoted to three).
+The study 4 findings table rounds identically. Nothing to do.
+
+### `ci_estimators` — only the BCa rows moved, and that is the finding
+
+Percentile and order-statistic coverage reproduced bit-for-bit. BCa did not: 0.928 against 0.894
+on the prediction-error arm, 0.718 against 0.744 on the paired difference. Chasing that turned up
+two things, in order of how much they matter.
+
+**The fit cache is lossy, and it hid a real non-reproducibility.** `bootstrap_pes` and
+`bootstrap_coefs` are stored `float32` in the fit files while the studies compute on the
+in-memory `float64` arrays. A first pass comparing the two fit caches reported them identical —
+which was true and misleading, because the runs differ at about 10⁻⁹ relative and float32 carries
+only ~10⁻⁷. The fits are not bit-reproducible run to run; the cache was rounding the evidence
+away. Nothing else in the notebook is sensitive enough to notice.
+
+**BCa is sensitive enough to notice, by four orders of magnitude.** Perturbing the draws by
+10⁻⁹ relative — a perturbation that leaves the float32 representation *identical*, so the two
+arrays are the same file on disk — moves the measured BCa failure rate from 0.383 to 0.097.
+
+### The mechanism, stated correctly this time
+
+Yesterday's findings section said BCa fails because paired differences are taken against a shared
+set of holdout draws, so many iterations give identical differences. **That is wrong.** All 1000
+draws in the array tested are distinct; there are no ties in the data.
+
+The degeneracy is in the jackknife, not the sample. BCa's acceleration term is a jackknife
+skewness estimate, and the jackknife of a *median* barely moves: dropping one of n observations
+shifts the median by at most half the gap between two order statistics, and on a resampled sample
+with repeated values the n jackknife medians frequently collapse to one number. Scipy then
+evaluates `a_hat = 1/6 * sum(nums) / sum(dens)**(3/2)` with `sum(dens)` at or near zero, warns
+`DegenerateDataWarning`, and returns no interval. It is a property of pairing a jackknife with a
+median, and it would show up on clean textbook data.
+
+The notebook's study 5 findings now quote BCa as a range (0.89–0.93 and 0.72–0.74) with the
+instability presented as evidence rather than as a measurement, and state the mechanism above.
+The recommendation does not change and is better supported than it was: an estimator whose output
+turns on the last bits of its input is not one to build a selection rule on. The order statistic
+has no acceleration term, costs nothing in width (0.000225 against 0.000226), covers at 95.6%,
+and returns the same interval every time.
+
+### Still open
+
+Two things this surfaced that are not yet fixed. `bootstrap_ci` defaults to `rng=None` and then
+constructs an unseeded `default_rng()` — every current call site passes a generator, so nothing
+is wrong today, but the default is a trap for the next caller. And the float32 storage means a
+warm-cache run and a cold run hand the studies numerically different arrays, so "reproducible"
+currently depends on which path you took. Both are addressed next.
 
 ---
 
