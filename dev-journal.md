@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-28 15:48 EDT — the pipeline stages are linked from the top of the notebook](#2026-09-28-1548-edt--the-pipeline-stages-are-linked-from-the-top-of-the-notebook)
 - [2026-09-28 11:08 EDT — the figure-naming comments say what they mean, in American spelling](#2026-09-28-1108-edt--the-figure-naming-comments-say-what-they-mean-in-american-spelling)
 - [2026-09-24 10:12 EDT — the from-empty rebuild, and why one estimator would not reproduce](#2026-09-24-1012-edt--the-from-empty-rebuild-and-why-one-estimator-would-not-reproduce)
 - [2026-09-24 00:54 EDT — the bootstrap notebook rewritten, and the window it was measuring was wrong](#2026-09-24-0054-edt--the-bootstrap-notebook-rewritten-and-the-window-it-was-measuring-was-wrong)
@@ -35,6 +36,21 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-28 15:48 EDT — the pipeline stages are linked from the top of the notebook
+
+The first cell of `notebooks/moving_block_holdout_bootstrap.ipynb` listed and linked the six
+studies but not the pipeline they study. It now has a numbered list of the nine pipeline
+stages above the studies, each linking to its section with one line on what that stage does.
+For example, stage 5 draws which energies each iteration holds out and which residual blocks it
+resamples, once, shared by every combination. A reader can now see the whole path from spectra
+to selection before scrolling into Part 1.
+
+The Part 1 heading cell said "Eight steps" while its list tucked "Running all five" onto the end
+of item 8, even though that has its own numbered section. It now says "Nine steps" and lists
+"Running all five" as item 9, so both lists number the stages the same way.
 
 ---
 
