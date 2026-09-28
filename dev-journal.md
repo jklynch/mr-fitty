@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-28 11:08 EDT — the figure-naming comments say what they mean, in American spelling](#2026-09-28-1108-edt--the-figure-naming-comments-say-what-they-mean-in-american-spelling)
 - [2026-09-24 10:12 EDT — the from-empty rebuild, and why one estimator would not reproduce](#2026-09-24-1012-edt--the-from-empty-rebuild-and-why-one-estimator-would-not-reproduce)
 - [2026-09-24 00:54 EDT — the bootstrap notebook rewritten, and the window it was measuring was wrong](#2026-09-24-0054-edt--the-bootstrap-notebook-rewritten-and-the-window-it-was-measuring-was-wrong)
 - [2026-09-23 20:46 EDT — every figure says what drew it](#2026-09-23-2046-edt--every-figure-says-what-drew-it)
@@ -34,6 +35,36 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-28 11:08 EDT — the figure-naming comments say what they mean, in American spelling
+
+Two editorial passes over `notebooks/moving_block_holdout_bootstrap.ipynb`. No behavior changed.
+
+The comments in the "Naming the figures" cell leaned on words the reader had to decode. The
+worst was "functools.wraps leaves the original reachable as `__wrapped__`": "original" meant
+matplotlib's own `plt.figure`, and the comment now says so. It also says why that matters. On a
+re-run of the cell, `plt.figure` is already the previous run's replacement. Wrapping it again
+would add one layer to every `plt.figure` call per re-run. Other phrases were spelled out the
+same way:
+
+- "both ways of making a figure" is now `plt.figure()` and `plt.subplots()`, with the reason
+  one assignment covers both: `plt.subplots` looks up the pyplot-level name `figure` each time
+  it is called.
+- "on the way out" is now "after the function returns".
+- "the innermost marked function on the stack" is now the function that actually called
+  `plt.figure` or `plt.subplots`.
+- "idempotent" is replaced by the two cases it covers: decorating a function twice, and
+  drawing into a figure that already has a label.
+
+`_figure_source_stack` also got a comment saying what it holds and when it is empty.
+
+Separately, 30 British spellings across the notebook became American (colour → color,
+behaviour → behavior, labelled → labeled, and so on). That includes a few local variable names:
+`oxidised` → `oxidized` in the window-absorption check and `centre` → `center` in the
+cosine-versus-correlation example. The one visible change is an axis label that now reads
+"bar and label color".
 
 ---
 
