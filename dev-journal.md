@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-28 17:32 EDT — the tie table is named for what it pairs, and black formats the notebook](#2026-09-28-1732-edt--the-tie-table-is-named-for-what-it-pairs-and-black-formats-the-notebook)
 - [2026-09-28 16:51 EDT — each unknown's summary figures go to a PDF, and the pipeline list links to its functions](#2026-09-28-1651-edt--each-unknowns-summary-figures-go-to-a-pdf-and-the-pipeline-list-links-to-its-functions)
 - [2026-09-28 15:48 EDT — the pipeline stages are linked from the top of the notebook](#2026-09-28-1548-edt--the-pipeline-stages-are-linked-from-the-top-of-the-notebook)
 - [2026-09-28 11:08 EDT — the figure-naming comments say what they mean, in American spelling](#2026-09-28-1108-edt--the-figure-naming-comments-say-what-they-mean-in-american-spelling)
@@ -37,6 +38,51 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-28 17:32 EDT — the tie table is named for what it pairs, and black formats the notebook
+
+### "peci" is gone
+
+`peci_tie_table` read as "prediction error confidence interval", and no confidence interval
+decides a tie. The best combination at each size is the one with the lowest mean rank, and
+ties are decided on the paired differences: each combination's prediction error minus the
+best one's, iteration by iteration, on the same held-out energies. The default rule,
+`tie_by_paired_distribution`, brackets the middle 95% of those differences, which its own
+docstring says is not a confidence interval. The only interval in the table, `pe_ci_lo/hi`,
+is reported and never used.
+
+The function is now `tie_table_from_paired_prediction_errors`: what it returns, and what it is
+computed from. "Holdout" is left implied. The functions that take the finished table are named
+after the table:
+
+| was | now |
+|---|---|
+| `peci_tie_table` | `tie_table_from_paired_prediction_errors` |
+| `peci_tie_counts` | `tie_table_counts` |
+| `plot_peci_tie_panel` | `plot_tie_table_panel` |
+| `plot_best_peci_subset_bootstrap_summaries` | `plot_tied_subset_bootstrap_summaries` |
+| `test_peci_*` | `test_tie_table_*` |
+
+The frozen development notebook and earlier journal entries keep the old names.
+
+### Black formats the notebook, and the hook keeps it that way
+
+Every code cell of `moving_block_holdout_bootstrap.ipynb` is now formatted by black with its
+defaults, 88 columns and double quotes, the same style as `mrfitty/`. That rewrote most of the
+notebook's code, which had been hand-wrapped at about 95 columns with single quotes. Black
+never rewraps comments or docstrings, so those stay at their old width; no line exceeds
+flake8's 115. Part 1 was rerun afterwards and every test cell passes.
+
+The pre-commit config gains the `black-jupyter` hook beside `black`, which only ever saw `.py`
+files. `requirements-dev.txt` now asks for `black[jupyter]`, so `black` on a notebook works
+outside pre-commit too. That goes in the dev requirements rather than `requirements.txt`,
+because `setup.py` reads `requirements.txt` as the package's install requirements.
+
+The hook runs on the notebooks each commit includes. The other seven notebooks, including the
+frozen development notebook, are not black-formatted yet and will be reformatted the first time
+one of them is committed.
 
 ---
 

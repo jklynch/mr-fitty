@@ -1,4 +1,4 @@
-black
+black[jupyter]
 flake8
 pre-commit
 pytest
