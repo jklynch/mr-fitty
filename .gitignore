@@ -74,6 +74,7 @@ docs/_build
 jupyter-lab-log.txt
 
 
-# notebook caches -- fit files are ~24 MB each, study summaries are regenerated on demand
+# notebook caches and outputs -- fit files are ~24 MB each; study summaries and summary PDFs are regenerated on demand
 notebooks/fit_cache/
 notebooks/study_results/
+notebooks/fit_summaries/

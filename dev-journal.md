@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-28 16:51 EDT — each unknown's summary figures go to a PDF, and the pipeline list links to its functions](#2026-09-28-1651-edt--each-unknowns-summary-figures-go-to-a-pdf-and-the-pipeline-list-links-to-its-functions)
 - [2026-09-28 15:48 EDT — the pipeline stages are linked from the top of the notebook](#2026-09-28-1548-edt--the-pipeline-stages-are-linked-from-the-top-of-the-notebook)
 - [2026-09-28 11:08 EDT — the figure-naming comments say what they mean, in American spelling](#2026-09-28-1108-edt--the-figure-naming-comments-say-what-they-mean-in-american-spelling)
 - [2026-09-24 10:12 EDT — the from-empty rebuild, and why one estimator would not reproduce](#2026-09-24-1012-edt--the-from-empty-rebuild-and-why-one-estimator-would-not-reproduce)
@@ -36,6 +37,63 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-28 16:51 EDT — each unknown's summary figures go to a PDF, and the pipeline list links to its functions
+
+Four related changes to `notebooks/moving_block_holdout_bootstrap.ipynb`.
+
+### Figures can go to the notebook or to a PDF
+
+The plotting functions already return their figures closed and leave displaying them to the
+caller, so none of them grew a PDF option. Instead one new function, `render_figures(figures,
+pdf_path=None)`, is where the caller decides. With no path it displays each figure in the
+notebook. With a path it writes them to one PDF, one figure per page, creating the directory
+and replacing any existing file. Either way it closes every figure afterwards, because an open
+figure is drawn a second time by the inline backend at the end of the cell. The Part 1 cells
+that used `display(fig)` now call it.
+
+The pages are saved with `bbox_inches='tight'`, the same cropping the notebook applies when it
+displays a figure. Without it the first PDF page cut off the legend of
+`plot_interpolated_references`, which sits outside the axes. A new test checks that three
+figures make a three-page PDF and that all three are closed.
+
+### The demonstration writes one PDF per unknown
+
+After fitting the five unknowns, the demonstration cell writes
+`plot_best_peci_subset_bootstrap_summaries` for each one to
+`notebooks/fit_summaries/<unknown>.pdf`, 53 pages apiece. It uses the default tie rule and seed
+11, the same as Study 5, so the tied combinations are the ones that study reports. The
+directory is in `.gitignore`, like the two caches, and its path is `FIT_SUMMARY_DIR` in the
+setup cell.
+
+`plot_best_peci_subset_bootstrap_summaries` now starts with two overview figures. With the new
+`interpolation` argument (the keyword arguments for `plot_interpolated_references`), the first
+figure is the references interpolated onto the unknown's grid. With `clusterings`, the next is
+the plain correlation and cosine trees with their cutoffs, as step 3 draws them. A fit file
+does not record which spectra limit the common energy range, so the demonstration cell reruns
+`interpolate_references_at_sample_energies` for each unknown, with the same default cubic spline
+the fit used. One new test checks that the interpolated references come first; the existing
+tree test now expects the plain trees ahead of the tie panel.
+
+### The demonstration is no longer a pipeline step
+
+Running all five unknowns is a use of the pipeline, not a step in it. It is now its own
+"Demonstration" section in the first cell, and its heading in Part 1 is "Demonstration: running
+all five", unnumbered. Part 1 says "Eight steps" again, and the demonstration follows the
+numbered list rather than being item 9.
+
+### Each step lists its functions, linked to their definitions
+
+Each of the eight steps in the first cell now has a sublist of its main functions, 24 in all,
+each linking to its definition. Jupyter can only link to an anchor in a Markdown cell, so a
+one-line Markdown cell now sits above each of the 16 code cells that define them, e.g.
+"Defines `write_fit_results`, `read_fit_results`." That cell carries an anchor
+`def-<function>` for every public function in the code cell below, not just the ones listed,
+so more can be linked later. The notebook went from 78 cells to 94.
+
+Part 1 was run end to end after the code changes: all tests pass, and all five PDFs were written.
 
 ---
 
