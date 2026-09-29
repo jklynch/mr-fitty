@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-28 22:40 EDT — Study 7: how many references to report](#2026-09-28-2240-edt--study-7-how-many-references-to-report)
 - [2026-09-28 17:32 EDT — the tie table is named for what it pairs, and black formats the notebook](#2026-09-28-1732-edt--the-tie-table-is-named-for-what-it-pairs-and-black-formats-the-notebook)
 - [2026-09-28 16:51 EDT — each unknown's summary figures go to a PDF, and the pipeline list links to its functions](#2026-09-28-1651-edt--each-unknowns-summary-figures-go-to-a-pdf-and-the-pipeline-list-links-to-its-functions)
 - [2026-09-28 15:48 EDT — the pipeline stages are linked from the top of the notebook](#2026-09-28-1548-edt--the-pipeline-stages-are-linked-from-the-top-of-the-notebook)
@@ -38,6 +39,76 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-28 22:40 EDT — Study 7: how many references to report
+
+The pipeline lists which combinations tie the best one *at each size*, but never says which size
+to report. `notebooks/moving_block_holdout_bootstrap.ipynb` now has a seventh study that asks
+which rule for choosing the size recovers the number a spectrum was built from. The full numbers
+are in its Findings; this entry records how it got there and why.
+
+### Two checks that set it up (not in the notebook)
+
+*One tie set across all sizes does not work.* Ranking all 2,324 combinations together and asking
+which ones tie the overall best gave tie sets of 142 to 2,079 per unknown. Almost all of them were
+bigger combinations that contain a smaller tied one, because under NNLS an unhelpful extra
+reference gets a weight near zero and barely changes the fit. Taking the smallest tied size as the
+answer then picked single references ranked as low as 907th, because the default tie rule calls
+anything that wins about 2.5% of iterations tied. So the study compares only the best combination
+at each size.
+
+*The search needed a fourth reference.* Searching the five unknowns up to four references, with
+the block length pinned so the holdout draws were the cached ones, reproduced every 1–3 reference
+result exactly. Where the fourth reference only got a weight of zero, the three-reference fit
+stayed best. But for `Ott3_73_AsXANES_spot6_000` and `Ott3_74_AsXANES_spot0` a different
+four-reference combination beat the best three-reference one on about 80% of iterations and cut
+median prediction error by 9–12%.
+
+### The study
+
+Synthetic spectra built from 1 to 4 known references with noise resampled from a real fit's
+residuals, each searched over all 12,950 combinations of up to four references. Rules compared:
+lowest mean rank (no parsimony), the default tie rule, the package's own stepwise CI-overlap rule
+from `mrfitty.prediction_error_fit`, and a win-rate threshold.
+
+- **The default undercounts badly:** right on 53% of spectra; it misses a third reference 72% of
+  the time and a fourth every time. Without any parsimony rule the best fit is usually too big.
+- **The stepwise rule and the 25% win-rate rule are about equally accurate at 1000 draws** (80%
+  and 75%), but the stepwise rule drifts with the draw count. From 250 to 1000 draws it reports
+  more references for 15 spectra and fewer for none (p = 6e-5). The 25% rule changes on 3.
+- **25% holds up on spectra it was not chosen on.** Every threshold from 2% to 50% is scored from
+  the stored searches at no cost. On 256 held-out spectra from two other unknowns' references and
+  noise, with the largest true size left out (at the search ceiling a higher threshold can only
+  help), the thresholds within noise of the best overlap from about 0.16 to 0.27 on all three
+  sets, and 25% is inside.
+- **The remaining misses are mostly near-duplicate references.** How alike the two most similar
+  references in a mixture are predicts a miss far more strongly than its smallest weight does.
+- **On the real unknowns** the stepwise and 25% rules agree on all five: 3, 1, 2, 4, 4 references.
+
+A reading-off trick made the draw-count comparison cheap and exact. With the block length pinned,
+iteration *k*'s holdout and resample draws do not depend on how many iterations follow, so the
+first *n* draws of a search are an *n*-draw search. A smoke test confirmed it before the run relied
+on it.
+
+### Simplified after the first pass
+
+The first version compared seven rules and drew a heatmap. The fixed 10% and 40% thresholds are
+now points on the sweep, the CI on the median difference is dropped (it drifts, as Study 5
+predicted), and the heatmap is a table. The Findings lead with the answer and are about a third
+shorter. The sweep has 95% bands from resampling spectra, which is what showed the data supports
+a range of thresholds rather than exactly 25%.
+
+### Cost and caches
+
+About two hours of computation on 32 cores, cached under `notebooks/study_results/`:
+`size_selection` (44 min), `size_selection_draws` (22 min), `size_selection_holdout` (46 min)
+and `size_selection_real` (3 min). The setup cell now imports `statsmodels.formula.api`, already
+in `requirements.txt`, for the model in the mixture breakdown.
+
+Nothing in the pipeline has changed: the default tie rule still lists alternatives, nothing yet
+reports a size, and searches still stop at three references.
 
 ---
 
