@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-29 21:20 EDT — the batched NNLS refit is now the default](#2026-09-29-2120-edt--the-batched-nnls-refit-is-now-the-default)
 - [2026-09-29 20:55 EDT — a batched NNLS prototype: the same refits, two to six times faster](#2026-09-29-2055-edt--a-batched-nnls-prototype-the-same-refits-two-to-six-times-faster)
 - [2026-09-29 20:29 EDT — the pipeline reports how many references, and searches only as far as it has to](#2026-09-29-2029-edt--the-pipeline-reports-how-many-references-and-searches-only-as-far-as-it-has-to)
 - [2026-09-28 22:40 EDT — Study 7: how many references to report](#2026-09-28-2240-edt--study-7-how-many-references-to-report)
@@ -41,6 +42,41 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-29 21:20 EDT — the batched NNLS refit is now the default
+
+The prototype from the previous entry now does the pipeline's refits.
+`do_ref_subsets_moving_block_holdout_bootstrap` defaults to
+`do_moving_block_holdout_bootstrap_batched`, and the coefficients a fit keeps for its summary PDFs
+are computed the same way. The SciPy version, one call per draw, stays as the reference and can
+still be passed in. The solver and its two-level explanation moved into step 6. The checks
+against SciPy became a permanent section after the demonstration, and they now fail if a whole
+search to three references ever reaches a different reported number of references or different
+tie sets.
+
+The fit's recorded search settings now include the refit method, so fits made with SciPy were
+recomputed automatically.
+
+| unknown | searched to | SciPy | batched |
+|---|---|---|---|
+| spot5_000, spot1_avg | 3 | 26 s | 7 s |
+| OTT3_55_spot0 | 4 | 143 s | 41 s |
+| spot6_000 | 5 | 697 s | 324 s |
+| Ott3_74 | 5 | 643 s | 382 s |
+
+A cold run of Part 1 went from about 25 minutes to about 13, not the 8 the previous entry
+predicted. At five references a search also fits, ranks and builds the tie table for 55,454
+combinations, and none of that is the refit.
+
+**Part 2 is unchanged.** The batched prediction errors match SciPy's to within a couple of float32
+rounding steps, so the restricted fits Studies 1–6 read are no longer bit-for-bit their original
+searches. All 28 Part 2 code cells were compared with the previous run. The only output that
+changed is Study 5's table of how long each interval method takes, which varies from run to run
+and is not quoted in its Findings; every data result is identical. The Part 2 text now says
+"to within float32 rounding" instead of "exactly", and notes that the study cells' quoted run times
+were measured with SciPy.
 
 ---
 
