@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-29 22:17 EDT — the rest of the combination search, compiled; and the old mean ranks were not exact](#2026-09-29-2217-edt--the-rest-of-the-combination-search-compiled-and-the-old-mean-ranks-were-not-exact)
 - [2026-09-29 21:51 EDT — the refit is compiled with Numba, and Part 1 runs in a minute and a half](#2026-09-29-2151-edt--the-refit-is-compiled-with-numba-and-part-1-runs-in-a-minute-and-a-half)
 - [2026-09-29 21:20 EDT — the batched NNLS refit is now the default](#2026-09-29-2120-edt--the-batched-nnls-refit-is-now-the-default)
 - [2026-09-29 20:55 EDT — a batched NNLS prototype: the same refits, two to six times faster](#2026-09-29-2055-edt--a-batched-nnls-prototype-the-same-refits-two-to-six-times-faster)
@@ -43,6 +44,60 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-29 22:17 EDT — the rest of the combination search, compiled; and the old mean ranks were not exact
+
+A five-reference fit took about 38 seconds after the refit was compiled. Timing each stage of one
+showed where it went, and it also corrected a claim in the previous entry. That entry said the refit no
+longer dominated a five-reference search, but it still did: 55,454 compiled calls, each starting
+Numba's threads for one combination's thousand draws. The rest was ranking the combinations with
+SciPy (about 9 s, repeated at every growth step), building a full tie table just to choose which
+combinations keep coefficients (about 8 s), and one Python call per combination for the residual
+autocorrelations (about 1.5 s).
+
+| stage | before | now |
+|---|---|---|
+| refits | one compiled call per combination | `bootstrap_combinations_compiled`: one call per size, sharing the per-draw function `_refit_one_draw` with the per-combination driver |
+| ranking | `scipy.stats.rankdata` | compiled `subset_mean_ranks`, exact |
+| choosing coefficient rows | the full tie table | `_best_tied_combinations`: only the mean ranks and each combination's middle 95% of paired differences |
+| autocorrelations | a Python call per combination | `calculate_acf_all`, every series at once |
+
+None of the changes is specific to five references. The per-size refit runs once for each size a
+search covers, the ranking runs wherever combinations are ranked (the tie tables and Studies 5 and
+7 included), and the other two cover every combination. A five-reference fit simply had the most
+to gain, since 42,504 of its 55,454 combinations have five references. The five fits now take
+0.9, 0.9, 6.0, 22.7 and 19.3 seconds, against 1, 1, 9, 38 and 37: under a minute for all of Part 1's
+fits from cold, against about 25 minutes when the refit was one SciPy call per draw.
+
+### The old mean ranks were not exact
+
+The new ranking was meant to reproduce SciPy's to the last bit, and the check said it did not.
+The reason is that `scipy.stats.rankdata` returns float32 ranks for float32 input, and the search
+stores its prediction errors as float32. Float32 holds whole numbers exactly only up to about 16.8
+million, and a thousand ranks among 42,504 five-reference combinations sum to as much as 42
+million. So the old mean ranks carried rounding error: up to 1.4e-5 even among the 276
+two-reference combinations, more in larger fields. The compiled version works in float64, where
+every sum of ranks is exact, because every rank is a multiple of one half. Its docstring explains
+this, where the first draft had claimed it matched SciPy exactly.
+
+The corrected ranking changed no ordering in any of the five fits. In a full notebook run no
+Part 1 or Part 2 result changed. The only differences were run-to-run timings, temporary paths
+and the order of one test's output.
+
+### Checks
+
+- The rebuilt fits are identical to the cached ones in prediction errors, coefficients,
+  residuals and kept coefficients. Their autocorrelations differ by at most 2e-15, because the
+  sums are added in a different order.
+- The per-size and per-combination drivers give identical prediction errors on all 10,626
+  four-reference combinations.
+- `_best_tied_combinations` picks exactly the rows the tie table would, on all five fits.
+
+The "Compiling the loop" explanation now covers the per-size driver. What is left of Part 1's
+slow work is outside the search: the demonstration's PDFs build a full tie table per fit, about
+8 seconds at five references.
 
 ---
 
