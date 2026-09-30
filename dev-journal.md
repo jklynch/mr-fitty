@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-29 20:55 EDT — a batched NNLS prototype: the same refits, two to six times faster](#2026-09-29-2055-edt--a-batched-nnls-prototype-the-same-refits-two-to-six-times-faster)
 - [2026-09-29 20:29 EDT — the pipeline reports how many references, and searches only as far as it has to](#2026-09-29-2029-edt--the-pipeline-reports-how-many-references-and-searches-only-as-far-as-it-has-to)
 - [2026-09-28 22:40 EDT — Study 7: how many references to report](#2026-09-28-2240-edt--study-7-how-many-references-to-report)
 - [2026-09-28 17:32 EDT — the tie table is named for what it pairs, and black formats the notebook](#2026-09-28-1732-edt--the-tie-table-is-named-for-what-it-pairs-and-black-formats-the-notebook)
@@ -40,6 +41,66 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-29 20:55 EDT — a batched NNLS prototype: the same refits, two to six times faster
+
+A search spends almost all its time refitting: every combination of references on every
+bootstrap draw, 13 million non-negative least-squares fits for a search to four references and
+55 million to five. `scipy.optimize.nnls` does each in about 10 µs, mostly the cost of calling it
+from Python. `notebooks/moving_block_holdout_bootstrap.ipynb` now ends Part 1 with a prototype that
+solves a combination's thousand refits in one batch. The pipeline does not use it yet.
+
+### The method
+
+With at most five references there are only 31 ways to switch some of them on. For each, the best
+weights are an ordinary least-squares fit, done for all draws at once. Each draw then discards
+the fits with a negative weight and keeps the best of the rest, and that is exactly the NNLS
+answer: the true answer is the least-squares fit on its own set of switched-on references, so it
+is among the 31, and every other allowed fit is a valid set of non-negative weights, so none can
+beat it. Each draw's fits reduce to at most 5 × 5 Gram matrices, solved by a Cholesky
+factorization written as array operations over the whole stack. The condition number is checked
+once per draw, and by Cauchy interlacing that one check covers all 31 subsystems. A draw
+conditioned worse than 10⁸ goes to SciPy, because the normal equations square the condition
+number, and this pool has nearly identical references.
+
+The notebook explains the method twice. First in plain terms, then in notes for readers who know
+some linear algebra: why enumeration is exact, why singular subsets can be skipped, why normal
+equations cost digits, and the interlacing argument. The code comments follow the same pattern,
+with "Numerical note:" marking the deeper points.
+
+### Getting it fast was the instructive part
+
+The first version was correct and no faster than SciPy, and slower at five references. Three
+changes fixed that:
+
+- The Gram matrices were built with a three-way `np.einsum`, which NumPy evaluates with its own
+  loops. Rewritten as one matrix product that BLAS can do, that step was about 50 times faster.
+- `np.linalg.solve` accepts a stack of matrices but still hands LAPACK one 5 × 5 matrix at a
+  time. The hand-written Cholesky runs each step across every system at once.
+- Spreading every candidate's weights into full-width arrays cost a quarter of the time.
+  Choosing the winners from the errors first, and copying out only their weights, removed it.
+
+### Results
+
+- **Speed:** a combination's thousand refits take 1.3–2.3 ms instead of 8–11 ms at one to three
+  references, and 3.9–5.0 ms instead of 12–19 ms at five. A whole search to three references
+  takes 4.6 s instead of about 26 s.
+- **Accuracy:**
+  - On 12,000 random problems the weights match SciPy's to 1.4e-14.
+  - With an exactly duplicated reference the fit error matches.
+  - On real combinations, including `OTT3_55_spot0`'s most nearly identical pair, no stored
+    float32 prediction error changes.
+- **Decisions:** a whole search reaches the same reported number of references and the same tie
+  sets.
+
+The combination search takes a `bootstrap_fn` so either version can run. What is left of the time
+is the per-draw eigenvalue check and the Cholesky passes, which would take a compiler such as
+Numba to shrink further. Adopting the prototype would take a cold run of Part 1 from about 25
+minutes to about 8.
+
+The four study caches Study 7 no longer reads (`size_selection*`) were deleted.
 
 ---
 
