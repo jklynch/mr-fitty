@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-29 23:38 EDT — what each unknown's output says: weights, the rule, cautions, and tie patterns](#2026-09-29-2338-edt--what-each-unknowns-output-says-weights-the-rule-cautions-and-tie-patterns)
 - [2026-09-29 22:29 EDT — tie tables built from whole arrays for the default rule](#2026-09-29-2229-edt--tie-tables-built-from-whole-arrays-for-the-default-rule)
 - [2026-09-29 22:17 EDT — the rest of the combination search, compiled; and the old mean ranks were not exact](#2026-09-29-2217-edt--the-rest-of-the-combination-search-compiled-and-the-old-mean-ranks-were-not-exact)
 - [2026-09-29 21:51 EDT — the refit is compiled with Numba, and Part 1 runs in a minute and a half](#2026-09-29-2151-edt--the-refit-is-compiled-with-numba-and-part-1-runs-in-a-minute-and-a-half)
@@ -45,6 +46,95 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-29 23:38 EDT — what each unknown's output says: weights, the rule, cautions, and tie patterns
+
+The first four of a planned set of changes to what the demonstration reports for each unknown in
+`notebooks/moving_block_holdout_bootstrap.ipynb`. The fits themselves are unchanged.
+
+### Correlation trees only in the summaries
+
+Study 6 found correlation distance recovers a planted grouping and cosine is misled by the baseline
+offsets XANES references carry, so the summary PDFs now draw only the correlation tree
+(`SUMMARY_TREE_METRICS`). The fits still cluster both ways, and step 3 and Study 6 still show
+both. `plot_bootstrap_summary` now sizes its figures for the number of trees it draws, instead of
+assuming two.
+
+### Median weights
+
+Each reference's weight is now reported as the median of its 1,000 bootstrap weights with the range
+of the middle 95% (`weight_summary`). The median, not the mean, because weights pile up against
+zero. It appears in four places:
+
+- a box on every summary's fit panel
+- a "reported, median weight" column in the demonstration's table
+- `notebooks/fit_summaries/<unknown>.tsv`, from `coefficient_table`: one row per reference in each
+  combination the fit kept weights for, with the reported one marked
+- new `coef_median`, `coef_lo` and `coef_hi` columns in the fit file, readable with any Parquet
+  tool
+
+The fit file is now schema version 3; older files recompute automatically, which takes about a
+minute.
+
+### How the 25% rule chose each number
+
+`plot_reference_count` draws the rule for one unknown, and `plot_reference_counts` draws all five
+in the demonstration. Each unknown also gets a page in its PDF.
+
+- **Top panel:** each size's win share, meaning the share of iterations its best combination
+  beats the best of all sizes, against the 25% line. The reported size is in blue.
+- **Bottom panel:** the paired differences each share is counted from, as violins on a symmetric
+  log scale. The differences span three orders of magnitude, from about 0.05 for a size one
+  reference too small to about 0.001 among the competitive sizes.
+
+The first version computed the violins on the raw differences and let the axis stretch them,
+which distorted their shapes. They are now computed on the transformed values. `per_size_bests`
+records which row is best at each size, which the figure needs.
+
+### Cautions
+
+`reporting_cautions` says what Study 7 found the answer cannot see:
+
+- **A reported reference with near-identical references in the pool** (correlation distance below
+  0.015): any of them could be the one present.
+- **Near-identical references within the reported combination:** only their combined weight means
+  anything.
+- **A reported weight below 0.15:** near the detection limit, so another component like it could
+  be missing.
+
+The thresholds are named settings with comments citing the Study 7 results they come from. On this
+data the arsenates turn out to be one family of interchangeable spectra: scorodite, for example,
+has nine arsenate references within 0.015. So "which arsenate" is not something this data answers,
+and the output now says so. Ott3_74's reported combination contains goethite-sorbed arsenate and
+scorodite, only 0.0044 apart, so only their combined weight, 0.64, is meaningful. spot1_avg has no
+cautions. The cautions appear under the demonstration's figure, on each PDF's reference-count page,
+and as a `near_duplicates` column in each unknown's TSV.
+
+### Tie patterns
+
+At three or four references a tie set runs to thousands of combinations: 2,774 for spot6_000 at its
+reported size. `tie_patterns` summarizes it by groups of references instead of by references:
+
+- **Groups:** the reference tree is cut at a height, and the groups are lettered A, B, C... down the
+  tree.
+- **Patterns:** a pattern such as `2×A + B + C` counts the tied combinations that draw two
+  references from A, one from B and one from C.
+- **The cut:** chosen per tie set, as the finest at which five patterns cover 90% of the tied
+  combinations.
+
+Two fixed heights were tried first and failed. Grouping near-identical references alone left up to
+253 patterns, and the tree's own clusters lumped all 19 oxidized species into one group. Patterns
+are listed by their best rank rather than by how common they are. OTT3_55_spot0's most common
+pattern covers 51% of its tie set but reaches only rank 67; the best combination's pattern covers
+19%. On spot6_000 the 2,774 combinations come down to three groups: sulfides, As(III) oxides with
+sorbed arsenites, and arsenates. The patterns are printed in the demonstration, written to
+`<unknown>.ties.tsv`, and drawn as a text page in each PDF.
+
+Four new tests cover the table, the plots, the cautions and the patterns, and the fit-file test
+now also checks the new columns. The setup cell now imports
+`re` and `textwrap`.
 
 ---
 
