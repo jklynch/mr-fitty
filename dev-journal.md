@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-29 23:55 EDT — Part 1 reads straight through; how the refits are computed moves to an appendix](#2026-09-29-2355-edt--part-1-reads-straight-through-how-the-refits-are-computed-moves-to-an-appendix)
 - [2026-09-29 23:48 EDT — a check anyone can run: does the 25% threshold hold for these references?](#2026-09-29-2348-edt--a-check-anyone-can-run-does-the-25-threshold-hold-for-these-references)
 - [2026-09-29 23:38 EDT — what each unknown's output says: weights, the rule, cautions, and tie patterns](#2026-09-29-2338-edt--what-each-unknowns-output-says-weights-the-rule-cautions-and-tie-patterns)
 - [2026-09-29 22:29 EDT — tie tables built from whole arrays for the default rule](#2026-09-29-2229-edt--tie-tables-built-from-whole-arrays-for-the-default-rule)
@@ -47,6 +48,34 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-29 23:55 EDT — Part 1 reads straight through; how the refits are computed moves to an appendix
+
+Part 1 had grown a long detour in step 6, the three-tier explanation of the batched and compiled
+refits, and a block of checks between the demonstration and Part 2. Both are now in a new
+**Appendix A — How the refits are computed**, at the end of the notebook:
+
+- **A.1 Solving the refits in a batch:** the full explanation (plain-language, the notes for
+  readers who know some linear algebra, the NumPy performance lessons, and "Compiling the loop"),
+  followed by the NumPy version it describes, which the pipeline no longer runs.
+- **A.2 Checking the refits against SciPy:** the checks that used to follow the demonstration.
+
+Step 6 keeps a short "How the refits are computed" paragraph with the essence and a link. It also
+keeps the two pieces of code the pipeline needs: the one-SciPy-call-per-draw version, which is the
+plainest statement of the method and the reference the checks compare against, and the compiled
+refit. The compiled refit could not move. The search binds it as its default when it is defined,
+and the demonstration runs searches before the appendix, so it has to come first. Its comments now
+point to the appendix.
+
+The first cell gains an "Appendix" section, and its step 6 function list names only what the
+pipeline runs. Every link still resolves; the anchors moved with their sections.
+
+A full run from caches takes about two and a half minutes with no errors and every test passing.
+Compared with the last full run before this session's reporting changes, the only code cells whose
+output changed are the test cells with new tests, the demonstration with its new outputs, and two
+timing tables that vary from run to run.
 
 ---
 
