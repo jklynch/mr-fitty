@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-29 23:48 EDT — a check anyone can run: does the 25% threshold hold for these references?](#2026-09-29-2348-edt--a-check-anyone-can-run-does-the-25-threshold-hold-for-these-references)
 - [2026-09-29 23:38 EDT — what each unknown's output says: weights, the rule, cautions, and tie patterns](#2026-09-29-2338-edt--what-each-unknowns-output-says-weights-the-rule-cautions-and-tie-patterns)
 - [2026-09-29 22:29 EDT — tie tables built from whole arrays for the default rule](#2026-09-29-2229-edt--tie-tables-built-from-whole-arrays-for-the-default-rule)
 - [2026-09-29 22:17 EDT — the rest of the combination search, compiled; and the old mean ranks were not exact](#2026-09-29-2217-edt--the-rest-of-the-combination-search-compiled-and-the-old-mean-ranks-were-not-exact)
@@ -46,6 +47,34 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-29 23:48 EDT — a check anyone can run: does the 25% threshold hold for these references?
+
+The 25% threshold was chosen and checked on this notebook's arsenic references. Another element,
+another pool of references or noisier spectra could move it. So Study 7 now ends with a check that
+can be pointed at any fitted unknown.
+
+- **`check_threshold(fit)`** builds synthetic spectra from 1 to 3 of that unknown's own
+  interpolated references, with noise resampled from its own fit's residuals in blocks of its
+  tuned length. It searches each spectrum one size past the largest truth, so the rule can be
+  caught reporting too many. It reuses Study 7's machinery rather than copying it.
+- **`summarize_threshold_check`** reports how often 25% gets the number of references right, too
+  few and too many, and sweeps every threshold from 2% to 50% with 95% bands. It ends with one
+  sentence: whether 25% is inside the range of thresholds the data cannot tell from the best.
+
+The defaults are 16 spectra per true size at 500 draws, run in one process. The compiled search
+already spreads each spectrum across every core, and running several at once as well would only
+make them compete. The whole check takes about a minute and a half.
+
+Run on `Ott3_73_AsXANES_spot1_avg`, whose references and noise Study 7 never used, 25% reports the
+right number on 81% of spectra, too few on 19% and too many on none. Thresholds from 0.14 to 0.32
+do about as well, so 25% holds there too. As in Study 7, the misses are "too few" at three true
+references, the near-identical-arsenate effect. The result is cached as `threshold_check`.
+
+`plot_threshold_sweep` now draws only the true sizes a sweep contains; the check has no
+four-reference spectra, and its legend had listed an empty line for them.
 
 ---
 
