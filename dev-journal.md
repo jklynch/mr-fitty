@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-30 08:19 EDT — one fit-file layout, version 1](#2026-09-30-0819-edt--one-fit-file-layout-version-1)
 - [2026-09-30 08:10 EDT — every study rerun on the final pipeline: not one decision changed](#2026-09-30-0810-edt--every-study-rerun-on-the-final-pipeline-not-one-decision-changed)
 - [2026-09-29 23:55 EDT — Part 1 reads straight through; how the refits are computed moves to an appendix](#2026-09-29-2355-edt--part-1-reads-straight-through-how-the-refits-are-computed-moves-to-an-appendix)
 - [2026-09-29 23:48 EDT — a check anyone can run: does the 25% threshold hold for these references?](#2026-09-29-2348-edt--a-check-anyone-can-run-does-the-25-threshold-hold-for-these-references)
@@ -49,6 +50,28 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-30 08:19 EDT — one fit-file layout, version 1
+
+The notebook has never been released, so no fit file outside this machine needs reading, and the
+fit file's version history was dead weight. Three things went:
+
+- **The history of versions 1 to 3** in the comment above `RESULTS_SCHEMA_VERSION`. The version is
+  reset to 1, and the comment now describes one layout: the version is stamped on every file and
+  checked on reading, a layout change bumps it, and `fit_unknown` then recomputes a cached file
+  rather than misreading it.
+- **The reader's tolerance for missing search settings.** `metadata.get("search")` existed so
+  version-1 files, which had none, would still load. It is now a plain lookup.
+- **`"refit": "compiled"` in `fit_unknown`'s recorded search settings.** It existed only so fits
+  made with the SciPy refit would be recomputed, and the refit is no longer a choice.
+
+The version check itself stays, with its test, so a future layout change fails loudly rather than
+misreading old files. So does `fit_unknown`'s recompute-on-unreadable path, which is how such a
+change is picked up during development. The five cached fits, stamped version 3, recomputed once
+in about a minute and came out identical to the backup in every array and every kept coefficient
+row. Earlier journal entries still mention versions 2 and 3, as a record of what was true then.
 
 ---
 
