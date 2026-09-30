@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-29 21:51 EDT — the refit is compiled with Numba, and Part 1 runs in a minute and a half](#2026-09-29-2151-edt--the-refit-is-compiled-with-numba-and-part-1-runs-in-a-minute-and-a-half)
 - [2026-09-29 21:20 EDT — the batched NNLS refit is now the default](#2026-09-29-2120-edt--the-batched-nnls-refit-is-now-the-default)
 - [2026-09-29 20:55 EDT — a batched NNLS prototype: the same refits, two to six times faster](#2026-09-29-2055-edt--a-batched-nnls-prototype-the-same-refits-two-to-six-times-faster)
 - [2026-09-29 20:29 EDT — the pipeline reports how many references, and searches only as far as it has to](#2026-09-29-2029-edt--the-pipeline-reports-how-many-references-and-searches-only-as-far-as-it-has-to)
@@ -42,6 +43,62 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-29 21:51 EDT — the refit is compiled with Numba, and Part 1 runs in a minute and a half
+
+The search's refits now run as compiled code. `do_moving_block_holdout_bootstrap_compiled` uses
+the same method as the NumPy batched refit: try every set of switched-on references, solve each
+by Cholesky, keep the best allowed one. But it writes it as plain loops over one draw at a time,
+which Numba compiles and spreads across the CPU cores. It is the search's default and computes
+the coefficients a fit keeps. The NumPy batched version stays as the readable form of the method,
+and SciPy as the reference.
+
+| | SciPy loop | NumPy batched | compiled |
+|---|---|---|---|
+| whole search to 3 references | 23.4 s | 4.6 s | 0.5 s |
+| all five fits (Part 1, cold) | ~25 min | ~13 min | ~1.5 min |
+
+The five fits now take 1, 1, 9, 38 and 37 seconds. For the first time the refit is not what
+dominates a five-reference search; fitting, ranking and building the tie table for 55,454
+combinations is.
+
+The compiled prediction errors are identical to the NumPy batched ones at float32, both per
+combination and across a whole search. Against SciPy, one value in 2.3 million differs, by a
+single rounding step. All three reach the same reported number of references and the same tie
+sets, and the checks cell now fails if they ever do not. Part 2 is unchanged: its only differing
+output is again Study 5's timing table.
+
+### Two things that were not obvious
+
+**The first compiled version was no faster than NumPy.** A straight port took 38 s for a search to
+four references, against 40 s. Almost all of it was the per-draw condition check,
+`np.linalg.eigvalsh`: it calls LAPACK, which allocates working memory on every call, and 32
+threads doing that at once got in each other's way, at 98% of the loop's time. It is replaced by
+a bound that needs no LAPACK, cond(G) ≤ tr(G) · tr(G⁻¹), computed from the Cholesky factor. It
+overestimates by at most a factor of m², so it can only send a borderline draw to SciPy
+unnecessarily, never let an ill-conditioned one through. Building each draw's resampled spectrum
+inside the loop, instead of as a 1000 × 198 array beforehand, finished the job: 3.1 s for the
+search to four.
+
+**Timing the two versions side by side misled.** A loop that alternated Numba and NumPy calls every
+few milliseconds made the NumPy search take 62 s instead of 40. Both libraries' worker threads keep
+spinning briefly after their work finishes, and each slowed the other. Timed alone, in separate
+processes, the numbers above are stable, and a NumPy search run right after a Numba one is
+unaffected. A search uses one refit throughout, so this does not arise in the pipeline. Numba's
+default OpenMP threading layer is the right one here: `workqueue` took 7.4 s instead of 3.0 s.
+
+### Dependency
+
+`numba` (0.67, with `llvmlite`) is now in `requirements.txt`. The comment says why: like
+`pyarrow`, it is there so the refit can move into the package. Installing it changed nothing else;
+it supports the NumPy 2.5 already in the environment. Numba compiles the loop the first time it is
+used in a session, which takes about 3 seconds.
+
+The step 6 explanation gains a third tier, "Compiling the loop". It covers why plain loops are fast
+once compiled, when NumPy's lesson was to avoid them, the LAPACK-in-threads lesson, the trace bound
+with its derivation, and the timing caution.
 
 ---
 

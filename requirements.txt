@@ -5,6 +5,9 @@ pandas
 # results files written by notebooks/moving_block_holdout_bootstrap.ipynb; declared here
 # rather than only in the notebook so the writer and reader can move into the package
 pyarrow
+# compiles the bootstrap refit in notebooks/moving_block_holdout_bootstrap.ipynb; declared here,
+# like pyarrow, so the refit can move into the package
+numba
 scipy
 scikit-learn
 statsmodels
