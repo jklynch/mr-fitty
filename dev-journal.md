@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-30 08:10 EDT — every study rerun on the final pipeline: not one decision changed](#2026-09-30-0810-edt--every-study-rerun-on-the-final-pipeline-not-one-decision-changed)
 - [2026-09-29 23:55 EDT — Part 1 reads straight through; how the refits are computed moves to an appendix](#2026-09-29-2355-edt--part-1-reads-straight-through-how-the-refits-are-computed-moves-to-an-appendix)
 - [2026-09-29 23:48 EDT — a check anyone can run: does the 25% threshold hold for these references?](#2026-09-29-2348-edt--a-check-anyone-can-run-does-the-25-threshold-hold-for-these-references)
 - [2026-09-29 23:38 EDT — what each unknown's output says: weights, the rule, cautions, and tie patterns](#2026-09-29-2338-edt--what-each-unknowns-output-says-weights-the-rule-cautions-and-tie-patterns)
@@ -48,6 +49,44 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-30 08:10 EDT — every study rerun on the final pipeline: not one decision changed
+
+Studies 1-6 had been computed with the one-SciPy-call-per-draw refit, and Study 7 partly so. All
+18 study caches were set aside and every study rerun from cold on the final pipeline: the compiled
+refit and the exact ranking. The rerun took about 3.8 hours, almost all of it Study 7's main
+design, at 40-45 minutes per source.
+
+Compared with the earlier results:
+
+- **No decision changed.** Across all 1,856 of Study 7's searches, every rule reports the same
+  number of references at every draw count.
+- **Twelve caches are identical** to the last digit.
+- **Study 3's two recovery caches** differ in a rank correlation by at most 2e-7, from the exact
+  ranking.
+- **Study 7's tables** differ in mean rank by about 2e-7, again the exact ranking. In one
+  spectrum, one of 1,000 draws changed which fit wins, where the compiled refit's rounding
+  landed on the other side of a tie. Neither changed any answer.
+- **Every printed table is the same,** apart from the timing tables that vary on every run.
+
+So every Findings section stands as written. The Part 2 introduction now says so, instead of
+saying the results came from the SciPy refit. The eight run times the study cells quote are the
+new ones. Study 7's main design fell from about 3.5 hours per source to 40-45 minutes, its
+controlled sweeps from 3.5 hours to half an hour, and Study 3's recovery run from about 25 minutes
+to three.
+
+Two fixes came out of it:
+
+- **`run_arms` now limits each worker to one thread for compiled code.** A study's workers already
+  occupy every core, and each worker's compiled search was starting a thread per core of its own:
+  32 threads in each of 32 workers. A timing run gave identical results 13% faster with the
+  limit. That is less than expected, since on this laptop sustained throughput is bound more by
+  clock speed and memory than by the extra threads.
+- **`cached_study` now keeps a table's meaningful index.** It had been dropping it on write, so
+  Study 2's and Study 4's tables printed with the unknowns' names when just computed and with
+  0-4 when read from cache. A new test checks a named index survives the cache.
 
 ---
 
