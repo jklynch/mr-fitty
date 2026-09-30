@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-29 22:29 EDT — tie tables built from whole arrays for the default rule](#2026-09-29-2229-edt--tie-tables-built-from-whole-arrays-for-the-default-rule)
 - [2026-09-29 22:17 EDT — the rest of the combination search, compiled; and the old mean ranks were not exact](#2026-09-29-2217-edt--the-rest-of-the-combination-search-compiled-and-the-old-mean-ranks-were-not-exact)
 - [2026-09-29 21:51 EDT — the refit is compiled with Numba, and Part 1 runs in a minute and a half](#2026-09-29-2151-edt--the-refit-is-compiled-with-numba-and-part-1-runs-in-a-minute-and-a-half)
 - [2026-09-29 21:20 EDT — the batched NNLS refit is now the default](#2026-09-29-2120-edt--the-batched-nnls-refit-is-now-the-default)
@@ -44,6 +45,41 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-29 22:29 EDT — tie tables built from whole arrays for the default rule
+
+`tie_table_from_paired_prediction_errors` asked its tie rule and median-interval estimator about
+one combination at a time, with a random generator seeded per row. That generality is needed for
+Study 5's resampling rules, but the defaults draw no random numbers. The distribution rule takes
+the 2.5th and 97.5th percentiles of the paired differences, and the order-statistic interval reads
+two fixed positions off the sorted draws, so both can be taken along every row of an array at
+once.
+
+The function now sends the default rule and interval to `_tie_table_default_rule`. That computes
+every column for a whole size at once, in blocks of 4,096 rows to keep the temporary arrays to a
+few hundred MB. Any other rule or interval goes to `_tie_table_row_by_row`, the original loop, now
+a function of its own.
+
+| fit | row by row | whole arrays |
+|---|---|---|
+| to 5 references | 5.5 s | 1.8 s |
+| to 5 references, with regime columns | 8.1 s | 2.8 s |
+| to 4 references | 1.3 s | 0.4 s |
+| to 3 references | 0.2 s | 0.1 s |
+
+The two paths build identical tables, compared value for value with `check_exact=True` on all five
+real fits, with and without the regime columns. A new test asserts the same on synthetic results,
+so the paths cannot drift apart unnoticed. In a full notebook run no result changed; the only
+differing outputs were the new test, one test's output order, and the two timing tables that
+vary on every run.
+
+The whole notebook, with fits and studies read from their caches, now runs in about two and a
+half minutes. Most of what is left in the whole-array path is three passes over each block: a
+sort for the median interval, and partitions for the percentiles and the medians. Reading all of
+them off one sort would save perhaps a second per five-reference table. But it would mean
+reproducing NumPy's percentile interpolation exactly by hand, and that was not worth the risk.
 
 ---
 
