@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-09-29 20:29 EDT — the pipeline reports how many references, and searches only as far as it has to](#2026-09-29-2029-edt--the-pipeline-reports-how-many-references-and-searches-only-as-far-as-it-has-to)
 - [2026-09-28 22:40 EDT — Study 7: how many references to report](#2026-09-28-2240-edt--study-7-how-many-references-to-report)
 - [2026-09-28 17:32 EDT — the tie table is named for what it pairs, and black formats the notebook](#2026-09-28-1732-edt--the-tie-table-is-named-for-what-it-pairs-and-black-formats-the-notebook)
 - [2026-09-28 16:51 EDT — each unknown's summary figures go to a PDF, and the pipeline list links to its functions](#2026-09-28-1651-edt--each-unknowns-summary-figures-go-to-a-pdf-and-the-pipeline-list-links-to-its-functions)
@@ -39,6 +40,86 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-09-29 20:29 EDT — the pipeline reports how many references, and searches only as far as it has to
+
+Study 7 was strengthened, and then the pipeline in
+`notebooks/moving_block_holdout_bootstrap.ipynb` adopted what it found.
+
+### Study 7, strengthened
+
+The first version searched only as far as its largest true size, so a rule could never be caught
+reporting too many references there, and it compared rules that all read the bootstrap. The new
+design fixes both:
+
+- **The main design** builds spectra from 1 to 4 known references on three unknowns
+  (`OTT3_55_spot0`, `Ott3_73_AsXANES_spot6_000`, `Ott3_74_AsXANES_spot0`): 384 spectra, each
+  searched to five references.
+- **Controlled sweeps** vary the smallest weight, the noise level, and whether the references
+  include near-duplicates.
+- **AIC and BIC** are added, on the lowest-residual fit at each size. They need no bootstrap at
+  all.
+- **Real-data stability**: all sixteen unknowns, with two seeds and each half of the draws.
+
+The 25% rule held up. It is statistically tied with the package's stepwise rule on accuracy (0.78
+against 0.81; 15 against 26 where they disagree, p = 0.12), but it adds a reference that is not
+there less than half as often (3% against 7%). And it does not drift with the number of draws,
+where the stepwise rule reports more references for 42 spectra and fewer for none between 250 and
+1000 draws. BIC with an effective sample size is the best information criterion, at 0.74, but it
+adds a false reference on 18% of spectra, so the bootstrap is earning its cost. The threshold's
+best range is 0.20–0.34 on all three unknowns and does not move with noise from ×0.5 to ×2. With
+distinct references the rule is perfect. Its misses are near-duplicate references, and weak
+components: below a weight of about 0.10 no rule is reliable. At the true size, the true
+combination was in the tie set on all 384 spectra.
+
+The main design took about ten hours. This laptop's throughput under full parallel load is about
+a fifth of what single-process timings suggest, and the first attempt crashed partway through
+because SciPy's NNLS gives up after 3 iterations per column. Both NNLS calls now allow 100 per
+column. That cannot change any earlier result, since those all converged within the old limit.
+
+### The pipeline adopts it
+
+- **Step 7 reports a number of references.** `reference_count` applies the 25% rule, and the tie
+  table lists the alternatives at that size. `per_size_bests` moved there from Study 7.
+- **The search grows instead of stopping at a fixed cap.** `fit_unknown` searches every
+  combination of one to three references, then adds a size while the reported number is the
+  largest size searched, up to five, and warns if the answer is still at the edge. Study 7 judged
+  rules with the search one past the answer, and growing gets there without paying for sizes no
+  spectrum asks for. On the five unknowns two stop at three references, one grows to four and two
+  to five.
+- **The block length is tuned on the initial search.** It has to be settled before any bootstrap
+  runs, so that every size is scored on the same draws. Tuning on the initial search also keeps it
+  from depending on how far the search grows: adding four-reference fits would have moved
+  `Ott3_73_AsXANES_spot5_000` from 32 to 47.
+
+The defaults are general, not arsenic-specific. The demonstration spells out its settings,
+because Part 2 depends on them.
+
+### Part 2 is unchanged
+
+Studies 1 to 6 now read `study_fits`, the fits restricted to one to three references. With the
+block length tuned on those sizes, the restricted fits are identical to the searches the studies
+were run on, and a check compared them array by array. Their Findings and caches stand.
+
+### Smaller fit files
+
+Bootstrap coefficients are the largest thing a search makes, but only the summary PDFs read them,
+and only for a few combinations. Fits now keep them for the best ten tied combinations at each
+size, recomputed from the search's own draws and identical to what a full search stores. That
+means a new fit-file layout, schema version 2; a version-1 file in the cache is recomputed. Files
+that stop at three or four references shrank from 20–200 MB to 7–33 MB. A five-reference file is
+about 200 MB, almost all of it prediction errors. The combination search can also skip
+coefficients entirely (`keep_bootstrap_coefs=False`), which Study 7 needed to fit
+five-reference searches in memory.
+
+A cold run of Part 1 now takes about 25 minutes, mostly the two five-reference searches. Batching
+the refits of each combination in NumPy, solving NNLS exactly over every possible set of nonzero
+coefficients, is the likely next speedup.
+
+Smaller edits: the Study 7 text and three Part 1 comments name `OTT3_55_spot0` instead of calling
+it "the primary unknown".
 
 ---
 
