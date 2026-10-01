@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-01 16:14 EDT — the reference-count figures say what they count](#2026-10-01-1614-edt--the-reference-count-figures-say-what-they-count)
 - [2026-09-30 08:19 EDT — one fit-file layout, version 1](#2026-09-30-0819-edt--one-fit-file-layout-version-1)
 - [2026-09-30 08:10 EDT — every study rerun on the final pipeline: not one decision changed](#2026-09-30-0810-edt--every-study-rerun-on-the-final-pipeline-not-one-decision-changed)
 - [2026-09-29 23:55 EDT — Part 1 reads straight through; how the refits are computed moves to an appendix](#2026-09-29-2355-edt--part-1-reads-straight-through-how-the-refits-are-computed-moves-to-an-appendix)
@@ -50,6 +51,37 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-01 16:14 EDT — the reference-count figures say what they count
+
+The figures showing how the 25% rule chooses the number of references (`plot_reference_count`
+and `plot_reference_counts`) had vague wording. "Size" did not say what was being counted,
+"iterations" did not say what was iterated, and "its" in the y-labels could only be resolved by
+already knowing the method. The figures now use three terms throughout:
+
+- **"number of references"** instead of "size". The x-axis already used it, and so does the
+  title's first line ("2 references reported"), so the title now matches the axis it describes.
+- **"resampled spectra"** instead of "iterations". This is what the bootstrap actually makes,
+  and it is how the notebook's opening section describes it. "Bootstrap replicates" was
+  considered and rejected, because "replicate" already means a synthetic test spectrum in the
+  studies (`n_replicates`).
+- **"the overall best combination"** instead of "the best of all sizes". This includes the
+  label on the gray band.
+
+The y-labels no longer use a pronoun. The top one reads "share of resampled spectra on which
+the best combination of that many references has lower prediction error than the overall best
+combination", and the bottom one reads "prediction error of the best combination of that many
+references minus that of the overall best combination". To fit their panels, both are set at
+font size 9 and split over four or five lines. Both titles also replace "beats" with the
+quantity actually compared, prediction error. The docstrings of `_draw_reference_count` and
+`reference_count` use the same terms.
+
+"Bootstrap iterations" on the axis of `plot_tie_rule_sensitivity` stays, because that axis
+really is the iteration count. `per_size_bests` and its `beats_best` field keep their names,
+since renaming them would change code rather than text. Both figures were checked by drawing
+them from made-up numbers; the notebook was not rerun.
 
 ---
 
