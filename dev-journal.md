@@ -68,7 +68,11 @@ already knowing the method. The figures now use three terms throughout:
   considered and rejected, because "replicate" already means a synthetic test spectrum in the
   studies (`n_replicates`).
 - **"the overall best combination"** instead of "the best of all sizes". This includes the
-  label on the gray band.
+  label on the gray band and the 25% line's annotation, which now reads "counts as good as the
+  overall best combination".
+
+The diagnostic-window printout in Part 2 says "mostly held out for 29.7% of resampled
+spectra" instead of "of iterations".
 
 The y-labels no longer use a pronoun. The top one reads "share of resampled spectra on which
 the best combination of that many references has lower prediction error than the overall best
@@ -80,8 +84,9 @@ quantity actually compared, prediction error. The docstrings of `_draw_reference
 
 "Bootstrap iterations" on the axis of `plot_tie_rule_sensitivity` stays, because that axis
 really is the iteration count. `per_size_bests` and its `beats_best` field keep their names,
-since renaming them would change code rather than text. Both figures were checked by drawing
-them from made-up numbers; the notebook was not rerun.
+since renaming them would change code rather than text. The notebook was rerun from start to
+finish with no errors, and both figures were checked on the five unknowns: every label fits
+its panel, including the summary PDFs with their caution notes.
 
 ---
 
