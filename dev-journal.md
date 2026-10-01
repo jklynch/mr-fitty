@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-01 17:39 EDT — the tie patterns are drawn on the tree, at every number of references](#2026-10-01-1739-edt--the-tie-patterns-are-drawn-on-the-tree-at-every-number-of-references)
 - [2026-10-01 16:14 EDT — the reference-count figures say what they count](#2026-10-01-1614-edt--the-reference-count-figures-say-what-they-count)
 - [2026-09-30 08:19 EDT — one fit-file layout, version 1](#2026-09-30-0819-edt--one-fit-file-layout-version-1)
 - [2026-09-30 08:10 EDT — every study rerun on the final pipeline: not one decision changed](#2026-09-30-0810-edt--every-study-rerun-on-the-final-pipeline-not-one-decision-changed)
@@ -51,6 +52,55 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-01 17:39 EDT — the tie patterns are drawn on the tree, at every number of references
+
+The tie patterns (`tie_patterns`) name groups of references by letter: A, B, C and so on. The
+groups come from cutting the reference tree at a chosen height. Until now the letters appeared
+only on a text page near the front of each PDF, and only for the reported number of
+references. To see where a group sat in the tree, the reader had to find each listed name on
+the tree page many pages later. Now the tree shows the groups, and the patterns cover every
+number of references searched.
+
+- **The tree letters the groups.** On the shaded tie-set tree, each group the patterns use gets
+  a gray band from its leaves out to the cut height, with its letter at the band's edge.
+  Neighboring groups alternate between two grays, and the legend gives the cut height. The
+  bands are drawn by `_mark_pattern_groups`, through a new `patterns` argument to
+  `plot_weighted_reference_dendrogram`. The summary from `tie_patterns` now records its number
+  of references and the distance used for the tree, so the letters go only on the correlation
+  tree that was actually cut.
+- **The pattern page follows its tree.** `plot_tied_subset_bootstrap_summaries` takes a
+  `patterns` argument and puts each pattern page directly after the tree it explains. The
+  tree page's title points to the next page. The PDF cell no longer inserts the pattern page
+  near the front.
+- **Every tree is drawn top-down.** The patterns letter the groups in leaf order, and the tree
+  used to put the first leaf at the bottom, so A sat at the bottom and the text's "lettered
+  A, B, C... down the tree" was wrong. The y axis in `_draw_reference_tree` is now inverted.
+  That function draws every reference tree in the notebook, so all of them now read
+  top-down. The legend inside the tree moved to the lower left, which is the corner the
+  flipped trees leave empty for these references. For a different reference pool it could
+  land on a branch.
+- **Patterns at every number of references.** The PDF cell computes `tie_patterns` for each
+  number of references searched, not just the reported one. Each tie set gets its own cut
+  height, so the same letter can name different groups at different sizes. In
+  OTT3_55_spot0, "E" is three arsenites at 1 reference and all the arsenates at 3. The
+  notebook prose says so. The notebook printout still shows only the reported number,
+  because that is what the surrounding text discusses. The PDFs grew from 53–87 pages to
+  57–93.
+- **`<unknown>.ties.tsv` covers every number of references.** Each row now starts with
+  `references_per_combination` and `cut_height`, since the cut differs from one number to the
+  next.
+- **`size` is renamed `references_per_combination`** in both TSVs. In the ties table it was
+  new. In the weights table (`coefficient_table`) it replaces the old `size` column, which
+  only that function and one test read.
+
+A new test, `test_the_tie_patterns_follow_the_tree_that_letters_their_groups`, checks that the
+pattern page follows the trees and that the letters appear on the correlation tree and not on
+the cosine tree. The notebook was rerun from start to finish with every test passing. The
+lettered trees, pattern pages and both TSVs were checked on the five unknowns. At every
+number of references, the pattern rows add up to the full tie set.
 
 ---
 
