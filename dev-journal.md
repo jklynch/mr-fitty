@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-01 20:36 EDT — tie sets set aside the combinations that leave a reference unused](#2026-10-01-2036-edt--tie-sets-set-aside-the-combinations-that-leave-a-reference-unused)
 - [2026-10-01 19:58 EDT — cautions on every pattern page, marked on the tree, and a caution for an unused reference](#2026-10-01-1958-edt--cautions-on-every-pattern-page-marked-on-the-tree-and-a-caution-for-an-unused-reference)
 - [2026-10-01 17:39 EDT — the tie patterns are drawn on the tree, at every number of references](#2026-10-01-1739-edt--the-tie-patterns-are-drawn-on-the-tree-at-every-number-of-references)
 - [2026-10-01 16:14 EDT — the reference-count figures say what they count](#2026-10-01-1614-edt--the-reference-count-figures-say-what-they-count)
@@ -53,6 +54,52 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-01 20:36 EDT — tie sets set aside the combinations that leave a reference unused
+
+The previous entry found that much of every tie set is combinations with a reference the fit gives
+no weight. Such a combination predicts as well as the best one only because the smaller
+combination inside it does, so it is an answer at a smaller size rather than an alternative at
+this one. The tie patterns, and the tree shading drawn with them, now cover only the tied
+combinations that use all their references. The others are counted and reported.
+
+- **`fit_unknown` records `share_at_zero` for every combination.** This is the share of refits
+  that gave each reference a weight of exactly 0. The search computes every combination's
+  weights in every refit but keeps only the prediction errors, so `_shares_at_zero` recomputes
+  them from the same draws and reduces them at once to one number per reference. It doubles
+  the time of the two largest fits, from about 20 s to 45 s, and leaves the files the same
+  size.
+- **`leaves_a_reference_unused`** marks a combination whose `share_at_zero` reaches
+  `UNUSED_REFERENCE_SHARE` (0.5, the same as a median weight of 0) for some reference.
+  `reporting_cautions` uses the same constant.
+- **`tie_patterns` covers the rest.** Its summary adds `unused` and `using_all` counts, and the
+  pattern page header gives the split. For OTT3_55_spot0 at 3 references: "136 tied
+  combinations. 56 of them leave a reference unused … The patterns are of the other 80". A size
+  where every tied combination leaves a reference unused would get a header saying so and no
+  letters on its tree. None of the five unknowns has one.
+- **The tree is shaded over the same set.** `tied_subset_reference_shares` takes the unused
+  mask, and the title and legend name the count shaded over ("the 80 of 136 tied subsets that
+  use all their references").
+- **`<unknown>.ties.tsv`** gains `tied_combinations` and `tied_with_an_unused_reference` after
+  `references_per_combination` and `cut_height`.
+- **`share_at_zero` is part of the one fit-file layout.** It is stored as a column of its own,
+  and the writer and reader both require it. The version stays at 1, because no fit file has
+  been released and there is no older layout to read. The five cached fits were recomputed
+  once to pick it up. Their prediction errors and kept weights are identical to before, and
+  `share_at_zero` agrees with the kept weights wherever both exist.
+
+At the reported number of references the split is 56 of 136 for OTT3_55_spot0, 0 of 15 for
+Ott3_73_AsXANES_spot5_000, 3 of 30 for spot1_avg, 1,142 of 2,774 for spot6_000 and 559 of 1,658
+for Ott3_74_AsXANES_spot0. Above the reported number most of the tie set leaves a reference unused,
+11,385 of 15,846 at 5 references for spot6_000. The reported number of references does not change,
+because `reference_count` compares only each number's best combination. The studies do not change
+either, because their searches do not compute `share_at_zero`.
+
+New tests cover the `share_at_zero` round trip, the split counts in `tie_patterns`, and the
+shading with the unused combinations left out. The notebook was rerun from start to finish with
+every test passing, and the pattern pages, trees and TSVs were checked on the five unknowns.
 
 ---
 
