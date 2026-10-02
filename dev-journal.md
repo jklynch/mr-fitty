@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-01 21:36 EDT — the search counts zero weights as it goes, and the fits are fast again](#2026-10-01-2136-edt--the-search-counts-zero-weights-as-it-goes-and-the-fits-are-fast-again)
 - [2026-10-01 20:36 EDT — tie sets set aside the combinations that leave a reference unused](#2026-10-01-2036-edt--tie-sets-set-aside-the-combinations-that-leave-a-reference-unused)
 - [2026-10-01 19:58 EDT — cautions on every pattern page, marked on the tree, and a caution for an unused reference](#2026-10-01-1958-edt--cautions-on-every-pattern-page-marked-on-the-tree-and-a-caution-for-an-unused-reference)
 - [2026-10-01 17:39 EDT — the tie patterns are drawn on the tree, at every number of references](#2026-10-01-1739-edt--the-tie-patterns-are-drawn-on-the-tree-at-every-number-of-references)
@@ -54,6 +55,38 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-01 21:36 EDT — the search counts zero weights as it goes, and the fits are fast again
+
+The previous entry's `share_at_zero` doubled the time of the two largest fits, from about 20 s to
+45 s. `_shares_at_zero` ran after the search and refitted every combination on every draw a second
+time, only to recover weights the search had already computed. `_compiled_search` computes each
+draw's weights in `_refit_one_draw` and keeps only the prediction error, so the second pass was
+the whole search over again.
+
+The zeros are now counted inside the search, while the weights are still in hand:
+
+- **`_compiled_search`** adds to a per-combination, per-reference count whenever a weight is
+  exactly 0. A draw set aside as ill-conditioned returns before writing any weights, so it is
+  skipped there, and **`bootstrap_combinations_compiled`** counts it after refitting it with SciPy.
+  `bootstrap_combinations_compiled` now returns the shares along with the prediction errors.
+- **The search's other path**, used when the weights are kept or another refit is passed in,
+  counts zeros from the weights it gets back. So every search records `share_at_zero`, the
+  studies' included, though nothing there uses it yet. `leaves_a_reference_unused` still treats
+  a results dict without it as having nothing unused, for the tests' hand-built ones.
+- **`_shares_at_zero` is gone**, and `_concatenate_results` carries `share_at_zero` when
+  `fit_unknown` extends a search to a larger number of references.
+
+All five unknowns were refitted from scratch. Ott3_73_AsXANES_spot6_000 took 18 s and
+Ott3_74_AsXANES_spot0 19 s, against 19 s and 20 s before `share_at_zero` and 48 s and 44 s with the
+second pass. `share_at_zero` is identical to the second pass's for every combination, and the
+prediction errors and kept weights are identical to the fits from before either change.
+
+Appendix A's whole-search check now also asserts that the compiled and NumPy-batched searches give
+identical shares of zero weights. On its 2,324-combination search they do, and SciPy's differ from
+them by less than 0.001. The notebook was rerun from start to finish with every test passing.
 
 ---
 
