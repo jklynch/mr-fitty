@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-01 19:58 EDT — cautions on every pattern page, marked on the tree, and a caution for an unused reference](#2026-10-01-1958-edt--cautions-on-every-pattern-page-marked-on-the-tree-and-a-caution-for-an-unused-reference)
 - [2026-10-01 17:39 EDT — the tie patterns are drawn on the tree, at every number of references](#2026-10-01-1739-edt--the-tie-patterns-are-drawn-on-the-tree-at-every-number-of-references)
 - [2026-10-01 16:14 EDT — the reference-count figures say what they count](#2026-10-01-1614-edt--the-reference-count-figures-say-what-they-count)
 - [2026-09-30 08:19 EDT — one fit-file layout, version 1](#2026-09-30-0819-edt--one-fit-file-layout-version-1)
@@ -52,6 +53,59 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-01 19:58 EDT — cautions on every pattern page, marked on the tree, and a caution for an unused reference
+
+The cautions `reporting_cautions` writes about a combination used to be printed under the
+reference-count figure, and only for the reported combination. They now sit next to the
+patterns and the tree they are about, at every number of references.
+
+- **Cautions moved to the pattern pages.** Each number of references' page of tie patterns ends
+  with a numbered list of cautions about that number's best combination (best rank 1, the one
+  its tie set is anchored on). The heading names the combination and says when it is the
+  reported one. The reference-count page is back to its two panels, and `plot_reference_count`
+  no longer takes `notes`. The notebook still shows the reported combination's cautions as a
+  table under the reference-count figure.
+- **The tree marks what each caution names.** Each reference a caution names gets that
+  caution's number, e.g. `[1, 2, 3, 5]`, in a column of its own between the weight bars and
+  the leaf labels. A plain prefix to the labels would have left the names ragged, since the
+  marks differ in width and most leaves have none, so the names are pushed out by the widest
+  mark instead. The near-duplicate caution marks every near-identical reference, although its
+  sentence names only the first three.
+- **`reporting_cautions` returns structure.** Each caution is now `{"text", "references"}`, the
+  references being what the tree marks. A new `size` argument picks the best combination with
+  that many references. Leaving it out gives the reported combination, as before.
+- **A fourth caution: a reference the fit leaves out.** Some combinations give one reference a
+  median weight of exactly 0. That is the nonnegative fit pinning the weight at zero, and it is
+  not a faint component, so the small-weight caution described it wrongly. A reference whose
+  weight is exactly 0 in at least half the refits now gets its own caution: the combination is
+  in effect a smaller one with an unused reference added. That reference gets none of the
+  other three cautions, which assume the fit uses it.
+- **`share_at_zero` in `coefficient_table`** and so in `<unknown>.tsv`: the share of refits
+  that gave each reference no weight. It separates "never used" from "used a little", which a
+  median near zero does not.
+
+**What the unused references say about tie sets.** None of the five unknowns' reported
+combinations has an unused reference, but their tie sets are full of them. Going by each
+combination's single-fit weight, 45–69% of the tie set at the reported number of references
+leaves a reference at exactly 0. Above the reported number it is 78–91%, which is much of why
+tie sets grow so fast. These combinations do predict as well as the best one, so they belong in
+the tie set, but they are smaller answers rather than alternatives at that number. The next
+step is to count them apart from the rest.
+
+Telling them apart needs the bootstrap weights of every tied combination, and `fit_unknown` keeps
+those for only 10 per number of references. Measured on the largest tie set, Ott3_73_AsXANES_spot6_000's
+15,846 tied 5-reference combinations, recomputing them took 8 s. The search's batched path takes
+5 s for those combinations' prediction errors alone. The draws are seeded but not stored;
+regenerated, they reproduced the stored holdout masks and prediction errors exactly. The
+single-fit weight is not a usable shortcut: it flags 13,594 of those combinations and the
+bootstrap median 11,385, and the two disagree on 2,569.
+
+New tests cover the numbered cautions and their marks, `reporting_cautions(size=...)`, and the
+unused-reference caution with `share_at_zero`. The notebook was rerun from start to finish with
+every test passing, and the pattern pages, tree marks and TSVs were checked on the five unknowns.
 
 ---
 
