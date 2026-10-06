@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-06 18:51 EDT — the numbered groups' bands take their label colors](#2026-10-06-1851-edt--the-numbered-groups-bands-take-their-label-colors)
 - [2026-10-06 18:42 EDT — the text pages are sized to the text on them](#2026-10-06-1842-edt--the-text-pages-are-sized-to-the-text-on-them)
 - [2026-10-06 15:43 EDT — the reference tree is followed by its groups of near-identical references, numbered and colored on the tree](#2026-10-06-1543-edt--the-reference-tree-is-followed-by-its-groups-of-near-identical-references-numbered-and-colored-on-the-tree)
 - [2026-10-06 13:40 EDT — every panel says what drew it, and `plot_bootstrap_summary` is built from panel functions](#2026-10-06-1340-edt--every-panel-says-what-drew-it-and-plot_bootstrap_summary-is-built-from-panel-functions)
@@ -58,6 +59,25 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-06 18:51 EDT — the numbered groups' bands take their label colors
+
+On the reference tree at the start of each summary PDF, each group of near-identical references
+has blue or purple leaf labels, but its band behind the leaves was gray, like the tie patterns'
+bands. The labels and their band read as two separate marks. Each band is now a light tint of
+its group's label color, blue or purple. At 18% opacity (`NUMBERED_GROUP_BAND_ALPHA`) the branches
+still show through. The legend swatch is the blue tint.
+
+The tie-pattern bands on the later trees stay gray. The band-drawing helper `_band_groups` now
+takes an optional pair of colors, which defaults to the two grays, and only the numbered groups
+pass their own. This also fixes `_mark_numbered_groups`'s docstring, which an earlier edit had
+left with a run-on first paragraph and an over-long line.
+
+The near-duplicate test now also checks that each group's band has the same hue as its labels. The
+notebook was rerun from start to finish with every test passing. On OTT3_55_spot0's PDF, the first
+tree was checked by eye, along with a later tie-set tree whose bands are still gray.
 
 ---
 
