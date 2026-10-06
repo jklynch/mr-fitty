@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-06 18:42 EDT — the text pages are sized to the text on them](#2026-10-06-1842-edt--the-text-pages-are-sized-to-the-text-on-them)
 - [2026-10-06 15:43 EDT — the reference tree is followed by its groups of near-identical references, numbered and colored on the tree](#2026-10-06-1543-edt--the-reference-tree-is-followed-by-its-groups-of-near-identical-references-numbered-and-colored-on-the-tree)
 - [2026-10-06 13:40 EDT — every panel says what drew it, and `plot_bootstrap_summary` is built from panel functions](#2026-10-06-1340-edt--every-panel-says-what-drew-it-and-plot_bootstrap_summary-is-built-from-panel-functions)
 - [2026-10-01 21:36 EDT — the search counts zero weights as it goes, and the fits are fast again](#2026-10-01-2136-edt--the-search-counts-zero-weights-as-it-goes-and-the-fits-are-fast-again)
@@ -57,6 +58,37 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-06 18:42 EDT — the text pages are sized to the text on them
+
+The two pages of text in each summary PDF, the tie patterns and the groups of near-identical
+references, were sized by an estimate: 1.2 inches plus 0.2 inches per line. A line of 9-point
+monospace text takes about 0.15 inches in the PDF, and the fixed 1.2 inches was more than the title
+and the corner label need, so the blank space under the text grew with its length. The groups page
+for Ott3_73_AsXANES_spot1_avg was 6.6 inches tall with about two inches of nothing at the bottom.
+
+Both pages now go through one helper, **`_text_page`**, which lays the text out, measures it,
+and sizes the page to it. It keeps half an inch above the text for the title, as before, and leaves
+0.3 inches below it for the figure label in the bottom right corner. On that unknown's PDF the
+groups page is now 5.6 inches and the tie-pattern page 4.0, down from 4.4.
+
+### Measured at 300 dpi
+
+The first version measured the text at the figure's own resolution, the notebook's 100 dpi. The
+PDF pages still ended with about 0.3-0.4 inches of extra space, because font hinting at 100 dpi
+rounds every line up: 30 lines measured 4.95 inches at 100 dpi, 4.99 at 72, and 4.55 at 300,
+against 4.52 in the PDF. The text is now measured at `TEXT_PAGE_MEASURE_DPI` (300), and the
+figure's own dpi is put back afterwards.
+
+The cost is on screen. A page shown in the notebook is drawn at 100 dpi, where the same text runs
+about 9% taller, so its last lines can come down to the corner label. Neither page is shown in the
+notebook today. Both are drawn only by `plot_tied_subset_bootstrap_summaries` for the summary PDFs,
+and `_text_page`'s docstring records the trade.
+
+The notebook was rerun from start to finish with every test passing, and both pages were checked
+by eye in the PDF.
 
 ---
 
