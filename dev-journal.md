@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-06 13:40 EDT — every panel says what drew it, and `plot_bootstrap_summary` is built from panel functions](#2026-10-06-1340-edt--every-panel-says-what-drew-it-and-plot_bootstrap_summary-is-built-from-panel-functions)
 - [2026-10-01 21:36 EDT — the search counts zero weights as it goes, and the fits are fast again](#2026-10-01-2136-edt--the-search-counts-zero-weights-as-it-goes-and-the-fits-are-fast-again)
 - [2026-10-01 20:36 EDT — tie sets set aside the combinations that leave a reference unused](#2026-10-01-2036-edt--tie-sets-set-aside-the-combinations-that-leave-a-reference-unused)
 - [2026-10-01 19:58 EDT — cautions on every pattern page, marked on the tree, and a caution for an unused reference](#2026-10-01-1958-edt--cautions-on-every-pattern-page-marked-on-the-tree-and-a-caution-for-an-unused-reference)
@@ -55,6 +56,93 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-06 13:40 EDT — every panel says what drew it, and `plot_bootstrap_summary` is built from panel functions
+
+`plot_bootstrap_summary` drew all of its panels itself, about 200 lines of them, so the only way
+to redraw one histogram or violin was to redraw all five figures. Each of its plots is now a
+function of its own that draws into an `ax` it is handed, and every such panel in
+`notebooks/moving_block_holdout_bootstrap.ipynb` now carries the name of the function that drew
+it.
+
+### Panel labels
+
+The figure labels from the 2026-09-23 entry name the function that redraws a whole figure, but
+most figures are rows or grids of panels. A new decorator, **`names_its_panels`**, writes the
+decorated function's name in small grey type at a panel's lower right, just below its x-axis
+label (or below the tick numbers when there is no x-axis label).
+
+- **It labels on the way out, not at creation.** A panel function creates nothing the way
+  `names_its_figures` intercepts `plt.figure`; the axes already exist when it is called. So the
+  decorator finds the `ax` argument through the function's signature, positional or keyword,
+  and labels it after the function returns. Decorating a function with no `ax` argument raises
+  `TypeError`.
+- **The outermost function wins.** This is the reverse of the figure rule, for the same reason:
+  the label should name the call that redraws everything you see. `plot_weighted_spectrum_fit`
+  calls `plot_spectrum_fit` and then adds the weight box, which `plot_spectrum_fit` alone would
+  not redraw. A label replaces any earlier one on the same axes, so the inner function labels
+  first and the outer one relabels it.
+- **Its height comes from the axis label at draw time.** The label is placed against the x-axis
+  label's position, so it cannot overlap the tick or axis labels, even when an axis label is set
+  after the panel function returns. The first version sat level with the panel title in the
+  upper right, and four long titles ran into it.
+- **Figure labels stay.** A figure carries its own label in the bottom right corner and one label
+  per panel.
+
+Panels drawn by these functions are now labeled: `plot_spectrum_fit`, `plot_acf`,
+`plot_residuals_histogram`, `plot_tie_table_panel`, the three panels of the whiteline regime
+summary, the three of the whiteline recovery study, the three dendrogram functions, and
+`plot_interpolated_references`. Private helpers like `_draw_reference_tree` are not labeled.
+
+### `plot_bootstrap_summary` split into panel functions
+
+Five new panel functions, beside `weight_summary`:
+
+- **`plot_weighted_spectrum_fit`** — the fit, titled with the sample, plus the box of median
+  weights.
+- **`plot_coef_histogram`** and **`plot_pe_histogram`** — one reference's bootstrap weights, and
+  the holdout prediction errors.
+- **`plot_coef_violin`** and **`plot_pe_violin`** — the same draws as violins.
+
+The coefficient and prediction-error versions are kept separate, rather than one function with
+color, label and precision arguments, so that each panel's label says which it shows. Two
+private helpers draw the lines and markers they share. `plot_bootstrap_summary` still returns the
+same four or five figures in the same order. It keeps the parts that span more than one panel:
+the shared figure width, the suptitles, the column order by median weight, and one y range
+across the coefficient violins. The reasoning for medians over means moved into the docstrings
+of the panels that use them.
+
+### Changes to existing functions
+
+- **`plot_acf` and `plot_residuals_histogram` set their own title and legend**, using the
+  summary's wording ("Residual Autocorrelation Function", "Residuals Histogram", legend size 12),
+  so the labeled function redraws the panel as it appears. The residuals figure in Part 1 changes
+  to match; it had used "Residual autocorrelation", "Residuals" and size 9.
+- **The dendrogram functions and `plot_interpolated_references` require an `ax`** and no longer
+  make a figure when none is given. Every dendrogram call already passed one. In
+  `plot_weighted_reference_dendrogram`, `ax` moves ahead of `leaf_weight_label`; every call passes
+  both by keyword. The two callers of `plot_interpolated_references` now create its 11 × 5 figure
+  themselves. In `plot_tied_subset_bootstrap_summaries`, that figure is therefore labeled with
+  the calling function's name, and the panel label names `plot_interpolated_references`.
+- **The interpolated-references legend moved inside the axes**, to the upper right. The plot had
+  no `tight_layout`, so the legend, which hung outside the axes, ran past the figure's right
+  edge. That put the figure's corner label directly under the panel's. The figure now gets
+  `tight_layout`, and the legend sits where past the whiteline every spectrum levels off near 1,
+  well below the top of the axes. On all five unknowns it clears the spectra; only the dashed
+  line marking the upper end of the energy range runs behind it.
+
+### Tests
+
+Four new tests in the figure-naming cell cover the panel label. It labels only the panel it was
+handed, however `ax` was passed. The outermost function wins. Drawing into a panel twice leaves
+one label. A function without `ax` is rejected. A new selection test checks that every panel of
+`plot_bootstrap_summary` names the function that redraws it and that each figure still names
+`plot_bootstrap_summary`. The interpolated-references test now checks the panel label instead of
+the figure label. The tie-patterns test treated every text on a tree as a group letter, so it now
+skips the panel label. The notebook was rerun from start to finish with every test passing, and
+the summary PDFs for all five unknowns were checked by eye.
 
 ---
 
