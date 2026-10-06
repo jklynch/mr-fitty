@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-06 15:43 EDT — the reference tree is followed by its groups of near-identical references, numbered and colored on the tree](#2026-10-06-1543-edt--the-reference-tree-is-followed-by-its-groups-of-near-identical-references-numbered-and-colored-on-the-tree)
 - [2026-10-06 13:40 EDT — every panel says what drew it, and `plot_bootstrap_summary` is built from panel functions](#2026-10-06-1340-edt--every-panel-says-what-drew-it-and-plot_bootstrap_summary-is-built-from-panel-functions)
 - [2026-10-01 21:36 EDT — the search counts zero weights as it goes, and the fits are fast again](#2026-10-01-2136-edt--the-search-counts-zero-weights-as-it-goes-and-the-fits-are-fast-again)
 - [2026-10-01 20:36 EDT — tie sets set aside the combinations that leave a reference unused](#2026-10-01-2036-edt--tie-sets-set-aside-the-combinations-that-leave-a-reference-unused)
@@ -56,6 +57,71 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-06 15:43 EDT — the reference tree is followed by its groups of near-identical references, numbered and colored on the tree
+
+Each unknown's summary PDF opened with a reference tree that showed which references are similar
+but did not say which ones are too similar for the fit to tell apart. It now does, on the tree
+and on a page right after it.
+
+### Which groups
+
+There were two candidates already in the notebook, and on OTT3_55_spot0's pool they give very
+different answers:
+
+- **The clusters at the tree's significance cutoff**, the colored branches, are merges tighter
+  than chance. There are 2 per metric here (5 and 19 references by correlation, 14 and 10 by
+  cosine), which is too coarse to call indistinguishable.
+- **Near-duplicates**, pairs closer than `NEAR_DUPLICATE_DISTANCE` (0.015 correlation distance),
+  the threshold behind the "near-identical reference" caution. In Study 7 the number of
+  references was reported right on only 19-78% of mixtures with a pair this close.
+
+The report uses near-duplicates, so it agrees with the cautions. Cutting the correlation tree at
+0.015 gives five groups (2, 3, 5, 3 and 5 references) and leaves 6 references on their own.
+
+### What was added
+
+- **`near_duplicate_groups(clustering)`** returns one row per group: the references, how many,
+  and the distance between the farthest pair. A group is a set in which every pair is closer than
+  0.015, not just a chain of neighbors, because it comes from a complete-linkage cut, which merges
+  two groups only when their farthest pair is within the cut. It cuts one step below 0.015 so
+  that it agrees with `near_duplicates`, which counts a pair only when it is strictly closer. It
+  reuses the clustering's own distances, so it accepts only a correlation clustering. Groups are
+  listed in the order they appear on the tree from top to bottom.
+- **`plot_near_duplicate_groups`** draws that table as a text page, the way the tie-pattern page
+  is drawn. It explains the threshold and lists each group with its farthest-pair distance. It
+  also says how many references have no other reference that close, or that no two do.
+- **The groups are numbered on the tree.** `plot_reference_dendrogram` takes optional `groups`
+  and `groups_label` arguments. Each group gets a gray band behind its leaves and a boxed number
+  on the root side, the way the tie patterns' groups are lettered, and its leaf labels are
+  colored. The colors alternate between blue and purple from one group to the next, as the bands
+  alternate between two grays, so neighboring groups differ. They avoid the orange and green the
+  tree uses for its significant clusters. The banding code the tie-pattern letters used moved
+  into a shared helper, `_band_groups`, and the letters draw as before.
+- **`plot_tied_subset_bootstrap_summaries`** numbers the groups on its correlation tree and puts
+  the page right after it, numbered the same way, whenever a correlation tree is drawn. The
+  tie-set trees later in the PDF are unchanged, since they already carry the pattern letters.
+  The run-all-five cell inserts its reference-count page one position later to stay after the new
+  page. Each PDF grows by a page, to 58 to 94, and section 7's prose says so.
+
+### A crash on the way
+
+The band depth was first read from the clustering's stored cophenetic distances. Fit files leave
+those out of the clusterings they save, so every summary built from a fit file crashed. The depth
+now comes from the tree's linkage `Z`, which every clustering carries.
+
+### Tests
+
+A new test builds a pool with two families of near-copies among distinct references. It checks
+that the groups are exactly the two families, and that every pair in a group is one
+`near_duplicates` reports. It checks that the groups come in tree order and that a cosine
+clustering is refused. It also checks that on the drawn tree each number sits beside its own
+group's leaves, each group's labels share a color, neighbors differ, and everything else stays
+black. Two existing tests that unpack the summary's figures by position now expect the page, and
+one checks that a cosine tree alone gets no page. The notebook was rerun from start to finish with
+every test passing, and the tree and groups page were checked by eye in the PDFs.
 
 ---
 
