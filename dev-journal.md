@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-10 07:07 EDT — the reference tree's cutoff is in the low tail, and residuals are measured minus fitted, centered](#2026-10-10-0707-edt--the-reference-trees-cutoff-is-in-the-low-tail-and-residuals-are-measured-minus-fitted-centered)
 - [2026-10-09 21:30 EDT — blocked cross-validation replaces the bootstrap, Study 8 tests both on measured spectra, and the threshold moves to 20%](#2026-10-09-2130-edt--blocked-cross-validation-replaces-the-bootstrap-study-8-tests-both-on-measured-spectra-and-the-threshold-moves-to-20)
 - [2026-10-09 17:47 EDT — measured spectra from XASLIB, and blocked cross-validation tried on them](#2026-10-09-1747-edt--measured-spectra-from-xaslib-and-blocked-cross-validation-tried-on-them)
 - [2026-10-09 17:23 EDT — an outside critique of the bootstrap notebook's statistics](#2026-10-09-1723-edt--an-outside-critique-of-the-bootstrap-notebooks-statistics)
@@ -62,6 +63,65 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-10 07:07 EDT — the reference tree's cutoff is in the low tail, and residuals are measured minus fitted, centered
+
+Two more of the critique's points, both bugs.
+
+**The clustering cutoff was the wrong tail.** `cluster_reference_spectra` set its cutoff at the
+95th percentile of every merge height from the shuffled copies of the references, and called a
+merge below it tighter than chance. But 95% of shuffled merges fall below that, so on the arsenic
+pool 22 of the 23 real merges counted as significant. The cutoff is now the 5th percentile of each
+shuffled copy's *tightest* merge. Under chance, any merge at all falls below it only one time in
+twenty, however many merges the tree makes, and the tightest merges are compared only with each
+other rather than pooled with the last merges of a tree. The arsenic pool now cuts into six
+clusters under correlation (13/5/3/1/1/1), not two (19/5). The fit file stores the new
+`chance_tightest_merges` with the other large clustering arrays it leaves out, and
+`plot_cluster_metric_comparison` draws it.
+
+That changes Study 6's real arm. Correlation and cosine now cut the pool almost identically
+(adjusted Rand 0.976, against 0.315), and cosine's best two-reference fit no longer sits inside
+one cluster. The old finding, that cosine misread the fit as leaning on near-duplicates, was the
+cutoff's doing and is withdrawn. Correlation stays, on the synthetic offset test alone.
+
+Two tests pin the cutoff: unrelated random references get no merge below it, and one shuffled
+copy in twenty has a merge tighter than it. A third, on the leaf-weight bars, had been picking out
+bars as any two-point line not in data coordinates. With the cutoff now below 1 its line matched
+too, so the test now also checks the bars' width.
+
+**Residuals were fitted minus measured, and uncentered.** `fit_nnls` returned `fitted - b`, and
+everything that adds resampled residuals to a fit added them reflected: the bootstrap option,
+the synthetic noise behind Studies 3, 4 and 7, and Study 8's bootstrap column. A non-negative fit
+has no intercept, so its residuals also need not average zero, and resampling them added that
+mean to every spectrum as a constant offset. `fit_nnls` now returns `b - fitted`, and a new
+`centered` takes out the mean before anything is resampled. The fit file rebuilds the fitted curve
+as `b - residuals`. Its schema version stays at 1, because this code has not been released. A
+test checks that fitted plus residuals is the measurement and that centered residuals average
+zero.
+
+**Everything was rerun from cold.** The five unknowns' answers did not change, and only Study 2,
+which reads residuals alone, is untouched.
+
+- **Study 3:** the short holdout still wins, 58.6% against 52.7% (18 to 3, p = 0.0015), where it
+  was 52.7% against 44.5%.
+- **Study 4:** with the noise corrected, losing the white lines again costs resolution below first
+  place. The truth is in the top five on 79% of draws against 89% (2 to 11, p = 0.02). The last
+  run's "no cost" (p = 0.30) came from the bad noise.
+- **Study 7:** the 20% rule is right on 0.78 against 0.76 for the stepwise rule, 25% and BIC with
+  effective n, none of it significant (p = 0.11-0.33), and it adds a reference on 3% of spectra.
+  The best thresholds per source are 0.19, 0.20 and 0.18, so 20% is now central. The apparent rise
+  of the best threshold with the noise mostly goes: it is 0.18 at the measured noise and 0.17 at
+  double, where it was 0.17 and 0.26. Only half the noise wants less (0.11). That rise was the
+  offset.
+- **Study 8:** the bootstrap is less optimistic with its residuals corrected. Blocked CV's error is
+  now closer to the error on a second measurement only for three-compound mixtures (0.88 against
+  0.76 of it); for one and two they agree. The Findings were narrowed to say so. Accuracy is still
+  even, 0.913 against 0.907 at the best thresholds.
+
+The Findings of Studies 3, 4, 6, 7 and 8, the Part 2 introduction, step 7, `reference_count` and
+the caution wording quote the new numbers.
 
 ---
 
