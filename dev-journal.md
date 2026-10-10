@@ -5,6 +5,9 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-09 21:30 EDT — blocked cross-validation replaces the bootstrap, Study 8 tests both on measured spectra, and the threshold moves to 20%](#2026-10-09-2130-edt--blocked-cross-validation-replaces-the-bootstrap-study-8-tests-both-on-measured-spectra-and-the-threshold-moves-to-20)
+- [2026-10-09 17:47 EDT — measured spectra from XASLIB, and blocked cross-validation tried on them](#2026-10-09-1747-edt--measured-spectra-from-xaslib-and-blocked-cross-validation-tried-on-them)
+- [2026-10-09 17:23 EDT — an outside critique of the bootstrap notebook's statistics](#2026-10-09-1723-edt--an-outside-critique-of-the-bootstrap-notebooks-statistics)
 - [2026-10-06 18:51 EDT — the numbered groups' bands take their label colors](#2026-10-06-1851-edt--the-numbered-groups-bands-take-their-label-colors)
 - [2026-10-06 18:42 EDT — the text pages are sized to the text on them](#2026-10-06-1842-edt--the-text-pages-are-sized-to-the-text-on-them)
 - [2026-10-06 15:43 EDT — the reference tree is followed by its groups of near-identical references, numbered and colored on the tree](#2026-10-06-1543-edt--the-reference-tree-is-followed-by-its-groups-of-near-identical-references-numbered-and-colored-on-the-tree)
@@ -59,6 +62,196 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-09 21:30 EDT — blocked cross-validation replaces the bootstrap, Study 8 tests both on measured spectra, and the threshold moves to 20%
+
+**Study 8: measured spectra with known answers.** Every study before it scored recovery on
+synthetic spectra built the way the pipeline assumes data is built. Study 8 uses real scans of
+pure compounds from XASLIB, now in `example/xaslib/<element>/` with a README; the arsenic files
+moved there from `example/arsenic_xaslib/`. It uses five series, each from one beamline and one
+session with three scans of each compound: As, Cr, Mn, Ni and Zn. Scan 1 of each compound is the
+reference. Each of 300 mixtures is built twice, from scans 2 and from scans 3, so every mixture
+has two independent measurements. As and Cr are also fitted against scans from another session,
+at a different temperature and with another sample mount. Strontium was downloaded but is not
+used: its reference channel puts one compound's three scans up to 17 eV apart. The notebook reads
+the XDI files by column name, calibrates each scan on its reference channel, and normalizes it
+(`read_xdi`, `load_xaslib_series`, `normalize_xas`), with three tests.
+
+Three estimators were compared on the same holdout masks. The *bootstrap* is the old one. *Blocked
+CV* fits the measured spectrum at the training energies. *Other scan* fits the first measurement
+and scores the second.
+
+- **Blocked CV and the bootstrap are equally accurate.** With same-session references they name
+  the right compounds on 0.91 and 0.92 of mixtures at their best thresholds (0.15 and 0.12).
+- **Blocked CV's error is closer to the error on a second measurement.** For the true
+  combination, the error is 0.82-0.88 of the other-scan error for blocked CV, against 0.70-0.78
+  for the bootstrap. With other-session references it is 0.96-0.99 against 0.71-0.97. The
+  bootstrap's optimism grows with the number of references, as the leakage predicts.
+- **Two scans of one sample differ by a smooth drift.** The scan-to-scan difference has a lag-1
+  autocorrelation of 0.67-0.98, and its point-to-point part is only 0.0002-0.0015. A holdout
+  within one scan cannot see that drift, so even blocked CV underestimates the error on a new
+  measurement by 12-18%.
+- **References from another session defeat every rule.** The best any estimator does at any
+  threshold is 0.43.
+
+**The switch.** `do_ref_subsets_moving_block_holdout_bootstrap` and `fit_unknown` take
+`estimator="blocked_cv"` by default and still accept `"bootstrap"`. Blocked CV is the same
+compiled refit, given the measured spectrum as `fitted` and zeros as `residuals`. The estimator
+is part of `fit_unknown`'s cache key. Study 3 keeps the bootstrap, because it is about the
+bootstrap's resample length. Two new tests check that blocked CV is SciPy fitted to the measured
+training energies, to 6e-8 in a direct check, and that the bootstrap option still gives the old
+errors exactly. The introduction and steps 4-7 now describe blocked CV. The figure labels say
+"refits" and "draws" rather than "bootstrap": the weight box reads "median weight [middle 95% of
+refits]". The file name stays.
+
+**Every study was rerun from cold,** in about three hours.
+
+- **Studies 2, 3 and 6 are unchanged.** Study 2 reads only residuals, Study 3 keeps the
+  bootstrap, and Study 6 is about the reference tree.
+- **Study 1** still agrees on 12 of 15, with different disagreements, and its lowest rank
+  correlation is 0.9919.
+- **Study 4.** Hiding the white lines no longer costs measurable resolution: the truth is in the
+  top five on 81% of window-held-out runs against 86% for matched runs (5 to 10, p = 0.30). Under
+  the bootstrap it was 75% against 91% (p = 7e-4). Three unknowns still crown different winners
+  in the two regimes, but not the same three.
+- **Study 5.** The interval verdicts stand. The tie sets at 1000 draws are 8 / 71 / 161, against
+  8 / 102 / 136 under the bootstrap.
+- **Study 7** was rewritten (below).
+
+The bootstrap-era caches are kept in `bootstrap_2026-10-09/` subfolders of the ignored cache
+directories.
+
+**The threshold moved from 25% to 20%.** Under blocked CV, Study 7's three synthetic sources are
+best served by 0.17-0.25, and Study 8's measured mixtures by 0.05-0.22. 20% is inside both.
+
+- On Study 7's main design, 20% and 25% are equally accurate (0.745 each), as are the stepwise
+  rule and BIC with effective n (p = 0.81-0.92 between any two).
+- 20% adds a reference that is not there on 4% of spectra, against 10% for 25%. It misses a
+  fourth component on 61%, against 48%.
+- It is the steadiest of the rules that read the draws on the sixteen real unknowns: all six
+  reads agree on 0.88, against 0.81 for 25%.
+- On the measured mixtures it names the right compounds on 0.88, against 0.84 at 25%.
+- The best threshold now moves with the noise (0.10, 0.17 and 0.26 at half, the same and double
+  the noise), where under the bootstrap 0.25 was inside every band. So `check_threshold` matters
+  more; on an unknown Study 7 never used, it finds 20% inside 0.15-0.29.
+- Study 7 reads the threshold from `WIN_RATE_THRESHOLD`, with 25% kept beside it. The cautions'
+  detection-limit numbers were updated to match.
+
+**The five unknowns** now report 3, 1, 2, 2 and 3 references, against 3, 1, 2, 4 and 4 under the
+bootstrap at 25%. One answer depends on how far the search goes: searched to five,
+`Ott3_73_AsXANES_spot6_000` gets three rather than two, because the larger fits change which fit
+is the best of all sizes. The demonstration says so. Changing the search rule is left for later
+(the critique's sixth item).
+
+---
+
+## 2026-10-09 17:47 EDT — measured spectra from XASLIB, and blocked cross-validation tried on them
+
+The critique's first fix is to say what is being predicted and stop the held-out energies
+leaking into training. A prototype outside the notebook tried that on measured spectra rather than
+on synthetic ones.
+
+**The data.** The 32 arsenic K-edge spectra in XASLIB, the International X-ray Absorption
+Society's public-domain library, are now in `example/arsenic_xaslib/xdi/`, unchanged, with a
+README giving their source and license. They are transmission scans of As2O3, As2O5, As2S3, AsS
+and GaAs from SSRL in 1997, at 10 K, 100 K and room temperature, mostly three scans of each. The
+files are raw counts. The prototype normalized them the way Athena and Larch do and calibrated
+each scan's energy on its GaAs channel. RefXAS, the other open library considered, was not used:
+its server timed out, it needs registration, and it holds mostly metal foils.
+
+**The estimator.** Blocked cross-validation fits each candidate to the *measured* spectrum at the
+training energies and scores it at the held-out ones, on the same holdout masks as now. It drops
+the full-data fit and the resampled residuals, so nothing held out reaches the fit, and every
+candidate trains on the same numbers. The compiled search computes it unchanged when passed
+`fitted = b` and `residuals = 0`.
+
+**The test.** 42 mixtures of one to three compounds, at weights from 0.1 to 1, were built twice:
+once from scan 2 of each compound at 100 K and once from scan 3. That gives two independent
+measurements of each mixture. Each was fitted against two pools. The *matched* pool is scan 1 at
+100 K, which differs from the mixtures only by measurement. The *mismatched* pool is the 10 K
+scans, a different sample mount and temperature. Three estimators were compared on the same
+masks: the current bootstrap, blocked CV, and a replicate version that trains on scan 2 and
+scores scan 3.
+
+What it found:
+
+- **Without the leakage, the current rule does better.** On the matched pool, the 25% rule named
+  the right compounds 71% of the time with blocked CV and 55% with the bootstrap, which added a
+  reference 43% of the time.
+- **25% is the wrong threshold for measured data.** At a 5-10% win rate both estimators name
+  the right compounds 86-93% of the time. Study 7 chose 25% on synthetic spectra.
+- **Holding out energies within one scan underestimates the error on a new scan.** Both
+  within-scan estimators come out at about 0.6 of the error against an independent scan. Two
+  scans of one sample differ mostly by a smooth drift. Their difference has a lag-1
+  autocorrelation of 0.91-0.96 with or without per-scan calibration, and its point-to-point part
+  is only 0.0004-0.0012. A holdout within a single scan cannot see that drift.
+- **Mismatched references outweigh every other effect.** Against the 10 K pool, the true
+  combination's error is about 16 times the scan-to-scan noise, and every estimator names the
+  right compounds only 29-40% of the time. That is where the leakage shows most: for
+  three-compound mixtures the bootstrap's error is 0.68 of the independent-scan error and
+  blocked CV's is 0.99.
+
+The 42 mixtures reuse a few scans, so these rates are indicative. Nothing in the notebook changed.
+
+---
+
+## 2026-10-09 17:23 EDT — an outside critique of the bootstrap notebook's statistics
+
+Codex (the OpenAI CLI, run read-only) was asked to critique the statistical methods in
+`notebooks/moving_block_holdout_bootstrap.ipynb`: the holdout and resampling design, block lengths,
+how prediction error and its uncertainty are estimated, model selection, and whether the prose
+claims follow from the computation. It read the code and prose but did not rerun the studies. Its
+verdict: the notebook is a sound exploratory study of how stable the selection is, but its numbers
+are not yet out-of-sample prediction errors, confidence intervals, or sets of models the data
+cannot separate.
+
+Its high-severity points:
+
+- **The holdout leaks into training.** Each candidate is first fitted to every energy, including
+  the held-out ones, and its bootstrap spectrum is that fit plus resampled residuals. Only the
+  refit leaves the holdout out, so the held-out points have already shaped the curve the refit is
+  trained on.
+- **Each candidate trains on different data.** Every candidate's bootstrap spectrum is built
+  around its own fit, so a poor candidate's structured misfit becomes its "noise". Comparisons mix
+  predictive skill with how each candidate's data were generated.
+- **Smooth misfit is treated as noise that can be moved to any energy,** though energy is where
+  the chemistry is.
+- **Politis–White was not derived for holdout error or subset selection,** and the prose claim
+  that unmodeled structure "can only inflate" the block length is false.
+- **The intervals measure Monte Carlo precision.** The measured spectrum is fixed, so the median
+  intervals narrow as the number of draws grows, without any new measurement.
+- **A "tie" means the ordering sometimes flips,** not that two models are equally good: a
+  candidate can lose nearly every draw and still be tied.
+- **Picking the best of up to 55,454 combinations is not accounted for,** so the winner's
+  reported error is optimistic.
+- **The 25% rule and the adaptive search were never tested together** as the pipeline runs them.
+- **NNLS weights sit on the zero boundary,** where percentile intervals can fail, and the
+  number of references offered is not necessarily the number used.
+
+Medium-severity points: the residuals are `fitted - b` and so are added back with their sign
+flipped, and they are not centered; held-out blocks have no buffer from their training
+neighbors; residual blocks near the ends and next to holdouts are sampled less often; mean rank
+optimizes something other than prediction error; and Study 4 reads p = 0.35 as evidence of
+equivalence.
+
+Two claims were checked by hand and are right:
+
+- **The clustering cutoff is reversed.** `cluster_references` puts the cutoff at the 95th
+  percentile of the randomized merge heights and calls merges below it rare by chance. But 95% of
+  randomized merges fall below that cutoff. A cutoff for "unusually close" would be the 5th
+  percentile.
+- **Mean rank can disagree with pairwise wins.** If 60% of draws order A < B < C and 40% order
+  B < C < A, A beats B in 60% of draws but B has the better mean rank, 1.6 to 1.8. The prose says
+  mean rank "cannot disagree" with within-iteration comparisons.
+
+Codex ranked the fixes: (1) say what is being predicted, remove the leakage, and train every
+candidate on the same data; (2) separate Monte Carlo precision from sampling uncertainty and test
+the whole selection procedure on outside data; (3) build and test a model of the noise and misfit;
+(4) calibrate the block lengths and the NNLS weight intervals; (5) account for picking the best
+and redefine ties; (6) test the adaptive search and the 25% rule on fresh data, fix the cluster
+cutoff, and narrow the prose. Nothing in the notebook has changed yet.
 
 ---
 
