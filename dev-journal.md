@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-10 07:31 EDT — mean rank can disagree with a head-to-head comparison, and now says so](#2026-10-10-0731-edt--mean-rank-can-disagree-with-a-head-to-head-comparison-and-now-says-so)
 - [2026-10-10 07:26 EDT — what one measurement's draws say about a second measurement](#2026-10-10-0726-edt--what-one-measurements-draws-say-about-a-second-measurement)
 - [2026-10-10 07:07 EDT — the reference tree's cutoff is in the low tail, and residuals are measured minus fitted, centered](#2026-10-10-0707-edt--the-reference-trees-cutoff-is-in-the-low-tail-and-residuals-are-measured-minus-fitted-centered)
 - [2026-10-09 21:30 EDT — blocked cross-validation replaces the bootstrap, Study 8 tests both on measured spectra, and the threshold moves to 20%](#2026-10-09-2130-edt--blocked-cross-validation-replaces-the-bootstrap-study-8-tests-both-on-measured-spectra-and-the-threshold-moves-to-20)
@@ -64,6 +65,28 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-10 07:31 EDT — mean rank can disagree with a head-to-head comparison, and now says so
+
+`subset_mean_ranks` claimed that a mean rank, being an average of comparisons made within each
+draw, "cannot disagree" with them. The critique showed it can. If A < B < C on 60% of draws and
+B < C < A on the other 40%, A beats B on 60% of draws, but B's mean rank is 1.6 and A's 1.8, so B
+becomes the anchor.
+
+The docstring now says when the two agree and when they don't:
+
+- Between two combinations alone, the lower mean rank is always the one that wins more draws.
+- Among three or more, a combination's rank also counts how many *others* it beats, so the anchor
+  need not win the most head-to-head comparisons, and adding or removing combinations can move it.
+- Mean rank counts only order, not by how much one combination beats another.
+
+Step 7's paragraph on ranking says the same in a sentence, and now speaks of draws rather than
+iterations. A new test, `test_mean_rank_can_disagree_with_a_head_to_head_comparison`, builds the
+critique's example and checks both halves: with three combinations B ranks first, and with A and
+B alone A does. How the anchor is chosen did not change; whether it should is a separate
+question.
 
 ---
 
