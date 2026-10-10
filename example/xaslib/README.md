@@ -18,8 +18,8 @@ Most compounds have three scans from one session, which is what makes them usefu
 a reference, and the other two are independent measurements of anything built from it.
 
 - **Not normalized.** The files hold raw counts (`i0`, `itrans`, and `irefer` for the reference
-  channel), or for strontium the absorption itself (`mutrans`, `murefer`). The column order
-  differs between files, so read them by the names in their headers. The notebook's
+  channel). The column order differs between files, so read them by the names in their
+  headers. The notebook's
   `read_xdi`, `load_xaslib_series` and `normalize_xas` do this, calibrate each scan's energy on
   its reference channel, and normalize the edge step to 1.
 - **License:** Creative Commons Zero (public domain). The library's

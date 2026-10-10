@@ -74,8 +74,9 @@ moved there from `example/arsenic_xaslib/`. It uses five series, each from one b
 session with three scans of each compound: As, Cr, Mn, Ni and Zn. Scan 1 of each compound is the
 reference. Each of 300 mixtures is built twice, from scans 2 and from scans 3, so every mixture
 has two independent measurements. As and Cr are also fitted against scans from another session,
-at a different temperature and with another sample mount. Strontium was downloaded but is not
-used: its reference channel puts one compound's three scans up to 17 eV apart. The notebook reads
+at a different temperature and with another sample mount. Strontium is in the library with
+replicate scans but is not used, and its files are not kept: its reference channel puts one
+compound's three scans up to 17 eV apart. The notebook reads
 the XDI files by column name, calibrates each scan on its reference channel, and normalizes it
 (`read_xdi`, `load_xaslib_series`, `normalize_xas`), with three tests.
 
