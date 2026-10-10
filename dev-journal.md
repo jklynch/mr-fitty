@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-10 11:36 EDT — the search grows while the best fit is at its edge, checked on every study with a known answer](#2026-10-10-1136-edt--the-search-grows-while-the-best-fit-is-at-its-edge-checked-on-every-study-with-a-known-answer)
 - [2026-10-10 07:31 EDT — mean rank can disagree with a head-to-head comparison, and now says so](#2026-10-10-0731-edt--mean-rank-can-disagree-with-a-head-to-head-comparison-and-now-says-so)
 - [2026-10-10 07:26 EDT — what one measurement's draws say about a second measurement](#2026-10-10-0726-edt--what-one-measurements-draws-say-about-a-second-measurement)
 - [2026-10-10 07:07 EDT — the reference tree's cutoff is in the low tail, and residuals are measured minus fitted, centered](#2026-10-10-0707-edt--the-reference-trees-cutoff-is-in-the-low-tail-and-residuals-are-measured-minus-fitted-centered)
@@ -65,6 +66,55 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-10 11:36 EDT — the search grows while the best fit is at its edge, checked on every study with a known answer
+
+The pipeline's search starts at combinations of one to three references and adds a size at a
+time. It used to grow only while the reported number of references was the largest size
+searched. That is not enough. The 20% rule measures every size against the best fit of any size,
+so a larger size can replace that best fit and with it the answer, even when the answer sits
+below the edge. Searched to five on the pipeline's own draws, three of the sixteen real unknowns
+got fewer references from the old rule than from the full search: `OTT3_55_spot4` two instead of
+four, and `Ott3_73_AsXANES_spot6_000` and `Ott3_74_AsXANES_spot1` two instead of three.
+
+The search now grows while the answer *or* the best fit of any size is the largest size searched
+(`search_should_grow`). On the sixteen unknowns it gives the full search's answer on all sixteen,
+searching to 4.5 references on average rather than 5. The demonstration now reports 3, 1, 2, 3
+and 3 references, searching to 4, 4, 3, 5 and 5, and its PDFs run 58–94 pages. The fit cache key
+records the stopping rule, so old cached fits are not reused.
+
+Studies 7 and 8 search every size, so what a growing search would have reported can be read off
+them exactly: keeping a search's first n sizes gives the same draws a search grown to n would
+have scored. `stopped_search` does that, under each of three stopping rules (`STOPPING_RULES`):
+the old one, the new one, and always to the largest size. Both studies now record all three.
+
+| | new rule agrees with the full search | mean size searched to | old rule |
+|---|---|---|---|
+| Study 7 main design (384 spectra, full search to 5) | 384 of 384 | 4.1 | stopped too early on 21 |
+| Study 7 controlled sweeps (608, full search to 4) | 606 of 608 | 3.6 | differed on 10 |
+| sixteen real unknowns | 16 of 16 | 4.5 | too few on 3 |
+| Study 8 measured mixtures (1,251 searches) | 1,249 of 1,251 | 3.8 | differed on 9 |
+
+- *Study 7.* The old rule's cost was mostly in the number of references: right size on 0.74
+  against 0.78, too few on 23% against 19%. The right combination barely moved, 0.602 against
+  0.607, because on 16 of the 21 spectra it cut short the full search finds the right size but on
+  only 2 the right references. On the two sweep spectra where the new rule differs, a
+  four-reference fit replaced the best fit and moved the answer, once onto the truth and once off
+  it. So the new rule is not guaranteed to match the full search, but Study 7's accuracy figures
+  are now the pipeline's own. The Findings said before that the new rule had not been checked on
+  the synthetic spectra; that caveat is replaced by these results.
+- *Study 8.* At 20%, the share of mixtures given the right compounds under the pipeline's search
+  is within 0.007 of a search of every size, for every reference pool and estimator. The small gap
+  is zinc, the one series with six compounds, which the search caps at five. The old rule's 9
+  changes were right 3 times and the search to five 2 times: with no mixture of more than three
+  compounds, stopping at three rarely leaves out a real one.
+
+The caches without the new columns (Study 7's main design and sweeps, Study 8's main table) were
+set aside and recomputed. Every column they already had came back identical, as it should: the
+searches did not change, only how they are read. The table of contents' line for step 6 still
+described the old rule, and now describes the new one.
 
 ---
 
