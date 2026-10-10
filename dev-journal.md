@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-10 07:26 EDT — what one measurement's draws say about a second measurement](#2026-10-10-0726-edt--what-one-measurements-draws-say-about-a-second-measurement)
 - [2026-10-10 07:07 EDT — the reference tree's cutoff is in the low tail, and residuals are measured minus fitted, centered](#2026-10-10-0707-edt--the-reference-trees-cutoff-is-in-the-low-tail-and-residuals-are-measured-minus-fitted-centered)
 - [2026-10-09 21:30 EDT — blocked cross-validation replaces the bootstrap, Study 8 tests both on measured spectra, and the threshold moves to 20%](#2026-10-09-2130-edt--blocked-cross-validation-replaces-the-bootstrap-study-8-tests-both-on-measured-spectra-and-the-threshold-moves-to-20)
 - [2026-10-09 17:47 EDT — measured spectra from XASLIB, and blocked cross-validation tried on them](#2026-10-09-1747-edt--measured-spectra-from-xaslib-and-blocked-cross-validation-tried-on-them)
@@ -63,6 +64,46 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-10 07:26 EDT — what one measurement's draws say about a second measurement
+
+The critique's eighth point: the intervals the pipeline reports come from one measurement's
+draws, and every draw refits that same measurement. So they say how precisely the draws locate
+an answer, not how much the answer would move if the sample were measured again, and the
+interval on a median narrows with more draws whether or not anything new was measured. Study 8's
+mixtures were each measured twice, so the two can now be told apart on real data.
+
+**The new subsection,** "What one measurement's draws say about the next", comes just before
+Study 8's Findings. `measured_replicate_arm` searches each mixture once per measurement, against
+the same-session references, with blocked CV and on the same holdout masks. It then compares the
+second measurement's answer with the ranges the first one's draws put around it.
+`measured_replicates` runs every series, and `replicate_summary` reads the result. All 300
+mixtures take about a minute.
+
+- **The interval on the median prediction error.** The second measurement's median falls inside
+  the first one's 95% interval on 32% of mixtures at 250 draws, and on 21% at 1000. It moves by a
+  median 2.3 times the interval's width, from 1.1 times for Zn to 8.3 times for Mn. The interval
+  halves from 250 draws to 1000; the move does not.
+- **The middle 95% of refitted weights,** the range in every summary PDF's weight box. It is
+  usually about five times wider than the move between measurements (0.020 against 0.004 for
+  two-compound mixtures). Even so, the second measurement's weight falls outside it for 29% of
+  references in two-compound mixtures and 18% in three-compound ones.
+- **The reported compounds,** by the 20% rule. The two halves of one measurement's draws agree on
+  97% of mixtures, and the two measurements on 90% (81% for As, all of Ni). Each measurement alone
+  is right on 88-90%. Agreement within one measurement's draws is the check Study 7 can run on
+  the real unknowns, and it overstates how often a remeasurement gives the same answer.
+
+**The wording follows.** Where the intervals are defined, in `median_ci_order_statistic` and in
+the tie table's `pe_ci_lo/hi`, the notebook now says they describe the draws, not a second
+measurement. `weight_summary` and the demonstration's description of the PDFs say the weight
+range is how much a weight depends on which energies were held out, not a range for the sample.
+Study 5's "covers correctly" now says it means the median of the draws themselves. Study 8's
+headline and closing paragraph say that how much an answer moves on remeasurement can only be
+learned by measuring again. Nothing in how the pipeline selects references changed. The real
+unknowns have one measurement each, so their PDFs still show the draw-based ranges, now
+described for what they are.
 
 ---
 
