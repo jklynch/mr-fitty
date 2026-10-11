@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-10 23:39 EDT — Study 10: the range on a weight is about two and a half times too narrow for a second measurement](#2026-10-10-2339-edt--study-10-the-range-on-a-weight-is-about-two-and-a-half-times-too-narrow-for-a-second-measurement)
 - [2026-10-10 22:59 EDT — the tie table says what is within 10% of the best, and the PDFs lead with it](#2026-10-10-2259-edt--the-tie-table-says-what-is-within-10-of-the-best-and-the-pdfs-lead-with-it)
 - [2026-10-10 22:36 EDT — a tie is not an equivalence: the notebook says so, and Study 9 tests a rule that asks how close](#2026-10-10-2236-edt--a-tie-is-not-an-equivalence-the-notebook-says-so-and-study-9-tests-a-rule-that-asks-how-close)
 - [2026-10-10 11:36 EDT — the search grows while the best fit is at its edge, checked on every study with a known answer](#2026-10-10-1136-edt--the-search-grows-while-the-best-fit-is-at-its-edge-checked-on-every-study-with-a-known-answer)
@@ -68,6 +69,64 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-10 23:39 EDT — Study 10: the range on a weight is about two and a half times too narrow for a second measurement
+
+Each reported weight comes with the middle 95% of its blocked-CV refits. That range says how much
+the weight depends on which energies were held out; Study 8 had found a second measurement's
+weight outside it for about one reference in four. Study 10 asks whether another method does
+better, and if none does, how much wider the range must be.
+
+**Three intervals**, each on the weights of the true combination:
+
+- the **refit range** the pipeline reports;
+- a **residual bootstrap** of the full fit: its centered residuals resampled in blocks of the
+  tuned length, added back to the fitted curve and refitted to every energy, 1000 times
+  (`residual_bootstrap_weights`);
+- a **sandwich** standard error, the least-squares covariance with the error correlation
+  estimated Newey–West style from the residuals up to the tuned block length
+  (`sandwich_weight_errors`).
+
+**On Study 8's 300 measured mixtures** none holds the second measurement's weight 95% of the time:
+
+| method | holds second measurement, 2 / 3 compounds | holds true weight, 2 / 3 | median width, 2 / 3 |
+|---|---|---|---|
+| refit range | 0.71 / 0.82 | 0.62 / 0.74 | 0.020 / 0.033 |
+| residual bootstrap | 0.62 / 0.77 | 0.50 / 0.59 | 0.016 / 0.028 |
+| sandwich | 0.63 / 0.77 | 0.54 / 0.61 | 0.015 / 0.026 |
+
+A second measurement moves a weight by a median 0.004, with a long tail, and the true weight is
+farther, 0.007–0.012, because the references are a third scan of each compound. All three methods
+vary something within one measurement (the energies fitted, or the residuals), and the smooth
+drift between scans that Study 8 found is in neither.
+
+**The widening factor.** For each reference, how far the target lies from the point in units of
+the interval's half-width on that side (`interval_reach`); the 95th percentile of that over the
+references is the factor that makes the interval hold 95%. Fitted on four elements and checked
+on the fifth (`widening_factors`), for the 634 references in two- and three-compound mixtures:
+
+- refit range: 2.18–2.64 by element left out, holding 88–100% of the left-out element's second
+  measurements, 93% pooled; 2.52 on all five;
+- residual bootstrap: 3.26–3.85, 94% pooled; sandwich: 2.91–2.97, 95% pooled.
+
+Widened by 2.52 the refit range also holds the true weight on 97% of references (88% for Mn),
+while the bootstrap and sandwich, calibrated on the true weight directly, still miss 26% and
+20% of arsenic's. One-compound weights are only the spectrum's scale and every method misses
+them badly.
+
+**On Study 7's synthetic spectra**, whose noise is resampled residual blocks, the residual
+bootstrap holds the true weight on 87–97% of references, as it should; the refit range on
+75–90% at nearly twice the width, and the sandwich on 76–89%. The bootstrap is right about the
+noise within one measurement, and a second measurement differs by more than that.
+
+The Findings recommend keeping the refit range, described as how much the weight depends on the
+holdout, with a widening of about 2.5 for a range on a remeasurement or the true weight, measured
+on five elements from one library with same-session references. With two or more scans of an
+unknown, fitting each measures that spread directly. The pipeline does not widen the range yet.
+The new caches are `weight_uncertainty_measured.parquet` and `weight_uncertainty_synthetic.parquet`,
+under half a minute each. Part 2 now has ten studies.
 
 ---
 
