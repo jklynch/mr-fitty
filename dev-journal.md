@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-10 22:36 EDT — a tie is not an equivalence: the notebook says so, and Study 9 tests a rule that asks how close](#2026-10-10-2236-edt--a-tie-is-not-an-equivalence-the-notebook-says-so-and-study-9-tests-a-rule-that-asks-how-close)
 - [2026-10-10 11:36 EDT — the search grows while the best fit is at its edge, checked on every study with a known answer](#2026-10-10-1136-edt--the-search-grows-while-the-best-fit-is-at-its-edge-checked-on-every-study-with-a-known-answer)
 - [2026-10-10 07:31 EDT — mean rank can disagree with a head-to-head comparison, and now says so](#2026-10-10-0731-edt--mean-rank-can-disagree-with-a-head-to-head-comparison-and-now-says-so)
 - [2026-10-10 07:26 EDT — what one measurement's draws say about a second measurement](#2026-10-10-0726-edt--what-one-measurements-draws-say-about-a-second-measurement)
@@ -66,6 +67,70 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-10 22:36 EDT — a tie is not an equivalence: the notebook says so, and Study 9 tests a rule that asks how close
+
+The last open item from Codex's critique (2026-10-09 17:23) was that a "tie" means the order
+sometimes flips, not that two combinations are equally good. That is right. A combination is tied
+with the best when the middle 95% of its paired differences reaches zero, which is when it wins at
+least about one draw in forty. It can lose the other 97%, by a lot.
+
+**The wording.** About 25 places in the notebook said tied combinations were "equally good", "as
+good as the best" or ones "the data cannot separate". They now say what a tie is. Step 7 defines
+it and says a tied combination can lose on 97% of draws. Study 5 is renamed "Which interval, and
+what counts as a tie". Figure titles say "tie the best". The 20% line on the reference-count plot
+reads "the smallest size to reach this is reported". Study 7's Findings say the tie table holds
+the truth among 112 or 1,285 others rather than picking it out.
+
+**Study 9 — Ties against equivalence.** An equivalence rule asks the question a reader has: does
+this combination predict about as well as the best? Fix a margin in advance. Put an upper
+one-sided 95% bound on the typical paired difference against the anchor (the lowest mean rank),
+and call the combination equivalent when the bound is within the margin times the anchor's own
+error (`equivalent_to_best`). Study 9 tries the median and the mean as the typical difference, at
+margins of 1%, 2%, 5% and 10%. It reuses known answers: Study 7's 384 main-design spectra,
+rebuilt from their seeds and searched at their true size (the tie sets match Study 7's on 384 of
+384), and Study 8's 300 measured mixtures, each measured twice.
+
+| rule | holds the truth, 1 / 2 / 3 / 4 refs | median set, 1 / 2 / 3 / 4 refs |
+|---|---|---|
+| tie | 1.00 / 1.00 / 1.00 / 1.00 | 1 / 7 / 112 / 1,285 |
+| median within 5% | 1.00 / 1.00 / 0.99 / 0.93 | 1 / 2 / 3 / 16 |
+| median within 10% | 1.00 / 1.00 / 1.00 / 1.00 | 1 / 2 / 6 / 52 |
+
+- Margins of 1% and 2% miss the truth often, because the true combination is often a little
+  worse than the anchor on these draws: at the 90th percentile by 1.6% at three references and
+  3.6% at four. That is the noise, not the rule.
+- The mean is the wrong summary. A third of the draws hold out the white line, where differences
+  are many times larger, and they decide it: 0.69 against 0.93 holding the truth at four
+  references and 5%.
+- The sets settle as draws are added rather than shrinking: the same median size at 250, 500 and
+  1000 draws, the property the median-CI tie rule of Study 5 lacks.
+- On the measured mixtures, the set found on the first measurement is the set found on the
+  second for 95–97% of mixtures under the equivalence rules, against 81% for the tie rule, whose
+  edge is a win rate near 2.5% that a second measurement easily crosses.
+
+The 10% margin was chosen on these same spectra, and the bound, like every range in the
+notebook, says nothing about a second measurement. The Findings recommend an "equivalent within
+10%" column in the tie table, leading the PDFs, with the tie column kept beside it. The pipeline
+does not use it yet.
+
+**A figure of how the rules work.** `plot_equivalence_demo` draws one four-reference spectrum,
+chosen by rule: the first whose anchor is not the true combination but whose 10% set holds it.
+(a) shows four combinations' draws with what each rule reads: the true one (4.1% worse
+typically, both rules keep it), an equivalent one just inside the margin, a tied one that is
+typically 81% worse but wins 2.8% of draws, and an untied one only 18% worse that wins 2.5%. The
+tie rule orders the last two backwards. (b) sorts all 10,626 combinations by their bound: the 24
+within 10% sit left of the margin line, and the 790 tied ones run to several hundred percent.
+(c) reads the four on their first 25 to 1000 draws: the bound closes in on the median, while
+the tie rule's 95% range stays as wide as the draws and its verdict flips for the two near its
+edge. Rebuilding a main-design spectrum moved into `main_design_at_true_size` and
+`main_design_seed`, shared by the study and the figure.
+
+The new caches are `equivalence.parquet` (about five minutes) and `equivalence_measured.parquet`
+(under a minute). The caches set aside earlier (`before_stopping_columns_2026-10-10/`,
+`bootstrap_2026-10-09/`, `blocked_cv_2026-10-09/`) are kept for now.
 
 ---
 
