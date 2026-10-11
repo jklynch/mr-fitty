@@ -5,6 +5,7 @@ A running log of development work on MrFitty. Newest entries at the top.
 ## Contents
 
 <!-- toc -->
+- [2026-10-10 22:59 EDT — the tie table says what is within 10% of the best, and the PDFs lead with it](#2026-10-10-2259-edt--the-tie-table-says-what-is-within-10-of-the-best-and-the-pdfs-lead-with-it)
 - [2026-10-10 22:36 EDT — a tie is not an equivalence: the notebook says so, and Study 9 tests a rule that asks how close](#2026-10-10-2236-edt--a-tie-is-not-an-equivalence-the-notebook-says-so-and-study-9-tests-a-rule-that-asks-how-close)
 - [2026-10-10 11:36 EDT — the search grows while the best fit is at its edge, checked on every study with a known answer](#2026-10-10-1136-edt--the-search-grows-while-the-best-fit-is-at-its-edge-checked-on-every-study-with-a-known-answer)
 - [2026-10-10 07:31 EDT — mean rank can disagree with a head-to-head comparison, and now says so](#2026-10-10-0731-edt--mean-rank-can-disagree-with-a-head-to-head-comparison-and-now-says-so)
@@ -67,6 +68,55 @@ A running log of development work on MrFitty. Newest entries at the top.
 - [2026-07-03 13:00 EDT — `interpolate_references_at_sample_energies` reporting, return value, and tests](#2026-07-03-1300-edt--interpolate_references_at_sample_energies-reporting-return-value-and-tests)
 - [2026-07-01 19:11 EDT — Profiling `do_ref_subsets_moving_block_holdout_bootstrap`](#2026-07-01-1911-edt--profiling-do_ref_subsets_moving_block_holdout_bootstrap)
 <!-- /toc -->
+
+---
+
+## 2026-10-10 22:59 EDT — the tie table says what is within 10% of the best, and the PDFs lead with it
+
+Study 9 recommended an equivalence column for the tie table, and the pipeline now has one. A
+combination is *equivalent* to the best one at its size when an upper 95% bound on its median
+paired difference from it is at most 10% of the best's median prediction error: on the typical
+draw it predicts no more than 10% worse. The tie column stays beside it, for what it says: which
+combinations these draws cannot put in a fixed order with the best.
+
+- **The table.** `tie_table_from_paired_prediction_errors` adds `d_median_bound` (the bound) and
+  `equivalent` (the verdict), on both its whole-array and row-by-row paths, and whatever the tie
+  rule. `equivalent_to_best` moved from Study 9 into Part 1 with `EQUIVALENCE_MARGIN = 0.10` and
+  `median_upper_bound_position`, which Study 9 and its figure now share. `tie_table_counts`
+  counts the equivalent combinations, and Study 5's count table shows them.
+- **The PDFs.** Each size's tie-structure page colors every combination within 10% (green), tied
+  but not within 10% (purple) or neither, and draws each bound as a tick against a dotted 10%
+  line, so both verdicts read off the figure. Its pattern page opens with the equivalent
+  combinations (`format_equivalent_combinations`): each one's place by mean rank, how much worse
+  than the best it is on the typical draw, its bound, and its share of draws won. The tie
+  patterns follow. The full summaries, still up to three per size, take the equivalent
+  combinations first and fill with tied ones (`summary_combinations`); their titles say which
+  list each is from. The PDFs still run 58 to 94 pages.
+- **The files.** `<unknown>.equivalent.tsv` lists the equivalent combinations at every size, with
+  both verdicts and the differences as a share of the best's error. The fit keeps refitted
+  weights for the best ten equivalent combinations at each size as well as the best ten tied
+  ones, and the fit cache key records that, so every cached fit was recomputed once (about 28
+  minutes for the whole notebook; 3 minutes after). No study cache changed.
+
+At the reported size the five unknowns' lists are short where the tie sets are long:
+
+| unknown | references | within 10% | tied |
+|---|---|---|---|
+| `OTT3_55_spot0.e` | 3 | 12 | 161 |
+| `Ott3_73_AsXANES_spot5_000.e` | 1 | 5 | 11 |
+| `Ott3_73_AsXANES_spot1_avg.e` | 2 | 1 | 60 |
+| `Ott3_73_AsXANES_spot6_000.e` | 3 | 9 | 596 |
+| `Ott3_74_AsXANES_spot0.e` | 3 | 4 | 728 |
+
+Some equivalent combinations predict better than the best on the typical draw: a two-reference
+one for `OTT3_55_spot0.e` is 12% better by median and third by mean rank. That is the
+disagreement between mean rank and a head-to-head comparison that step 7 already describes, now
+visible in the lists.
+
+Three tests cover the column against `equivalent_to_best` under both tie rules (including a
+combination equivalent but not tied), the order and titles of the summaries, and the printed
+list. Step 7, the table of contents, the demonstration's text and Study 9's "What follows" now
+describe the column as part of the pipeline.
 
 ---
 
